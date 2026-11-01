@@ -15,7 +15,7 @@ from app.shared.logging.classify import get_log_level_for_exception, get_status_
     ],
 )
 def test_get_log_level_for_exception(error: Exception, expected_level: int) -> None:
-    """INTERNAL → ERROR, клиентские доменные → WARNING, не-доменные → ERROR."""
+    """INTERNAL → ERROR, клиентские категории AppError → WARNING, исключения вне AppError → ERROR."""
     assert get_log_level_for_exception(error) == expected_level
 
 

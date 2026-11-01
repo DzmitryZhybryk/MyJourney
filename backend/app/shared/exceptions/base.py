@@ -1,4 +1,4 @@
-"""Базовые исключения для доменов."""
+"""Базовые исключения приложения."""
 
 from enum import Enum
 from typing import ClassVar
@@ -8,9 +8,9 @@ from app.shared.types import OptionalDict
 
 class ErrorCategoryEnum(Enum):
     """
-    Транспортно-нейтральная категория доменной ошибки.
+    Транспортно-нейтральная категория ошибки приложения.
 
-    Домен классифицирует род сбоя в собственных терминах и НЕ знает про HTTP,
+    Бросающий код классифицирует род сбоя в собственных терминах и НЕ знает про HTTP,
     gRPC и прочие транспорты. Перевод категории в конкретный код транспорта —
     забота адаптера (HTTP-handler, будущий gRPC-handler и т.д.).
     """
@@ -26,11 +26,11 @@ class ErrorCategoryEnum(Enum):
     INTERNAL = "internal"
 
 
-class BaseDomainError(Exception):
+class AppError(Exception):
     """
-    Базовое исключение для всех доменных ошибок.
+    Базовое исключение для ошибок приложения, у которых есть категория.
 
-    Все доменные исключения должны наследоваться от этого класса.
+    От него наследуются ошибки доменов и инфраструктурных адаптеров.
     Дочерние классы могут задать атрибуты класса `category`, `code` и `message`
     для дефолтных значений.
 
@@ -71,7 +71,7 @@ class BaseDomainError(Exception):
         self.details = details
 
 
-class InvalidInputError(BaseDomainError):
+class InvalidInputError(AppError):
     """Базовое исключение для ошибок валидации и некорректного ввода."""
 
     category = ErrorCategoryEnum.INVALID_INPUT
@@ -79,7 +79,7 @@ class InvalidInputError(BaseDomainError):
     message = "Некорректный запрос"
 
 
-class UnauthenticatedError(BaseDomainError):
+class UnauthenticatedError(AppError):
     """Базовое исключение для ошибок аутентификации."""
 
     category = ErrorCategoryEnum.UNAUTHENTICATED
@@ -87,7 +87,7 @@ class UnauthenticatedError(BaseDomainError):
     message = "Требуется авторизация"
 
 
-class PermissionDeniedError(BaseDomainError):
+class PermissionDeniedError(AppError):
     """Базовое исключение для ошибок доступа."""
 
     category = ErrorCategoryEnum.PERMISSION_DENIED
@@ -95,7 +95,7 @@ class PermissionDeniedError(BaseDomainError):
     message = "Доступ запрещен"
 
 
-class NotFoundError(BaseDomainError):
+class NotFoundError(AppError):
     """Базовое исключение для ошибок "ресурс не найден"."""
 
     category = ErrorCategoryEnum.NOT_FOUND
@@ -103,7 +103,7 @@ class NotFoundError(BaseDomainError):
     message = "Ресурс не найден"
 
 
-class ConflictError(BaseDomainError):
+class ConflictError(AppError):
     """Базовое исключение для конфликтов данных."""
 
     category = ErrorCategoryEnum.CONFLICT
@@ -111,7 +111,7 @@ class ConflictError(BaseDomainError):
     message = "Конфликт данных"
 
 
-class GoneError(BaseDomainError):
+class GoneError(AppError):
     """Базовое исключение для ресурсов, которые когда-то были и истекли."""
 
     category = ErrorCategoryEnum.GONE
@@ -119,7 +119,7 @@ class GoneError(BaseDomainError):
     message = "Ресурс больше недоступен"
 
 
-class UnprocessableError(BaseDomainError):
+class UnprocessableError(AppError):
     """Базовое исключение для ошибок обработки корректно сформированной сущности."""
 
     category = ErrorCategoryEnum.UNPROCESSABLE
@@ -127,7 +127,7 @@ class UnprocessableError(BaseDomainError):
     message = "Невозможно обработать запрос"
 
 
-class RateLimitedError(BaseDomainError):
+class RateLimitedError(AppError):
     """Базовое исключение для ошибок превышения лимита запросов."""
 
     category = ErrorCategoryEnum.RATE_LIMITED
@@ -135,9 +135,25 @@ class RateLimitedError(BaseDomainError):
     message = "Превышен лимит запросов"
 
 
-class InternalError(BaseDomainError):
+class InternalError(AppError):
     """Базовое исключение для внутренних ошибок сервера."""
 
     category = ErrorCategoryEnum.INTERNAL
     code = "internal"
     message = "Внутренняя ошибка сервера"
+
+
+class InvariantViolationError(Exception):
+    """
+    Наш код обнаружил, что его собственное допущение ложно.
+
+    Корень вне дерева `AppError`: это не ответ клиенту, а повод для алерта и разбора, поэтому
+    у него нет категории и `code`. Через HTTP он даёт общий 500, в лог — ERROR с трейсбеком.
+    Наследник задаёт `message`; переданные именованные значения дописываются к нему в текст.
+    """
+
+    message: ClassVar[str] = "Нарушен инвариант"
+
+    def __init__(self, **context: object) -> None:
+        pairs = ", ".join(f"{name}={value!r}" for name, value in context.items())
+        super().__init__(f"{self.message}: {pairs}" if pairs else self.message)

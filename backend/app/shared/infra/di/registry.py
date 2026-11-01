@@ -24,9 +24,7 @@ class ComponentRegistry:
         try:
             return cast(Component, self._store[key])
         except KeyError as err:
-            raise ComponentNotRegisteredError(
-                message=f"{self.__class__.__name__} object has no attribute {key}"
-            ) from err
+            raise ComponentNotRegisteredError(registry=type(self).__name__, key=key) from err
 
     def __contains__(self, key: type[Any]) -> bool:
         return key in self._store

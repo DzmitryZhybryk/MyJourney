@@ -82,13 +82,13 @@ async def test_warning_classified_exception_logs_warning(
     middleware_app: BFastAPI,
     make_async_client: Callable[[BFastAPI], AsyncClient],
 ) -> None:
-    """Доменное (клиентское) исключение, дошедшее как exception, логируется на уровне warning."""
+    """AppError клиентской категории, дошедший как exception, логируется на уровне warning."""
     with capture_logs() as logs:
         async with make_async_client(middleware_app) as client:
-            response = await client.get("/domain-error")
+            response = await client.get("/app-error")
 
-    # без зарегистрированных хендлеров доменное исключение доходит до ServerErrorMiddleware → 500
+    # без зарегистрированных хендлеров AppError доходит до ServerErrorMiddleware → 500
     assert response.status_code == 500
-    matching = [entry for entry in logs if entry.get("event") == "Domain error handler"]
+    matching = [entry for entry in logs if entry.get("event") == "App error route"]
     assert len(matching) == 1
     assert matching[0]["log_level"] == "warning"

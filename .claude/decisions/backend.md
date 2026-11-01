@@ -45,3 +45,32 @@
   misleading number in `/docs`.
 - Revisit when: a client outside this repo generates code from or reads `openapi.json`.
 - Source: PR #176, 2026-10-30
+
+## The exception tree branches by reaction (`ErrorCategoryEnum`) under one root, `AppError`
+- A failure subclasses the category class for its reaction; a family (`ObjectStorageError`) or a layer is not a level
+  of the tree. Every leaf declares its own `code` and codes are unique — guarded by `tests/unit/shared/exceptions/test_codes.py`.
+- Why: the category is the only axis anything branches on — HTTP status, log level, task retry. Nothing catches by
+  origin or layer, and `category` is a class attribute that works wherever the class sits.
+- Rejected: `Internal`/`External` at the top, `External` split into temporary/persistent — nothing catches `External`;
+  a temporary failure is not only external (exhausted pool, deadlock); a use case may translate a dependency failure
+  into a 4xx.
+- Rejected: one node per layer (`DomainError`/`RepositoryError`/`ServiceError`) — the layer is visible in the
+  traceback, the node carries nothing to read, and the boundary blurs (a business rule checked in a service).
+- Rejected: `Result` objects for business errors — no gain over exceptions in a web service; `find_* -> Entity | None`
+  already covers an expected absence.
+- Rejected: root named `BaseDomainError` (until 2026-11-01) — the root also covers DI, S3 and pagination, and the
+  name kept raising the question whether the tree is right.
+- Source: exception hierarchy review, 2026-10-31
+
+## A false assumption of our own code raises `InvariantViolationError`, outside the `AppError` tree
+- Its subclasses carry no category and no `code`; their data goes into the message text. HTTP answers the generic
+  500 `internal`, the log gets ERROR with a traceback.
+- Why: the reaction is an alert and an investigation, not a client contract. A `code` would publish a bug as an API
+  identifier, and the message would leak internals through the error envelope.
+- Rejected: a subclass of `InternalError` with its own `code` (until 2026-11-01) — same reason.
+- Rejected: one base for invariant violations and the persistent failures of adapters — a base defined by a missing
+  trait has nothing to read, and a family whose temporary leaf needs a category (503, retry) would split across two roots.
+- Rejected: the criterion "does not reach the client" or "has no `code`" — every failure reaches the client as a 500,
+  and such a class would absorb adapter failures with a different reaction (retry, provider config, not a code fix).
+- Rejected: `AssertionError` as the base — accurate in meaning, misleading in a traceback.
+- Source: exception hierarchy review, 2026-10-31

@@ -36,10 +36,10 @@ def middleware_app() -> BFastAPI:
     async def _unhandled() -> JSONResponse:
         raise RuntimeError("unhandled failure")  # noqa: TRY003 — намеренный сбой роута для except-ветки
 
-    # Без register_exception_handlers доменное исключение НЕ конвертируется в Response, а доходит
-    # до middleware как исключение — это покрывает WARNING-ветку except (доменная ошибка = клиентская).
-    @app.get("/domain-error", name="domain_error_handler")
-    async def _domain_error() -> JSONResponse:
+    # Без register_exception_handlers AppError НЕ конвертируется в Response, а доходит
+    # до middleware как исключение — это покрывает WARNING-ветку except (клиентская категория).
+    @app.get("/app-error", name="app_error_route")
+    async def _app_error() -> JSONResponse:
         raise NotFoundError
 
     return app

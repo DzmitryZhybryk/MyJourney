@@ -1,10 +1,10 @@
 """Утилиты для описания ошибок API."""
 
-from app.shared.exceptions.base import BaseDomainError
+from app.shared.exceptions.base import AppError
 from app.shared.types import DictStrAny
 
 
-def error_response_example(error_cls: type[BaseDomainError]) -> DictStrAny:
+def error_response_example(error_cls: type[AppError]) -> DictStrAny:
     """
     Вернуть словарь для примера `ErrorResponse` по исключению.
 

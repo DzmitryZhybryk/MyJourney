@@ -12,7 +12,7 @@
 import re
 import string
 
-from app.shared.fractional_index.exceptions import InvalidFractionalKeyError
+from app.shared.fractional_index.exceptions import FractionalBoundsOrderError, InvalidFractionalKeyError
 
 # Цифры по возрастанию кодов ASCII: побайтный порядок строк совпадает с порядком цифр.
 _DIGITS = string.digits + string.ascii_uppercase + string.ascii_lowercase
@@ -39,14 +39,15 @@ def generate_key_between(*, before: str | None, after: str | None) -> str:
         Новый ключ
 
     Raises:
-        InvalidFractionalKeyError: ключ некорректен или ``before`` не меньше ``after``
+        InvalidFractionalKeyError: ключ некорректен
+        FractionalBoundsOrderError: ``before`` не меньше ``after``
     """
     for key in (before, after):
         if key is not None and not _KEY_PATTERN.fullmatch(key):
-            raise InvalidFractionalKeyError(details={"key": key})
+            raise InvalidFractionalKeyError(key=key)
 
     if before is not None and after is not None and before >= after:
-        raise InvalidFractionalKeyError(details={"before": before, "after": after})
+        raise FractionalBoundsOrderError(before=before, after=after)
 
     return _midpoint(lower=before or "", upper=after)
 
