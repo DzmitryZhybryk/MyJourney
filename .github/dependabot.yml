@@ -68,3 +68,12 @@ updates:
       interval: weekly
     commit-message:
       prefix: chore
+    ignore:
+      # Минор Python в образе обязан совпадать с requires-python в backend/pyproject.toml:
+      # при UV_PYTHON_DOWNLOADS=0 `uv sync --locked` не находит интерпретатор, а CI образ не
+      # собирает и остаётся зелёным. Переход на новый минор — отдельная задача вместе с
+      # requires-python; новые digest текущего минора по-прежнему приходят.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
