@@ -2,7 +2,7 @@
 Unit-тесты ``ComponentRegistry`` — типобезопасного хранилища компонентов по ключу-классу.
 
 Покрывают set/get round-trip, перезапись, ``__contains__`` и ошибку незарегистрированного
-ключа (``ComponentNotRegisteredError`` — внутренняя ошибка конфигурации инфраструктуры).
+ключа (``ComponentNotRegisteredError`` — нарушенный инвариант композиционного корня).
 """
 
 import pytest

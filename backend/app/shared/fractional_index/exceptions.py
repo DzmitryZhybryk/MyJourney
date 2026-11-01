@@ -1,8 +1,13 @@
-from app.shared.exceptions import InternalError
+from app.shared.exceptions import InvariantViolationError
 
 
-class InvalidFractionalKeyError(InternalError):
-    """Дробный ключ некорректен или границы для нового ключа переданы не по возрастанию."""
+class InvalidFractionalKeyError(InvariantViolationError):
+    """Дробный ключ не соответствует формату ключа порядка."""
 
-    code = "invalid_fractional_key"
-    message = "Некорректный ключ порядка"
+    message = "Некорректный дробный ключ"
+
+
+class FractionalBoundsOrderError(InvariantViolationError):
+    """Границы для нового ключа переданы не по возрастанию."""
+
+    message = "Границы дробного ключа не по возрастанию"

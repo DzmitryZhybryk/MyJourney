@@ -1,10 +1,11 @@
 from app.shared.exceptions.base import (
-    BaseDomainError,
+    AppError,
     ConflictError,
     ErrorCategoryEnum,
     GoneError,
     InternalError,
     InvalidInputError,
+    InvariantViolationError,
     NotFoundError,
     PermissionDeniedError,
     RateLimitedError,
@@ -14,13 +15,14 @@ from app.shared.exceptions.base import (
 
 __all__ = [
     # Базовые исключения
-    "BaseDomainError",
+    "AppError",
     "ConflictError",
     # Категории
     "ErrorCategoryEnum",
     "GoneError",
     "InternalError",
     "InvalidInputError",
+    "InvariantViolationError",
     "NotFoundError",
     "PermissionDeniedError",
     "RateLimitedError",

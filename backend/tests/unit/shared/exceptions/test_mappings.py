@@ -1,7 +1,7 @@
 import pytest
 
 from app.shared.exceptions.base import (
-    BaseDomainError,
+    AppError,
     ConflictError,
     GoneError,
     InternalError,
@@ -29,11 +29,11 @@ from app.shared.exceptions.mappings import resolve_http_status
         (InternalError(), 500),
     ],
 )
-def test_resolve_http_status_maps_each_category(error: BaseDomainError, expected_status: int) -> None:
-    """Каждая доменная категория резолвится в свой HTTP-статус."""
+def test_resolve_http_status_maps_each_category(error: AppError, expected_status: int) -> None:
+    """Каждая категория резолвится в свой HTTP-статус."""
     assert resolve_http_status(error) == expected_status
 
 
-def test_resolve_http_status_non_domain_returns_500() -> None:
-    """Не-доменное исключение трактуется как внутренняя ошибка (500)."""
+def test_resolve_http_status_non_app_error_returns_500() -> None:
+    """Исключение вне AppError трактуется как внутренняя ошибка (500)."""
     assert resolve_http_status(ValueError("boom")) == 500

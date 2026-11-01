@@ -3,7 +3,7 @@ Unit-тесты сборки контекста логирования (``app.sh
 
 Чистые функции над ``Request``: извлечение клиентского контекста, сборка контекста
 запроса (с явным контекстом и с фоллбэком на извлечённый) и контекста ошибки
-(доменная ошибка без traceback'а vs неожиданная — с traceback'ом).
+(AppError без traceback'а vs неожиданная — с traceback'ом).
 """
 
 from collections.abc import Callable
@@ -68,8 +68,8 @@ def test_build_log_context_falls_back_to_extracted_context(make_request: Callabl
     assert log_context["client_ip"] == "203.0.113.5"
 
 
-def test_build_error_log_context_for_domain_error_omits_traceback(make_request: Callable[..., Request]) -> None:
-    """Доменная ошибка: пишутся error_code/error_message, traceback не нужен, статус из категории."""
+def test_build_error_log_context_for_app_error_omits_traceback(make_request: Callable[..., Request]) -> None:
+    """AppError: пишутся error_code/error_message, traceback не нужен, статус из категории."""
     log_context, status_code, include_traceback = build_error_log_context(
         request=make_request(),
         exc=NotFoundError(),

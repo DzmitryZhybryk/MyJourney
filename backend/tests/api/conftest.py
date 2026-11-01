@@ -6,7 +6,7 @@ Generic-проводка **уровня api** (домен-агностично).
 
 - ``api_app`` — ASGI-приложение **без компонентов**: ``create_default_app()`` поднимает
   пустой ``ComponentRegistry`` (нет коннектов к PG/Resend/Procrastinate), плюс
-  ``register_exception_handlers`` — чтобы доменные исключения и 422/500 сворачивались в
+  ``register_exception_handlers`` — чтобы исключения AppError и 422/500 сворачивались в
   тот же ``ErrorResponse``-envelope, что и в проде.
 - ``app`` — собранное приложение под тест: монтирует ``router`` под ``router_prefix`` и
   применяет карту ``dependency_overrides``. Механизм один на все домены; сами данные

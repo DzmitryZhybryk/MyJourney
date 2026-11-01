@@ -2,7 +2,7 @@
 
 from starlette.requests import Request
 
-from app.shared.exceptions import BaseDomainError
+from app.shared.exceptions import AppError
 from app.shared.logging.classify import get_status_code_from_exception
 from app.shared.types import DictStrAny
 
@@ -107,7 +107,7 @@ def build_error_log_context(
 
     log_context["error_type"] = type(exc).__name__
 
-    if isinstance(exc, BaseDomainError):
+    if isinstance(exc, AppError):
         log_context["error_code"] = exc.code
         log_context["error_message"] = exc.message
         include_traceback = False

@@ -6,7 +6,7 @@ import re
 import pytest
 
 from app.shared.fractional_index import generate_key_between
-from app.shared.fractional_index.exceptions import InvalidFractionalKeyError
+from app.shared.fractional_index.exceptions import FractionalBoundsOrderError, InvalidFractionalKeyError
 
 # Форма корректного ключа: цифры base-62, последняя — не «0».
 _KEY_FORM = re.compile(r"[0-9A-Za-z]*[1-9A-Za-z]")
@@ -89,17 +89,18 @@ def test_generate_key_between_repeated_edge_insertions_grow_slowly(edge: str) ->
 
 @pytest.mark.parametrize(("before", "after"), [("b", "a"), ("a1", "a1")])
 def test_generate_key_between_bounds_not_ascending_raises(before: str, after: str) -> None:
-    """before ≥ after → InvalidFractionalKeyError с обеими границами в details."""
-    with pytest.raises(InvalidFractionalKeyError) as exc_info:
+    """before ≥ after → FractionalBoundsOrderError с обеими границами в сообщении."""
+    with pytest.raises(FractionalBoundsOrderError) as exc_info:
         generate_key_between(before=before, after=after)
 
-    assert exc_info.value.details == {"before": before, "after": after}
+    assert repr(before) in str(exc_info.value)
+    assert repr(after) in str(exc_info.value)
 
 
 @pytest.mark.parametrize("key", ["", "a0", "a-1", "ключ"])
 def test_generate_key_between_malformed_key_raises(key: str) -> None:
-    """Пустой ключ, ключ на «0» или с чужими символами → InvalidFractionalKeyError с самим ключом."""
+    """Пустой ключ, ключ на «0» или с чужими символами → InvalidFractionalKeyError с ключом в сообщении."""
     with pytest.raises(InvalidFractionalKeyError) as exc_info:
         generate_key_between(before=key, after=None)
 
-    assert exc_info.value.details == {"key": key}
+    assert repr(key) in str(exc_info.value)

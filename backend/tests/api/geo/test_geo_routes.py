@@ -65,7 +65,7 @@ async def test_search_cities_query_with_surrounding_spaces_is_trimmed(
 
 
 async def test_search_cities_without_token_returns_401(client: AsyncClient) -> None:
-    """401: запрос без Bearer-токена отклоняется с доменным кодом auth.invalid_access_token."""
+    """401: запрос без Bearer-токена отклоняется с кодом auth.invalid_access_token."""
     response = await client.get(_SEARCH_PATH, params={"searchText": "Mos", "language": "en"})
 
     assert response.status_code == 401
