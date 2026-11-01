@@ -9,14 +9,20 @@ import app
 from app.shared.exceptions import AppError
 
 
-@pytest.fixture
-def app_error_leaves() -> tuple[type[AppError], ...]:
+def _qualified_name(cls: type) -> str:
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+@pytest.fixture(scope="module")
+def app_error_tree() -> tuple[type[AppError], ...]:
     """
-    Листья дерева ``AppError`` из модулей приложения: классы без наследников внутри ``app``.
+    Все классы дерева ``AppError`` из модулей приложения, корень включительно.
 
     Наследники видны только среди импортированных модулей, поэтому сначала импортируется каждый
-    модуль ``exceptions.py`` и каждый модуль пакетов ``exceptions/``. Классы из тестовых модулей
-    отброшены, чтобы чужой тестовый наследник не делал результат зависимым от порядка запуска.
+    модуль пакета ``app``. Искать только в ``exceptions``-модулях нельзя: класс, объявленный в другом
+    месте, попадал бы в проверку лишь тогда, когда его успел импортировать предыдущий тест. Классы из
+    тестовых модулей отброшены, чтобы чужой тестовый наследник не делал результат зависимым от
+    порядка запуска.
     """
     package_root = Path(app.__file__).parent
     for path in package_root.rglob("*.py"):
@@ -24,10 +30,9 @@ def app_error_leaves() -> tuple[type[AppError], ...]:
         if path.stem == "__init__":
             module_parts = module_parts[:-1]
 
-        if "exceptions" in module_parts:
-            importlib.import_module(".".join(module_parts))
+        importlib.import_module(".".join(module_parts))
 
-    found: set[type[AppError]] = set()
+    found: set[type[AppError]] = {AppError}
     pending: list[type[AppError]] = [AppError]
     while pending:
         for subclass in pending.pop().__subclasses__():
@@ -35,5 +40,12 @@ def app_error_leaves() -> tuple[type[AppError], ...]:
                 found.add(subclass)
                 pending.append(subclass)
 
-    leaves = (cls for cls in found if not any(issubclass(other, cls) for other in found - {cls}))
-    return tuple(sorted(leaves, key=lambda cls: f"{cls.__module__}.{cls.__qualname__}"))
+    return tuple(sorted(found, key=_qualified_name))
+
+
+@pytest.fixture(scope="module")
+def app_error_leaves(app_error_tree: tuple[type[AppError], ...]) -> tuple[type[AppError], ...]:
+    """Листья дерева ``AppError``: классы без наследников внутри ``app``."""
+    return tuple(
+        cls for cls in app_error_tree if not any(issubclass(other, cls) for other in app_error_tree if other is not cls)
+    )
