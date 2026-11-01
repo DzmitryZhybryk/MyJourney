@@ -25,9 +25,9 @@ class RegisterRequest(CamelModel):
 
         Pydantic v2 оборачивает в ``ValidationError`` только ``ValueError``/
         ``AssertionError``/``PydanticCustomError``; ``TermsNotAcceptedError``
-        (наследник ``BaseDomainError`` с категорией ``INVALID_INPUT``)
+        (наследник ``AppError`` с категорией ``INVALID_INPUT``)
         пробрасывается наружу как есть и ловится глобальным exception handler'ом →
-        HTTP 400 с правильным ``code`` по доменной категории, а не 422 от FastAPI.
+        HTTP 400 с правильным ``code`` по категории, а не 422 от FastAPI.
 
         Scenarios:
             - регистрация

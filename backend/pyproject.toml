@@ -1,6 +1,6 @@
 [project]
 name = "MyJourney"
-version = "6.0.6"
+version = "7.0.0"
 description = "Personal travel atlas: journeys, cities and routes on a globe"
 authors = [
     { name = "Dzmitry Zhybryk", email = "mr.zhybryk@gmail.com" }

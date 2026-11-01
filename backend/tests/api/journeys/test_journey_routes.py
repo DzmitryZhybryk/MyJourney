@@ -116,7 +116,7 @@ async def test_create_journey_ignores_legacy_month_and_day(
 
 
 async def test_create_journey_without_token_returns_401(client: AsyncClient) -> None:
-    """401: запрос без Bearer-токена отклоняется с доменным кодом auth.invalid_access_token."""
+    """401: запрос без Bearer-токена отклоняется с кодом auth.invalid_access_token."""
     response = await client.post(_CREATE_PATH, json=_VALID_BODY)
 
     assert response.status_code == 401
@@ -268,7 +268,7 @@ async def test_get_journeys_map_returns_aggregated_countries(
 
 
 async def test_get_journeys_map_without_token_returns_401(client: AsyncClient) -> None:
-    """401: запрос карты без Bearer-токена отклоняется доменным кодом auth.invalid_access_token."""
+    """401: запрос карты без Bearer-токена отклоняется кодом auth.invalid_access_token."""
     response = await client.get(_MAP_PATH)
 
     assert response.status_code == 401

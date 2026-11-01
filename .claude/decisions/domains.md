@@ -9,10 +9,10 @@
 - Rejected: foreign keys across domains — they tie two domains' tables to one database.
 - Source: journeys design; auth and users already followed it
 
-## Domain errors know nothing about HTTP
-- A domain exception carries an `ErrorCategoryEnum`; the HTTP status is chosen only in the HTTP adapter
+## An `AppError` knows nothing about HTTP
+- An `AppError` carries an `ErrorCategoryEnum`; the HTTP status is chosen only in the HTTP adapter
   (`resolve_http_status`).
-- Why: the transport is HTTP today and may be a queue, gRPC or a CLI tomorrow; an HTTP status on a
-  domain exception leaks HTTP into the domain. The owner wants maximum flexibility and clean layers.
-- Rejected: `status_code` on the domain exception — same reason.
+- Why: the transport is HTTP today and may be a queue, gRPC or a CLI tomorrow; an HTTP status on an
+  exception leaks HTTP into the domain. The owner wants maximum flexibility and clean layers.
+- Rejected: `status_code` on the exception — same reason.
 - Source: PR #14, 2026-05-24

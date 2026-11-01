@@ -27,7 +27,7 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
     Заменяет стандартное логирование uvicorn.access и позволяет
     обогащать логи дополнительными данными (user_id и т.д.).
     Также перехватывает необработанные исключения на уровне ASGI и логирует их
-    в нужном формате. Доменные исключения сюда не доходят как exception: их
+    в нужном формате. Исключения AppError сюда не доходят как exception: их
     раньше конвертирует ExceptionMiddleware, и они приходят готовым Response.
     """
 
@@ -83,7 +83,7 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
             event = get_event_name(request)
 
             # Уровень лога зависит от статуса: 5xx -> error, 4xx -> warning, иначе info.
-            # Доменные исключения теперь конвертируются ExceptionMiddleware в Response 4xx
+            # Исключения AppError конвертируются ExceptionMiddleware в Response
             # и приходят сюда как готовый response, а не exception.
             match response.status_code:
                 case status if status >= 500:
