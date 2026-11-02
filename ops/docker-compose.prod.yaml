@@ -143,7 +143,7 @@ services:
   # Grafana наружу НЕ публикуется (нет ports, Caddy её не проксирует). Доступ админа —
   # по SSH-туннелю к 3000 (см. docs/deployment.md).
   grafana:
-    image: grafana/grafana:12.3.1@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f
+    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
     container_name: myjourney_grafana
     env_file: .env
     environment:
