@@ -3,6 +3,7 @@ from procrastinate import JobContext
 from structlog.testing import capture_logs
 
 from app.auth.infra.tasks import send_verification_email
+from app.shared.exceptions import TemporaryError
 from app.shared.infra.http.exceptions import ExternalAPIPersistentError, ExternalAPITemporaryError
 from tests.fakes import FakeEmailTransport
 
@@ -50,6 +51,26 @@ async def test_send_verification_email_propagates_temporary_error(
         await send_verification_email(job_context, user_id="user-1", email="user@example.com", code="123456")
 
     assert fake_email_transport.sent == []
+
+
+@pytest.mark.parametrize(
+    ("error", "is_retried"),
+    [
+        (ExternalAPITemporaryError(method="POST", url="u", status=503, message="m"), True),
+        (TemporaryError(), True),
+        (ExternalAPIPersistentError(method="POST", url="u", status=400, message="m"), False),
+    ],
+)
+def test_send_verification_email_retries_any_temporary_error(
+    job_context: JobContext, error: Exception, is_retried: bool
+) -> None:
+    """Повтор задачи — на любой временный сбой, а не только HTTP-провайдера; постоянный не повторяется."""
+    retry_strategy = send_verification_email.retry_strategy
+    assert retry_strategy is not None
+
+    decision = retry_strategy.get_retry_decision(exception=error, job=job_context.job)
+
+    assert (decision is not None) is is_retried
 
 
 async def test_send_verification_email_propagates_persistent_error(

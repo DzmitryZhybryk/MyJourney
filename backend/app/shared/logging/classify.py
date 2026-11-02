@@ -20,7 +20,8 @@ def get_log_level_for_exception(exc: Exception) -> int:
 
     Returns:
         ``logging.ERROR`` для нашего сбоя (категория INTERNAL или исключение вне дерева ошибок),
-        ``logging.WARNING`` для ошибки клиента (остальные категории, невалидный запрос)
+        ``logging.WARNING`` для ошибки клиента (невалидный запрос, клиентские категории) и временного
+        сбоя зависимости (TEMPORARY): это не наш баг, сигнал для алерта — доля таких ответов
     """
     if isinstance(exc, AppError):
         return logging.ERROR if exc.category is ErrorCategoryEnum.INTERNAL else logging.WARNING

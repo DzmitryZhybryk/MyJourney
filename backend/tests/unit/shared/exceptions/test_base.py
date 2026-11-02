@@ -1,9 +1,16 @@
-"""Unit-тесты ``InvariantViolationError`` — сообщение из текста класса и переданных значений."""
+"""Unit-тесты базовых исключений: признак серверного сбоя у категории и сообщение ``InvariantViolationError``."""
 
 import pytest
 
-from app.shared.exceptions import InvariantViolationError
+from app.shared.exceptions import ErrorCategoryEnum, InvariantViolationError
 from app.shared.fractional_index.exceptions import InvalidFractionalKeyError
+
+
+def test_error_category_is_server_fault_only_for_temporary_and_internal() -> None:
+    """Серверный сбой — временный сбой зависимости и внутренняя ошибка; остальные категории — ошибка запроса."""
+    server_faults = {category for category in ErrorCategoryEnum if category.is_server_fault}
+
+    assert server_faults == {ErrorCategoryEnum.TEMPORARY, ErrorCategoryEnum.INTERNAL}
 
 
 @pytest.mark.parametrize(

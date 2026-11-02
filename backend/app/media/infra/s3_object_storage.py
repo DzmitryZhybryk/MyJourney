@@ -2,7 +2,7 @@ import datetime as dt
 from collections.abc import Collection
 from http import HTTPStatus
 from itertools import batched
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from aiohttp import ClientError as AiohttpClientError
 from botocore.exceptions import BotoCoreError, ClientError, IncompleteReadError
@@ -13,13 +13,30 @@ from app.media.application.ports.private_storage import ObjectInfo, PrivateStora
 from app.media.application.ports.public_storage import PublicStoragePort
 from app.media.exceptions import (
     ObjectNotFoundError,
+    ObjectStorageError,
     ObjectStoragePersistentError,
     ObjectStorageTemporaryError,
     ObjectTooLargeError,
 )
+from app.shared.types import DictStrAny
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client
+
+# Обрыв тела aiobotocore не переводит в ошибку botocore — приходит исключение aiohttp.
+_SDK_ERRORS: Final = (ClientError, BotoCoreError, AiohttpClientError)
+_TEMPORARY_SDK_ERRORS: Final = (
+    BotocoreConnectionError,
+    BotocoreHTTPClientError,
+    IncompleteReadError,
+    AiohttpClientError,
+)
+_TEMPORARY_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {"RequestTimeout", "SlowDown", "InternalError", "ServiceUnavailable"}
+)
+_TEMPORARY_CLIENT_ERROR_STATUSES: Final[frozenset[HTTPStatus]] = frozenset(
+    {HTTPStatus.REQUEST_TIMEOUT, HTTPStatus.TOO_MANY_REQUESTS}
+)
 
 
 class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
@@ -57,8 +74,8 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
                 },
                 ExpiresIn=int(expires_in.total_seconds()),
             )
-        except BotoCoreError as error:
-            raise ObjectStoragePersistentError(details={"key": key}) from error
+        except _SDK_ERRORS as error:
+            raise _to_storage_error(error=error, details={"key": key}) from error
 
         return SignedUpload(
             url=url,
@@ -69,32 +86,22 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
     async def head_object(self, key: str) -> ObjectInfo | None:
         try:
             response = await self._client.head_object(Bucket=self._bucket, Key=key)
-        except ClientError as error:
+        except _SDK_ERRORS as error:
             if _is_not_found(error):
                 return None
 
-            error_class = ObjectStorageTemporaryError if _is_server_failure(error) else ObjectStoragePersistentError
-            raise error_class(details={"key": key}) from error
-        except (BotocoreConnectionError, BotocoreHTTPClientError) as error:
-            raise ObjectStorageTemporaryError(details={"key": key}) from error
-        except BotoCoreError as error:
-            raise ObjectStoragePersistentError(details={"key": key}) from error
+            raise _to_storage_error(error=error, details={"key": key}) from error
 
         return ObjectInfo(size_bytes=response["ContentLength"], content_type=response.get("ContentType"))
 
     async def get_object(self, *, key: str, max_bytes: int) -> bytes:
         try:
             response = await self._client.get_object(Bucket=self._bucket, Key=key)
-        except ClientError as error:
-            if _is_missing_key(error):
+        except _SDK_ERRORS as error:
+            if _is_not_found(error):
                 raise ObjectNotFoundError(details={"key": key}) from error
 
-            error_class = ObjectStorageTemporaryError if _is_server_failure(error) else ObjectStoragePersistentError
-            raise error_class(details={"key": key}) from error
-        except (BotocoreConnectionError, BotocoreHTTPClientError) as error:
-            raise ObjectStorageTemporaryError(details={"key": key}) from error
-        except BotoCoreError as error:
-            raise ObjectStoragePersistentError(details={"key": key}) from error
+            raise _to_storage_error(error=error, details={"key": key}) from error
 
         async with response["Body"] as body:
             if response["ContentLength"] > max_bytes:
@@ -102,9 +109,8 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
 
             try:
                 return await body.read()
-            # Обрыв тела aiobotocore не переводит в ошибку botocore — приходит исключение aiohttp.
-            except (BotocoreHTTPClientError, IncompleteReadError, AiohttpClientError) as error:
-                raise ObjectStorageTemporaryError(details={"key": key}) from error
+            except _SDK_ERRORS as error:
+                raise _to_storage_error(error=error, details={"key": key}) from error
 
     async def put_object(self, *, key: str, body: bytes, content_type: str, cache_control: str) -> None:
         try:
@@ -115,13 +121,8 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
                 ContentType=content_type,
                 CacheControl=cache_control,
             )
-        except ClientError as error:
-            error_class = ObjectStorageTemporaryError if _is_server_failure(error) else ObjectStoragePersistentError
-            raise error_class(details={"key": key}) from error
-        except (BotocoreConnectionError, BotocoreHTTPClientError) as error:
-            raise ObjectStorageTemporaryError(details={"key": key}) from error
-        except BotoCoreError as error:
-            raise ObjectStoragePersistentError(details={"key": key}) from error
+        except _SDK_ERRORS as error:
+            raise _to_storage_error(error=error, details={"key": key}) from error
 
     async def delete_objects(self, keys: Collection[str]) -> None:
         for batch in batched(iterable=keys, n=self._DELETE_OBJECTS_MAX_KEYS):
@@ -130,35 +131,49 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
                     Bucket=self._bucket,
                     Delete={"Objects": [{"Key": key} for key in batch], "Quiet": True},
                 )
-            except ClientError as error:
-                error_class = ObjectStorageTemporaryError if _is_server_failure(error) else ObjectStoragePersistentError
-                raise error_class(details={"keys": batch}) from error
-            except (BotocoreConnectionError, BotocoreHTTPClientError) as error:
-                raise ObjectStorageTemporaryError(details={"keys": batch}) from error
-            except BotoCoreError as error:
-                raise ObjectStoragePersistentError(details={"keys": batch}) from error
+            except _SDK_ERRORS as error:
+                raise _to_storage_error(error=error, details={"keys": batch}) from error
 
-            # Отказ по отдельным ключам приходит в теле ответа 200, а не исключением; повтор безопасен,
-            # поэтому такой отказ считается временным, а коды остаются в деталях для разбора.
+            # Отказ по отдельным ключам приходит в теле ответа 200, а не исключением, и статуса у него нет —
+            # только код. Повтор пачки безопасен, поэтому хватает одного временного кода среди отказов.
             failed_keys = {error.get("Key"): error.get("Code") for error in response.get("Errors", ())}
             if failed_keys:
-                raise ObjectStorageTemporaryError(details={"failed_keys": failed_keys})
+                error_class = (
+                    ObjectStorageTemporaryError
+                    if any(code in _TEMPORARY_ERROR_CODES for code in failed_keys.values())
+                    else ObjectStoragePersistentError
+                )
+                raise error_class(details={"failed_keys": failed_keys})
 
 
 def _signed_upload_headers(*, content_type: str) -> dict[str, str]:
     return {"Content-Type": content_type, "If-None-Match": "*"}
 
 
-# 404 приходит и на пропавший бакет. GET отличает его по коду ошибки, а у HEAD тела нет —
-# там остаётся только статус, и пропавший бакет от пропавшего объекта неотличим.
-def _is_not_found(error: ClientError) -> bool:
-    return error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == HTTPStatus.NOT_FOUND
+# 404 приходит и на пропавший бакет, а у ответа HEAD нет тела с кодом ошибки — пропавший бакет от
+# пропавшего объекта там неотличим. GET судит по тому же правилу, чтобы «нет объекта» значило одно и то же.
+def _is_not_found(error: Exception) -> bool:
+    return isinstance(error, ClientError) and _status_of(error) == HTTPStatus.NOT_FOUND
 
 
-def _is_missing_key(error: ClientError) -> bool:
-    return error.response.get("Error", {}).get("Code") == "NoSuchKey"
+def _to_storage_error(*, error: Exception, details: DictStrAny) -> ObjectStorageError:
+    if _is_temporary(error):
+        return ObjectStorageTemporaryError(details=details)
+
+    return ObjectStoragePersistentError(details=details)
 
 
-def _is_server_failure(error: ClientError) -> bool:
-    status = error.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
-    return status >= HTTPStatus.INTERNAL_SERVER_ERROR or status == HTTPStatus.TOO_MANY_REQUESTS
+def _is_temporary(error: Exception) -> bool:
+    if isinstance(error, ClientError):
+        status = _status_of(error)
+        return (
+            status >= HTTPStatus.INTERNAL_SERVER_ERROR
+            or status in _TEMPORARY_CLIENT_ERROR_STATUSES
+            or error.response.get("Error", {}).get("Code") in _TEMPORARY_ERROR_CODES
+        )
+
+    return isinstance(error, _TEMPORARY_SDK_ERRORS)
+
+
+def _status_of(error: ClientError) -> int:
+    return error.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)

@@ -25,6 +25,7 @@
   "invalid_cursor": "The list is out of date. Please reload it",
   "validation_error": "Please check the entered data and try again",
   "network": "Network error. Please try again.",
+  "temporary": "Couldn't complete the request. Please try again a bit later.",
   "invalid_response": "Unexpected server response. Please try again.",
   "fallback": "Something went wrong. Please try again."
 }

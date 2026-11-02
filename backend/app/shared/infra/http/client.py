@@ -10,8 +10,9 @@
 обёртке поверх BaseComponent — здесь её намеренно нет, чтобы не смешивать роли.
 """
 
-from http import HTTPMethod
-from typing import Any
+import logging
+from http import HTTPMethod, HTTPStatus
+from typing import Any, ClassVar
 
 import httpx
 
@@ -24,9 +25,6 @@ from app.shared.logging import get_logger
 
 logger = get_logger(__name__)
 
-# 502/503/504 — апстрим/гейтвей; 500 и 429 сознательно НЕ временные (см. exceptions.py)
-_TEMPORARY_STATUSES: frozenset[int] = frozenset({502, 503, 504})
-
 
 class BaseHTTPClient:
     """
@@ -34,7 +32,13 @@ class BaseHTTPClient:
 
     Подклассы пробрасывают в __init__ свой HTTPClientConfig и добавляют доменные методы.
     Закрытие сетевых ресурсов — через aclose(); вызывает её *Component-обёртка в shutdown.
+    Провайдер, у которого «повторите» означает ещё какой-то 4xx, переопределяет
+    `_TEMPORARY_CLIENT_ERROR_STATUSES`; любой 5xx временный всегда.
     """
+
+    _TEMPORARY_CLIENT_ERROR_STATUSES: ClassVar[frozenset[HTTPStatus]] = frozenset(
+        {HTTPStatus.REQUEST_TIMEOUT, HTTPStatus.TOO_MANY_REQUESTS}
+    )
 
     def __init__(self, *, config: HTTPClientConfig) -> None:
         self._config = config
@@ -85,9 +89,10 @@ class BaseHTTPClient:
         body = self._safe_parse_body(response)
         message = self._extract_error_message(body) or f"HTTP {response.status_code}"
         exc_class = (
-            ExternalAPITemporaryError if response.status_code in _TEMPORARY_STATUSES else ExternalAPIPersistentError
+            ExternalAPITemporaryError if self._is_temporary_status(response.status_code) else ExternalAPIPersistentError
         )
-        bound_log.error(
+        bound_log.log(
+            logging.WARNING if exc_class is ExternalAPITemporaryError else logging.ERROR,
             "http_client.error_response",
             status=response.status_code,
             error_message=message,
@@ -99,6 +104,10 @@ class BaseHTTPClient:
             message=message,
             body=body,
         )
+
+    @classmethod
+    def _is_temporary_status(cls, status_code: int) -> bool:
+        return status_code >= HTTPStatus.INTERNAL_SERVER_ERROR or status_code in cls._TEMPORARY_CLIENT_ERROR_STATUSES
 
     @staticmethod
     def _safe_parse_body(response: httpx.Response) -> Any:

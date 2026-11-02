@@ -1,18 +1,20 @@
 """
 Исключения для внешних HTTP-клиентов.
 
-Это инфраструктурные ошибки взаимодействия с внешними сервисами (Resend, провайдер-API
-и т.п.). Они НЕ наследуют ``AppError`` и не имеют категории — 404 от внешнего API
-не должен превращаться в HTTP 404 наружу (необработанными они дадут 500).
+Сбой внешнего API для нашего клиента — всегда наш серверный сбой: временный (503) или постоянный
+(500). Статус ответа провайдера в наш ответ не попадает — 404 от внешнего API не становится нашим 404.
 """
 
+from app.shared.exceptions import AppError, InternalError, TemporaryError
 
-class ExternalAPIError(Exception):
+
+class ExternalAPIError(AppError):
     """
-    Базовое исключение при ошибке внешнего HTTP API.
+    Маркер семьи сбоев внешнего HTTP API.
 
-    Содержит весь контекст вызова (метод, URL, статус, тело ответа), чтобы caller мог
-    принимать решение, не обращаясь к raw httpx-объектам или подшитым атрибутам.
+    Категории не задаёт: её даёт вторая база листа — `TemporaryError` или `InternalError`.
+    Несёт контекст вызова (метод, URL, статус, тело ответа) для лога и для caller'а, которому
+    нужно решение по конкретному сбою; наружу он не уходит.
     """
 
     def __init__(
@@ -24,25 +26,16 @@ class ExternalAPIError(Exception):
         message: str,
         body: object | None = None,
     ) -> None:
-        super().__init__(message)
+        super().__init__(message=message)
         self.method = method
         self.url = url
         self.status = status
-        self.message = message
         self.body = body
 
 
-class ExternalAPITemporaryError(ExternalAPIError):
-    """
-    Временная ошибка внешнего API: апстрим/гейтвей (502, 503, 504), таймаут, сетевая ошибка.
-
-    Кандидат на повтор запроса. Сюда НЕ входит 429 (требует Retry-After и backoff —
-    в этом классе caller'ом не обеспечивается) и 500 (часто детерминированный баг сервера).
-    """
+class ExternalAPITemporaryError(ExternalAPIError, TemporaryError):
+    """Временная ошибка внешнего API: любой 5xx, 429, 408, таймаут, сетевая ошибка — повтор позже может пройти."""
 
 
-class ExternalAPIPersistentError(ExternalAPIError):
-    """Постоянная ошибка внешнего API: 4xx (включая 429) и 500.
-
-    Повторять без дополнительной координации (backoff, правки запроса) бессмысленно.
-    """
+class ExternalAPIPersistentError(ExternalAPIError, InternalError):
+    """Постоянная ошибка внешнего API: остальные 4xx — тот же запрос не пройдёт и при повторе."""

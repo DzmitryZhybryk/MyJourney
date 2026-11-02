@@ -103,21 +103,14 @@ async def test_get_object_over_limit_raises_without_reading_body(
     assert stream.is_closed
 
 
-async def test_get_object_missing_object_raises_not_found(storage: S3ObjectStorage, s3_stubber: AioStubber) -> None:
-    """Отсутствующий объект при чтении — `ObjectNotFoundError`, отличимый от сбоя хранилища."""
-    s3_stubber.add_client_error(method="get_object", service_error_code="NoSuchKey", http_status_code=404)
+@pytest.mark.parametrize("error_code", ["NoSuchKey", "NoSuchBucket"])
+async def test_get_object_not_found_status_raises_not_found(
+    storage: S3ObjectStorage, s3_stubber: AioStubber, error_code: str
+) -> None:
+    """Любой 404 при чтении — `ObjectNotFoundError`: то же правило, что у HEAD, где кода ошибки нет."""
+    s3_stubber.add_client_error(method="get_object", service_error_code=error_code, http_status_code=404)
 
     with pytest.raises(ObjectNotFoundError):
-        await storage.get_object(key="u1/f1/original.jpg", max_bytes=100)
-
-
-async def test_get_object_missing_bucket_raises_persistent_error(
-    storage: S3ObjectStorage, s3_stubber: AioStubber
-) -> None:
-    """Отсутствующий бакет при чтении — постоянный сбой, а не отсутствующий объект, хотя статус тот же 404."""
-    s3_stubber.add_client_error(method="get_object", service_error_code="NoSuchBucket", http_status_code=404)
-
-    with pytest.raises(ObjectStoragePersistentError):
         await storage.get_object(key="u1/f1/original.jpg", max_bytes=100)
 
 
@@ -190,13 +183,19 @@ async def test_delete_objects_without_keys_sends_nothing(storage: S3ObjectStorag
     await storage.delete_objects([])
 
 
-async def test_delete_objects_failed_keys_raise_temporary_error_with_codes(
-    storage: S3ObjectStorage, s3_stubber: AioStubber
+@pytest.mark.parametrize("temporary_code", ["RequestTimeout", "SlowDown", "InternalError", "ServiceUnavailable"])
+async def test_delete_objects_failed_keys_with_one_temporary_code_raise_temporary_error(
+    storage: S3ObjectStorage, s3_stubber: AioStubber, temporary_code: str
 ) -> None:
-    """Отказ по ключам в ответе 200 — временный сбой, коды отказов в деталях ошибки."""
+    """Отказ по ключам в ответе 200 с хотя бы одним временным кодом — временный сбой, коды в деталях."""
     s3_stubber.add_response(
         method="delete_objects",
-        service_response={"Errors": [{"Key": "u1/f1/original.jpg", "Code": "AccessDenied", "Message": "Denied"}]},
+        service_response={
+            "Errors": [
+                {"Key": "u1/f1/original.jpg", "Code": "AccessDenied", "Message": "Denied"},
+                {"Key": "u1/f2/original.jpg", "Code": temporary_code, "Message": "Retry"},
+            ]
+        },
         expected_params={
             "Bucket": "media-private",
             "Delete": {"Objects": [{"Key": "u1/f1/original.jpg"}, {"Key": "u1/f2/original.jpg"}], "Quiet": True},
@@ -206,18 +205,41 @@ async def test_delete_objects_failed_keys_raise_temporary_error_with_codes(
     with pytest.raises(ObjectStorageTemporaryError) as error_info:
         await storage.delete_objects(["u1/f1/original.jpg", "u1/f2/original.jpg"])
 
+    assert error_info.value.details == {
+        "failed_keys": {"u1/f1/original.jpg": "AccessDenied", "u1/f2/original.jpg": temporary_code}
+    }
+
+
+async def test_delete_objects_failed_keys_without_temporary_code_raise_persistent_error(
+    storage: S3ObjectStorage, s3_stubber: AioStubber
+) -> None:
+    """Отказ по ключам только с постоянными кодами — постоянный сбой: повтор пачки не удалит их."""
+    s3_stubber.add_response(
+        method="delete_objects",
+        service_response={"Errors": [{"Key": "u1/f1/original.jpg", "Code": "AccessDenied", "Message": "Denied"}]},
+        expected_params={
+            "Bucket": "media-private",
+            "Delete": {"Objects": [{"Key": "u1/f1/original.jpg"}], "Quiet": True},
+        },
+    )
+
+    with pytest.raises(ObjectStoragePersistentError) as error_info:
+        await storage.delete_objects(["u1/f1/original.jpg"])
+
     assert error_info.value.details == {"failed_keys": {"u1/f1/original.jpg": "AccessDenied"}}
 
 
 @pytest.mark.parametrize(("operation", "call"), _STORAGE_CALLS, ids=[operation for operation, _ in _STORAGE_CALLS])
 @pytest.mark.parametrize(
-    ("status", "error_class"),
+    ("error_code", "status", "error_class"),
     [
-        (500, ObjectStorageTemporaryError),
-        (503, ObjectStorageTemporaryError),
-        (429, ObjectStorageTemporaryError),
-        (400, ObjectStoragePersistentError),
-        (403, ObjectStoragePersistentError),
+        ("Error", 500, ObjectStorageTemporaryError),
+        ("Error", 503, ObjectStorageTemporaryError),
+        ("Error", 408, ObjectStorageTemporaryError),
+        ("Error", 429, ObjectStorageTemporaryError),
+        ("RequestTimeout", 400, ObjectStorageTemporaryError),
+        ("Error", 400, ObjectStoragePersistentError),
+        ("AccessDenied", 403, ObjectStoragePersistentError),
     ],
 )
 async def test_storage_call_classifies_error_response(
@@ -225,11 +247,12 @@ async def test_storage_call_classifies_error_response(
     s3_stubber: AioStubber,
     operation: str,
     call: Callable[[S3ObjectStorage], Awaitable[object]],
+    error_code: str,
     status: int,
     error_class: type[Exception],
 ) -> None:
-    """Ответ 5xx и 429 — временный сбой, остальные отказы хранилища — постоянный."""
-    s3_stubber.add_client_error(method=operation, service_error_code="Error", http_status_code=status)
+    """Ответ 5xx, 408, 429 или с временным кодом S3 — временный сбой, остальные отказы — постоянный."""
+    s3_stubber.add_client_error(method=operation, service_error_code=error_code, http_status_code=status)
 
     with pytest.raises(error_class):
         await call(storage)

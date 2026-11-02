@@ -47,8 +47,11 @@
 - Source: PR #176, 2026-10-30
 
 ## The exception tree branches by reaction (`ErrorCategoryEnum`) under one root, `AppError`
-- A failure subclasses the category class for its reaction; a family (`ObjectStorageError`) or a layer is not a level
-  of the tree. Every leaf declares its own `code` and codes are unique — guarded by `tests/unit/shared/exceptions/test_codes.py`.
+- A failure subclasses the category class for its reaction; a layer is not a level of the tree. A family of an
+  external dependency (`ExternalAPIError`, `ObjectStorageError`) is a marker under `AppError` with no category, `code`
+  or `message`; each leaf pairs it with a category base (`(Family, TemporaryError)` / `(Family, InternalError)`) and
+  inherits that base's `code`. Every other leaf declares its own `code`; codes are unique — guarded by
+  `tests/unit/shared/exceptions/test_codes.py`.
 - Why: the category is the only axis anything branches on — HTTP status and log level. Nothing catches by origin or
   layer, and `category` is a class attribute that works wherever the class sits.
 - Rejected: `Internal`/`External` at the top, `External` split into temporary/persistent — nothing catches `External`;
@@ -60,7 +63,12 @@
   already covers an expected absence.
 - Rejected: root named `BaseDomainError` (until 2026-11-01) — the root also covers DI, S3 and pagination, and the
   name kept raising the question whether the tree is right.
-- Source: exception hierarchy review, 2026-10-31
+- Rejected: an own `code` per family leaf (`media.object_storage_temporary_error`, until 2026-11-02) — a client reacts
+  the same to any provider's 500 or 503; a use case that needs the client to tell them apart catches the family and
+  raises its own domain error.
+- Rejected: the family as a category base (`ObjectStorageError(InternalError)`, until 2026-11-02) — its temporary
+  leaf then answers 500.
+- Source: exception hierarchy review, 2026-10-31; external failure classification (#33), 2026-11-02
 
 ## A false assumption of our own code raises `InvariantViolationError`, outside the `AppError` tree
 - Its subclasses carry no category and no `code`; their data goes into the message text. HTTP answers the generic
@@ -74,6 +82,34 @@
   and such a class would absorb adapter failures with a different reaction (retry, provider config, not a code fix).
 - Rejected: `AssertionError` as the base — accurate in meaning, misleading in a traceback.
 - Source: exception hierarchy review, 2026-10-31
+
+## An external call's adapter classifies a failure as temporary or persistent; the caller decides the retry
+- `TemporaryError` (category `TEMPORARY`: 503, WARNING) is the base of every transient failure of a dependency; a
+  persistent one is an `InternalError`. Background tasks retry by `retry_exceptions={TemporaryError}`.
+- Temporary: any 5xx, 408, 429, timeout, network failure, a broken response body, and the S3 retry codes
+  `RequestTimeout`, `SlowDown`, `InternalError`, `ServiceUnavailable`; every other 4xx is persistent. A provider that
+  signals "retry" with another 4xx overrides `BaseHTTPClient._TEMPORARY_CLIENT_ERROR_STATUSES`.
+- Why: the adapter knows what failed, only the caller knows what to do — a task retries in minutes, a request answers
+  now. One base keeps every task's retry list from growing per provider, and the category gives the request path an
+  honest 503 and a WARNING instead of a 500 that reads as our bug.
+- Rejected: a marker mixin without a category — the request path still answers 500 and logs ERROR, and a second
+  axis drifts from the category.
+- Rejected: one shared temporary/persistent pair without families — ports lose a typed `Raises:`.
+- Rejected: 500 and 429 persistent (until 2026-11-02) — "429 needs `Retry-After` and backoff" is weak while
+  procrastinate backs off; S3 documents 500 and `SlowDown` as retryable.
+- Rejected: botocore's full transient code list — most of its codes belong to DynamoDB, EC2 and Lambda.
+- Revisit when: a provider's `Retry-After` must be honoured.
+- Source: external failure classification (#33), 2026-10-31
+
+## A server-fault response carries only the `code` and the class message
+- For a category with `ErrorCategoryEnum.is_server_fault` (`TEMPORARY`, `INTERNAL`) the envelope drops `details` and
+  the instance message; both stay in the log.
+- Why: instance data of a server fault describes our internals (storage keys carry the owner id), and the client's
+  reaction does not depend on it. The flag sits on the category, so a gRPC or GraphQL adapter applies the same rule.
+- Rejected: deciding by HTTP status ≥ 500 in the handler — every future transport would re-derive the rule in its
+  own terms.
+- Rejected: instance message and `details` on every error (until 2026-11-02) — leaked internals through a 500.
+- Source: external failure classification (#33), 2026-11-02
 
 ## Log lines of one request are joined by the OpenTelemetry trace context, not an own request id
 - The API gives FastAPI's native telemetry a `TracerProvider` without an exporter (`app.shared.infra.telemetry`); a

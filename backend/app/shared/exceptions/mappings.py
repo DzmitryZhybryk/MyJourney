@@ -23,6 +23,7 @@ _CATEGORY_HTTP_STATUS: dict[ErrorCategoryEnum, int] = {
     ErrorCategoryEnum.GONE: 410,
     ErrorCategoryEnum.UNPROCESSABLE: 422,
     ErrorCategoryEnum.RATE_LIMITED: 429,
+    ErrorCategoryEnum.TEMPORARY: 503,
     ErrorCategoryEnum.INTERNAL: 500,
 }
 

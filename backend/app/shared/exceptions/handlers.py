@@ -28,10 +28,17 @@ def _create_error_response(exc: AppError) -> JSONResponse:
     """
     Создает HTTP ответ для исключения приложения используя типизированную схему.
 
+    Серверный сбой отдаёт только `code` и сообщение своего класса: детали и сообщение экземпляра
+    описывают наше устройство и остаются в логе.
+
     Scenarios:
         - любой запрос, завершившийся ошибкой приложения
     """
-    error_response = ErrorResponse(code=exc.code, message=exc.message, details=exc.details)
+    if exc.category.is_server_fault:
+        error_response = ErrorResponse(code=exc.code, message=type(exc).message)
+    else:
+        error_response = ErrorResponse(code=exc.code, message=exc.message, details=exc.details)
+
     return JSONResponse(
         status_code=resolve_http_status(exc),
         content=error_response.model_dump(mode="json"),

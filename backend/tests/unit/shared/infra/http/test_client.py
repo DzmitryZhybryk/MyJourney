@@ -2,8 +2,9 @@
 Unit-тесты ``BaseHTTPClient`` через ``httpx.MockTransport`` (без сети).
 
 Покрывают маппинг ответов внешнего API в ``ExternalAPI*Error``: успех проходит,
-таймаут/сетевая/5xx-апстрим → temporary (кандидат на retry), 4xx/500/429 →
-persistent, плюс извлечение сообщения об ошибке из тела.
+таймаут, сетевая ошибка, любой 5xx, 408 и 429 → temporary (кандидат на retry), остальные
+4xx → persistent; набор временных 4xx переопределяется подклассом; уровень лога следует
+классу ошибки; плюс извлечение сообщения об ошибке из тела.
 
 Клиент создаётся фабрикой ``make_http_client`` (conftest) — она же закрывает его в
 teardown. ``install_mock_transport`` вызывается ДО создания клиента: он патчит
@@ -11,15 +12,17 @@ teardown. ``install_mock_transport`` вызывается ДО создания 
 """
 
 from collections.abc import Callable
+from http import HTTPStatus
 
 import httpx
 import pytest
+from structlog.testing import capture_logs
 
 from app.shared.infra.http.client import BaseHTTPClient
-from app.shared.infra.http.exceptions import ExternalAPIPersistentError, ExternalAPITemporaryError
+from app.shared.infra.http.exceptions import ExternalAPIError, ExternalAPIPersistentError, ExternalAPITemporaryError
 
 type _InstallTransport = Callable[[Callable[[httpx.Request], httpx.Response]], None]
-type _MakeClient = Callable[[], BaseHTTPClient]
+type _MakeClient = Callable[..., BaseHTTPClient]
 
 
 async def test_get_success_returns_response(
@@ -80,40 +83,75 @@ async def test_network_error_raises_temporary_error(
         await client.get("/ping")
 
 
-async def test_upstream_503_raises_temporary_error(
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503, 504, 599])
+async def test_temporary_status_raises_temporary_error(
     install_mock_transport: _InstallTransport,
     make_http_client: _MakeClient,
+    status: int,
 ) -> None:
-    """503 (апстрим/гейтвей) → ``ExternalAPITemporaryError``."""
-    install_mock_transport(lambda request: httpx.Response(503))
+    """Любой 5xx, 408 и 429 → ``ExternalAPITemporaryError``: повтор позже может пройти."""
+    install_mock_transport(lambda request: httpx.Response(status))
     client = make_http_client()
 
     with pytest.raises(ExternalAPITemporaryError):
         await client.get("/ping")
 
 
-async def test_server_500_raises_persistent_error(
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 409, 422, 499])
+async def test_other_client_error_status_raises_persistent_error(
     install_mock_transport: _InstallTransport,
     make_http_client: _MakeClient,
+    status: int,
 ) -> None:
-    """500 сознательно НЕ временный → ``ExternalAPIPersistentError`` (без retry)."""
-    install_mock_transport(lambda request: httpx.Response(500))
+    """Остальные 4xx → ``ExternalAPIPersistentError``: тот же запрос не пройдёт и при повторе."""
+    install_mock_transport(lambda request: httpx.Response(status))
     client = make_http_client()
 
     with pytest.raises(ExternalAPIPersistentError):
         await client.get("/ping")
 
 
-async def test_rate_limited_429_raises_persistent_error(
+class _ConflictRetryingClient(BaseHTTPClient):
+    _TEMPORARY_CLIENT_ERROR_STATUSES = frozenset({HTTPStatus.CONFLICT})
+
+
+@pytest.mark.parametrize(
+    ("status", "error_class"),
+    [
+        (409, ExternalAPITemporaryError),
+        (429, ExternalAPIPersistentError),
+        (503, ExternalAPITemporaryError),
+    ],
+)
+async def test_provider_subclass_overrides_temporary_client_error_statuses(
     install_mock_transport: _InstallTransport,
     make_http_client: _MakeClient,
+    status: int,
+    error_class: type[Exception],
 ) -> None:
-    """429 сознательно НЕ временный (нужен backoff) → ``ExternalAPIPersistentError``."""
-    install_mock_transport(lambda request: httpx.Response(429))
+    """Подкласс провайдера заменяет набор временных 4xx; любой 5xx остаётся временным."""
+    install_mock_transport(lambda request: httpx.Response(status))
+    client = make_http_client(client_class=_ConflictRetryingClient)
+
+    with pytest.raises(error_class):
+        await client.get("/ping")
+
+
+@pytest.mark.parametrize(("status", "expected_level"), [(503, "warning"), (400, "error")])
+async def test_error_response_log_level_follows_error_class(
+    install_mock_transport: _InstallTransport,
+    make_http_client: _MakeClient,
+    status: int,
+    expected_level: str,
+) -> None:
+    """Строка лога ответа с ошибкой: временный сбой — WARNING, постоянный — ERROR."""
+    install_mock_transport(lambda request: httpx.Response(status))
     client = make_http_client()
 
-    with pytest.raises(ExternalAPIPersistentError):
+    with capture_logs() as logs, pytest.raises(ExternalAPIError):
         await client.get("/ping")
+
+    assert [log["log_level"] for log in logs if log["event"] == "http_client.error_response"] == [expected_level]
 
 
 async def test_client_error_extracts_message_from_body(
