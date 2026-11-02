@@ -57,13 +57,13 @@ async def send_verification_email(
     Args:
         context: Procrastinate JobContext с реестром компонентов воркера в
             ``additional_context``; из реестра берётся ``EmailTransportPort``
-        user_id: ID пользователя; используется только для логов и lock'а
+        user_id: ID пользователя; используется только для лога и lock'а
             (lock задаётся при defer'е в сервисе, не здесь)
-        email: Адрес получателя
+        email: Адрес получателя; в лог не пишется
         code: Plaintext-код, который увидит пользователь в письме
     """
     registry: ComponentRegistry = context.additional_context[WORKER_REGISTRY_KEY]
     transport = registry.get(EmailTransportPort)
     message = render_verification_email(email=email, code=code)
     await transport.send(message=message)
-    logger.info("auth.verification_email.sent", user_id=user_id, email=email)
+    logger.info("auth.verification_email.sent", user_id=user_id)

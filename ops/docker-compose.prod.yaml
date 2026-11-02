@@ -121,16 +121,18 @@ services:
       - default
     logging: *default-logging
 
-  promtail:
-    image: grafana/promtail:3.6.3@sha256:130b6dd63277d99ce87560c0266c0c30d07bc15ba0a8a590d42215465d4f5363
-    container_name: myjourney_promtail
+  alloy:
+    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
+    container_name: myjourney_alloy
     command:
-      - -config.file=/etc/promtail/config.yml
-      - -log.level=error
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
     volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./ops/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./ops/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
     depends_on:
       - loki
     restart: unless-stopped
@@ -150,6 +152,7 @@ services:
       GF_LOG_LEVEL: warn
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./ops/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - loki
     restart: unless-stopped
@@ -188,6 +191,7 @@ volumes:
   pg_data:
   pg_backups:
   loki_data:
+  alloy_data:
   grafana_data:
   caddy_data:
   caddy_config:

@@ -21,6 +21,7 @@ async def run_components(
     остановка в прямом порядке отняла бы ресурс у того, кто им ещё пользуется. Если ``startup``
     очередного компонента падает (или старт отменён), останавливаются только уже поднятые, а
     исходная ошибка летит дальше. Упавший компонент сам освобождает то, что успел открыть.
+    Сбой старта пишется в лог с именем компонента — трейсбек сам по себе его не называет.
 
     Scenarios:
         - старт и остановка API-процесса
@@ -37,7 +38,12 @@ async def run_components(
     started: list[BaseComponent] = []
     try:
         for component in components:
-            await component.startup(registry)
+            try:
+                await component.startup(registry)
+            except Exception:
+                logger.exception("component.startup_failed", component=type(component).__name__)
+                raise
+
             started.append(component)
 
         yield

@@ -8,10 +8,10 @@
 
 ```
 Интернет ──443/80──▶ Caddy (TLS, reverse-proxy) ─┬─ /v1/*  ▶ app:8000  (FastAPI)
-                                                  └─ /*     ▶ frontend:80 (nginx + SPA)
+                                                  └─ /*     ▶ frontend:8080 (nginx + SPA)
                      app/worker ▶ myjourney_pg (Postgres, НЕ виден снаружи)
                      myjourney_pg_backup ▶ pg_dump по расписанию
-                     loki/promtail/grafana — логирование (наружу не публикуется)
+                     loki/alloy/grafana — логирование (наружу не публикуется)
 ```
 
 - **Наружу открыт только Caddy** (80/443). Postgres/Grafana/Loki/app/frontend — без проброса портов,
@@ -22,7 +22,7 @@
 
 ## Предпосылки
 
-- **VPS** (рекомендуется тариф от 6 GB RAM: postgres + app + worker + frontend + loki + grafana + caddy).
+- **VPS** (рекомендуется тариф от 6 GB RAM: postgres + app + worker + frontend + loki + alloy + grafana + caddy).
 - **Домен** с возможностью править DNS.
 - Аккаунт **Resend** для отправки email (верификация домена-отправителя).
 
@@ -251,8 +251,12 @@ docker exec -i myjourney_pg sh -c \
 ## 8. Логи и мониторинг
 
 - **Loki** хранит логи 7 дней (`ops/loki.yaml`, `retention_period: 168h`).
+- **Alloy** собирает логи контейнеров `myjourney*` через Docker API (`ops/alloy-config.alloy`) и помнит позицию
+  чтения в томе `alloy_data`. Первый запуск один раз перечитывает историю контейнеров — дубли в Loki за это
+  окно ожидаемы. Устаревший контейнер `myjourney_promtail` удаляет `make prod-up` (`--remove-orphans`).
 - Docker json-file логи ограничены `10m × 3` на контейнер (compose + `daemon.json`).
-- **Grafana** наружу не публикуется. Доступ админа — по SSH-туннелю:
+- **Grafana** наружу не публикуется; источник данных Loki подключается сам
+  (`ops/grafana/provisioning/datasources/`). Доступ админа — по SSH-туннелю:
 
   ```bash
   ssh -L 3000:localhost:3000 <user>@<VPS>

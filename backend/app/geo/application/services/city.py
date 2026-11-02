@@ -9,6 +9,7 @@ from app.geo.application.schemas.results import (
     ResolvedCity,
 )
 from app.shared.logging import get_logger
+from app.shared.types import DictStrAny
 
 logger = get_logger(__name__)
 
@@ -46,16 +47,17 @@ class CityService:
             )
 
         items: list[CitySearchItem] = []
+        cities_without_name: list[DictStrAny] = []
         for city_entity in cities:
             name = city_entity.display_name(language=command.language)
             if city_entity.localized_name(language=command.language) is None:
-                logger.info(
-                    "geo.city_name_missing",
-                    language=command.language,
-                    city_id=city_entity.city_id,
-                    name=name,
-                    country_code=city_entity.country_code,
-                    population=city_entity.population,
+                cities_without_name.append(
+                    {
+                        "city_id": city_entity.city_id,
+                        "name": name,
+                        "country_code": city_entity.country_code,
+                        "population": city_entity.population,
+                    }
                 )
 
             items.append(
@@ -67,6 +69,14 @@ class CityService:
                     longitude=city_entity.longitude,
                     population=city_entity.population,
                 )
+            )
+
+        if cities_without_name:
+            logger.info(
+                "geo.city_names_missing",
+                language=command.language,
+                count=len(cities_without_name),
+                cities=tuple(cities_without_name),
             )
 
         return CitySearchResult(items=tuple(items))

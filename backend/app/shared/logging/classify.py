@@ -1,49 +1,53 @@
-"""Классификация исключений для логирования: HTTP-статус и log-level."""
+"""Уровень строки лога запроса: по исключению, которым закончился запрос, или по статусу ответа."""
 
 import logging
+from http import HTTPStatus
+
+from fastapi.exceptions import RequestValidationError
 
 from app.shared.exceptions import AppError, ErrorCategoryEnum
-from app.shared.exceptions.mappings import resolve_http_status
-
-
-def get_status_code_from_exception(exc: Exception) -> int:
-    """
-    Определяет HTTP статус код на основе типа исключения.
-
-    Делегирует единому HTTP-резолву (`resolve_http_status`), чтобы статус в логах
-    совпадал со статусом HTTP-ответа.
-
-    Scenarios:
-        - лог HTTP-запроса, завершившегося исключением
-
-    Args:
-        exc: Исключение
-
-    Returns:
-        HTTP статус код
-    """
-    return resolve_http_status(exc)
 
 
 def get_log_level_for_exception(exc: Exception) -> int:
     """
-    Определяет уровень логирования на основе типа исключения.
+    Определяет уровень лога по исключению, которым закончился запрос.
 
     Scenarios:
-        - лог HTTP-запроса, завершившегося исключением
+        - строка лога запроса, закончившегося ошибкой
 
     Args:
         exc: Исключение
 
     Returns:
-        Уровень логирования (logging.ERROR, logging.WARNING и т.д.)
+        ``logging.ERROR`` для нашего сбоя (категория INTERNAL или исключение вне дерева ошибок),
+        ``logging.WARNING`` для ошибки клиента (остальные категории, невалидный запрос)
     """
     if isinstance(exc, AppError):
-        if exc.category is ErrorCategoryEnum.INTERNAL:
-            # Внутренние ошибки - error
-            return logging.ERROR
-        # Клиентские ошибки - warning
+        return logging.ERROR if exc.category is ErrorCategoryEnum.INTERNAL else logging.WARNING
+
+    if isinstance(exc, RequestValidationError):
         return logging.WARNING
 
-    # Необработанные исключения - error
     return logging.ERROR
+
+
+def get_log_level_for_status(status_code: int) -> int:
+    """
+    Определяет уровень лога по статусу ответа, когда запрос закончился без исключения.
+
+    Scenarios:
+        - строка лога запроса: 404 на неизвестный путь, 405, ответ с кодом ошибки, собранный вручную
+
+    Args:
+        status_code: HTTP-статус ответа
+
+    Returns:
+        ``logging.ERROR`` для 5xx, ``logging.WARNING`` для 4xx, иначе ``logging.INFO``
+    """
+    if status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return logging.ERROR
+
+    if status_code >= HTTPStatus.BAD_REQUEST:
+        return logging.WARNING
+
+    return logging.INFO

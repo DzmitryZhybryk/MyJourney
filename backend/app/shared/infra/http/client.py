@@ -62,7 +62,7 @@ class BaseHTTPClient:
         try:
             response = await self._client.request(method=method.value, url=endpoint, **kwargs)
         except httpx.TimeoutException as err:
-            bound_log.warning("Внешний API: таймаут", error=str(err))
+            bound_log.warning("http_client.timeout", error=str(err))
             raise ExternalAPITemporaryError(
                 method=method.value,
                 url=f"{self._config.base_url}{endpoint}",
@@ -70,7 +70,7 @@ class BaseHTTPClient:
                 message="Запрос ко внешнему API завершился по таймауту",
             ) from err
         except httpx.RequestError as err:
-            bound_log.warning("Внешний API: сетевая ошибка", error=str(err))
+            bound_log.warning("http_client.network_error", error=str(err))
             raise ExternalAPITemporaryError(
                 method=method.value,
                 url=f"{self._config.base_url}{endpoint}",
@@ -79,7 +79,7 @@ class BaseHTTPClient:
             ) from err
 
         if response.is_success:
-            bound_log.debug("Внешний API: успех", status=response.status_code)
+            bound_log.debug("http_client.success", status=response.status_code)
             return response
 
         body = self._safe_parse_body(response)
@@ -88,7 +88,7 @@ class BaseHTTPClient:
             ExternalAPITemporaryError if response.status_code in _TEMPORARY_STATUSES else ExternalAPIPersistentError
         )
         bound_log.error(
-            "Внешний API: ошибка ответа",
+            "http_client.error_response",
             status=response.status_code,
             error_message=message,
         )

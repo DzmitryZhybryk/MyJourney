@@ -20,6 +20,7 @@ from app.shared.infra.email.component import ResendComponent
 from app.shared.infra.postgres.component import SqlAlchemyComponent
 from app.shared.infra.procrastinate.bus_component import TaskBusComponent
 from app.shared.infra.procrastinate.component import ProcrastinateComponent
+from app.shared.infra.telemetry import get_api_telemetry_config
 from app.shared.logging import configure_logging, get_logger
 from app.shared.logging.middleware import HTTPLoggingMiddleware
 from app.shared.schemas.base import BFastAPI
@@ -81,7 +82,7 @@ def create_default_app(
         """
         async with run_components(components=components_list, registry=registry):
             logger.info(
-                "Application started successfully",
+                "api.started",
                 service_name=_app.title,
                 version=_app.version,
             )
@@ -114,6 +115,7 @@ def create_app() -> BFastAPI:
         version=version("MyJourney"),
         description="Personal travel atlas: journeys, cities and routes on a globe",
         generate_unique_id_function=route_operation_id,
+        telemetry=get_api_telemetry_config(),
         components=[
             SqlAlchemyComponent(settings=settings),
             ResendComponent(settings=settings),
@@ -124,8 +126,6 @@ def create_app() -> BFastAPI:
         **docs_kwargs,
     )
 
-    # Регистрируем unified middleware для логирования HTTP запросов и исключений
-    # Заменяет стандартное логирование uvicorn.access
     app.add_middleware(HTTPLoggingMiddleware)
 
     register_exception_handlers(app)

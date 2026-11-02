@@ -28,11 +28,11 @@ def test_get_returns_registered_value() -> None:
     assert registry.get(_ComponentA) is value
 
 
-def test_get_unregistered_key_raises() -> None:
-    """``get`` незарегистрированного ключа бросает ``ComponentNotRegisteredError``."""
+def test_get_unregistered_key_raises_naming_registry_and_key() -> None:
+    """``get`` незарегистрированного ключа бросает ``ComponentNotRegisteredError`` с именем реестра и ключа."""
     registry = ComponentRegistry()
 
-    with pytest.raises(ComponentNotRegisteredError):
+    with pytest.raises(ComponentNotRegisteredError, match=r"registry='ComponentRegistry'.*_ComponentA"):
         registry.get(_ComponentA)
 
 

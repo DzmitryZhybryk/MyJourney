@@ -1,118 +1,48 @@
-"""Сборка контекста логирования для HTTP-запросов и ошибок."""
+"""Контекст строки лога: номер HTTP-запроса, в котором она написана, и значения, привязанные к этому запросу."""
 
-from starlette.requests import Request
-
-from app.shared.exceptions import AppError
-from app.shared.logging.classify import get_status_code_from_exception
-from app.shared.types import DictStrAny
+import structlog
+from opentelemetry import trace
+from structlog.typing import EventDict, WrappedLogger
 
 
-def extract_request_context(request: Request) -> DictStrAny:
+def bind_log_context(**values: object) -> None:
     """
-    Извлекает базовый контекст из HTTP запроса.
+    Привязывает значения к текущему запросу: structlog допишет их в каждую следующую строку лога этого запроса.
 
     Scenarios:
-        - лог каждого HTTP-запроса
+        - аутентификация запроса: ``user_id`` в строках лога запроса
 
     Args:
-        request: HTTP запрос
-
-    Returns:
-        Словарь с базовым контекстом запроса
+        **values: Поля строки лога и их значения
     """
-    context: DictStrAny = {}
-
-    if request.client:
-        context["client_ip"] = request.client.host
-
-    if request.url.query:
-        context["query_params"] = request.url.query
-
-    if hasattr(request.state, "user_id"):
-        context["user_id"] = str(request.state.user_id)
-
-    if hasattr(request.state, "request_id"):
-        context["request_id"] = str(request.state.request_id)
-
-    return context
+    structlog.contextvars.bind_contextvars(**values)
 
 
-def build_log_context(
-    *,
-    request: Request,
-    status_code: int,
-    process_time: float,
-    context: DictStrAny | None = None,
-) -> DictStrAny:
+def add_trace_context(_logger: WrappedLogger, _method_name: str, event_dict: EventDict) -> EventDict:
     """
-    Формирует полный контекст для логирования HTTP запроса.
+    Дописывает в строку лога номер запроса (``trace_id``) и текущего span'а (``span_id``), если строка
+    пишется во время HTTP-запроса.
+
+    По ``trace_id`` в Grafana находятся все строки одного запроса; ``span_id`` связывает строку со span'ом в
+    трейсе. Вне запроса (старт, воркер, CLI) номеров нет, и строка не меняется.
 
     Scenarios:
-        - лог каждого HTTP-запроса
+        - любая строка лога, написанная во время HTTP-запроса API
 
     Args:
-        request: HTTP запрос
-        status_code: HTTP статус код ответа
-        process_time: Время обработки запроса в секундах
-        context: Дополнительный контекст (например, из extract_request_context)
+        _logger: Логгер (не используется; сигнатура процессора structlog)
+        _method_name: Имя метода лога (не используется)
+        event_dict: Поля строки
 
     Returns:
-        Полный контекст для логирования
+        Поля строки, с ``trace_id`` и ``span_id`` — если строка пишется внутри запроса
     """
-    log_context = {
-        "method": request.method,
-        "path": request.url.path,
-        "status_code": status_code,
-        "process_time": round(process_time, 4),
+    span_context = trace.get_current_span().get_span_context()
+    if not span_context.is_valid:
+        return event_dict
+
+    return {
+        **event_dict,
+        "trace_id": format(span_context.trace_id, "032x"),
+        "span_id": format(span_context.span_id, "016x"),
     }
-
-    if context:
-        log_context.update(context)
-    else:
-        log_context.update(extract_request_context(request))
-
-    return log_context
-
-
-def build_error_log_context(
-    *,
-    request: Request,
-    exc: Exception,
-    process_time: float,
-    context: DictStrAny | None = None,
-) -> tuple[DictStrAny, int, bool]:
-    """
-    Формирует контекст для логирования ошибки и определяет параметры логирования.
-
-    Scenarios:
-        - лог HTTP-запроса, завершившегося исключением
-
-    Args:
-        request: HTTP запрос
-        exc: Исключение
-        process_time: Время обработки запроса в секундах
-        context: Дополнительный контекст (например, из extract_request_context)
-
-    Returns:
-        Tuple из (контекст логирования, статус код, нужно ли включать traceback)
-    """
-    status_code = get_status_code_from_exception(exc)
-
-    log_context = build_log_context(
-        request=request,
-        status_code=status_code,
-        process_time=process_time,
-        context=context,
-    )
-
-    log_context["error_type"] = type(exc).__name__
-
-    if isinstance(exc, AppError):
-        log_context["error_code"] = exc.code
-        log_context["error_message"] = exc.message
-        include_traceback = False
-    else:
-        log_context["error_message"] = str(exc)
-        include_traceback = True
-
-    return log_context, status_code, include_traceback
