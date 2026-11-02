@@ -6,6 +6,7 @@ Unit-тесты ``run_components`` — общего жизненного цик�
 """
 
 import pytest
+from structlog.testing import capture_logs
 
 from app.shared.infra.di.lifecycle import run_components
 from app.shared.infra.di.registry import ComponentRegistry
@@ -43,6 +44,24 @@ async def test_run_components_failed_startup_stops_started_and_reraises() -> Non
     assert events == ["start:first", "stop:first"]
 
 
+async def test_run_components_failed_startup_logs_component_with_traceback() -> None:
+    """Сбой старта пишется в лог ошибкой с именем компонента и трейсбеком — трейсбек сам компонент не называет."""
+    components = [FakeComponent(name="broken", events=[], startup_error=RuntimeError("db unreachable"))]
+
+    with capture_logs() as logs, pytest.raises(RuntimeError, match="db unreachable"):
+        async with run_components(components=components, registry=ComponentRegistry()):
+            pass
+
+    assert logs == [
+        {
+            "event": "component.startup_failed",
+            "component": "FakeComponent",
+            "log_level": "error",
+            "exc_info": True,
+        }
+    ]
+
+
 async def test_run_components_failed_shutdown_stops_the_rest_and_reraises_first() -> None:
     """Остановка двух компонентов падает: средний всё равно остановлен, наружу — первая по порядку остановки ошибка."""
     events: list[str] = []
@@ -54,12 +73,16 @@ async def test_run_components_failed_shutdown_stops_the_rest_and_reraises_first(
         FakeComponent(name="third", events=events, shutdown_error=third_error),
     ]
 
-    with pytest.raises(RuntimeError) as exc_info:
+    with capture_logs() as logs, pytest.raises(RuntimeError) as exc_info:
         async with run_components(components=components, registry=ComponentRegistry()):
             pass
 
     assert exc_info.value is third_error
     assert events == ["start:first", "start:second", "start:third", "stop:second"]
+    assert [(entry["event"], entry["log_level"]) for entry in logs] == [
+        ("component.shutdown_failed", "error"),
+        ("component.shutdown_failed", "error"),
+    ]
 
 
 async def test_run_components_body_error_stops_all_and_keeps_body_error() -> None:

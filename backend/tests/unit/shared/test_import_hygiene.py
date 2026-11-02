@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
@@ -53,14 +54,14 @@ def _frameworks_loaded_by(module_names: list[str], frameworks: tuple[str, ...], 
     return loaded
 
 
-def test_application_and_domain_import_without_web_and_orm_frameworks(tmp_path: Path) -> None:
+def test_application_and_domain_import_without_web_and_orm_frameworks(
+    tmp_path: Path,
+    module_name_of: Callable[[Path], str],
+) -> None:
     """Импорт всех модулей application/ и domain/ в чистом интерпретаторе не грузит FastAPI, Starlette, SQLAlchemy."""
-    module_paths = sorted(
-        path.relative_to(_BACKEND_DIR).with_suffix("")
-        for layer in _LAYERS
-        for path in (_BACKEND_DIR / "app").glob(f"*/{layer}/**/*.py")
+    module_names = sorted(
+        module_name_of(path) for layer in _LAYERS for path in (_BACKEND_DIR / "app").glob(f"*/{layer}/**/*.py")
     )
-    module_names = [".".join(path.parts[:-1] if path.name == "__init__" else path.parts) for path in module_paths]
 
     assert module_names, "не найдено ни одного модуля application/ или domain/ — сломан поиск файлов"
     loaded = _frameworks_loaded_by(module_names, _FRAMEWORKS, tmp_path)

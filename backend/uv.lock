@@ -888,7 +888,7 @@ wheels = [
 
 [[package]]
 name = "myjourney"
-version = "7.0.0"
+version = "7.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiobotocore" },
@@ -897,6 +897,9 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
     { name = "jinja2" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+    { name = "opentelemetry-semantic-conventions" },
     { name = "orjson" },
     { name = "procrastinate" },
     { name = "psycopg", extra = ["binary"] },
@@ -929,6 +932,9 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.159.1" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "opentelemetry-api", specifier = ">=1.45.1" },
+    { name = "opentelemetry-sdk", specifier = ">=1.45.1" },
+    { name = "opentelemetry-semantic-conventions", specifier = ">=0.66b1" },
     { name = "orjson", specifier = ">=3.13.0" },
     { name = "procrastinate", specifier = ">=3.10.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },

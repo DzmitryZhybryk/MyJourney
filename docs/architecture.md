@@ -27,7 +27,7 @@ Presentation-схемы отделены от application-DTO, чтобы не �
 
 ## Общая инфраструктура
 
-`backend/app/shared/` нарезана **по вертикалям-интеграциям** (postgres, procrastinate, email, http, jwt, crypto, di, logging) — каждая интеграция самодостаточный пакет с lifecycle-компонентом, клиентами и протоколами. Состав вертикали — её `__init__.py`; критерий «Component+Registry vs `@cache`-factory» — в `.claude/rules/python/component-lifecycle.md`, правила работы с `shared/` — в `.claude/rules/python/shared-infrastructure.md`.
+`backend/app/shared/` нарезана **по вертикалям-интеграциям** (postgres, procrastinate, email, http, jwt, crypto, di, logging, telemetry) — каждая интеграция самодостаточный пакет с lifecycle-компонентом, клиентами и протоколами. Состав вертикали — её `__init__.py`; критерий «Component+Registry vs `@cache`-factory» — в `.claude/rules/python/component-lifecycle.md`, правила работы с `shared/` — в `.claude/rules/python/shared-infrastructure.md`.
 
 ## Локализация топонимов: страны и города
 

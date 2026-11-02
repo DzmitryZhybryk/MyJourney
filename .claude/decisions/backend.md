@@ -49,8 +49,8 @@
 ## The exception tree branches by reaction (`ErrorCategoryEnum`) under one root, `AppError`
 - A failure subclasses the category class for its reaction; a family (`ObjectStorageError`) or a layer is not a level
   of the tree. Every leaf declares its own `code` and codes are unique — guarded by `tests/unit/shared/exceptions/test_codes.py`.
-- Why: the category is the only axis anything branches on — HTTP status, log level, task retry. Nothing catches by
-  origin or layer, and `category` is a class attribute that works wherever the class sits.
+- Why: the category is the only axis anything branches on — HTTP status and log level. Nothing catches by origin or
+  layer, and `category` is a class attribute that works wherever the class sits.
 - Rejected: `Internal`/`External` at the top, `External` split into temporary/persistent — nothing catches `External`;
   a temporary failure is not only external (exhausted pool, deadlock); a use case may translate a dependency failure
   into a 4xx.
@@ -74,3 +74,36 @@
   and such a class would absorb adapter failures with a different reaction (retry, provider config, not a code fix).
 - Rejected: `AssertionError` as the base — accurate in meaning, misleading in a traceback.
 - Source: exception hierarchy review, 2026-10-31
+
+## Log lines of one request are joined by the OpenTelemetry trace context, not an own request id
+- The API gives FastAPI's native telemetry a `TracerProvider` without an exporter (`app.shared.infra.telemetry`); a
+  structlog processor writes `trace_id`/`span_id` of the current span into every line written during a request.
+- Why: FastAPI already opens a span per request and continues an incoming W3C `traceparent`; the same id will join the
+  logs to exported traces and to a frontend trace.
+- Rejected: an own `request_id` (uuid in middleware, `X-Request-ID`) — a second correlation mechanism beside the one
+  FastAPI ships, and it joins no trace.
+- Revisit when: traces are exported — the provider then owns a span processor and becomes a component with shutdown.
+- Source: logging audit, 2026-11-02
+
+## A handled error reaches the request log line through the request scope; only the logging middleware writes it
+- An exception handler answers the client and hands the exception and its `code` to `remember_handled_error`; the
+  pure-ASGI `HTTPLoggingMiddleware` writes one line per request — type, code and, at ERROR, the traceback. An
+  unhandled exception is logged by the middleware and re-raised.
+- Why: the handler answers before the request returns to the middleware; without the hand-over the line knew only
+  the status, and an INTERNAL error was logged as a bare 500. One writer keeps one line per request with its context.
+- Rejected: logging in the handler — two lines per error, and the handler's line has no request fields.
+- Rejected: re-raising INTERNAL from the handler — the next reader "fixes" a handler that raises instead of answering;
+  the error would go through `ServerErrorMiddleware`, which re-raises to the server after answering.
+- Rejected: FastAPI's native telemetry logs instead of the middleware — they record only unhandled exceptions and
+  validation failures, never a handled `AppError`, write no line per request, and need an OTLP log pipeline.
+- Rejected: `BaseHTTPMiddleware` as the base — it runs the app in a separate task, so context bound deeper in the
+  request (`user_id`) never reaches the line.
+- Source: logging audit, 2026-11-02
+
+## An incoming `traceparent` is accepted at the edge
+- `ops/Caddyfile` passes `traceparent`/`tracestate` to the API, so a request's trace may start in the client.
+- Why: a frontend trace joins the backend's through this header. A client-chosen id only groups that client's own
+  lines: the format is validated and our ids are not exposed.
+- Rejected: stripping the headers in Caddy (proposed 2026-11-02) — closes front-to-back tracing for no real protection.
+- Revisit when: traces are exported — decide whether the client's sampled flag may switch tracing of its requests.
+- Source: logging audit, 2026-11-02

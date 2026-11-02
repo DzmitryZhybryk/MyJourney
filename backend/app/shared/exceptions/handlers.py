@@ -15,14 +15,13 @@ from fastapi.responses import JSONResponse
 from app.shared.exceptions import AppError
 from app.shared.exceptions.mappings import resolve_http_status
 from app.shared.exceptions.schemas import ErrorResponse
-from app.shared.logging import get_logger
-
-logger = get_logger(__name__)
+from app.shared.logging.middleware import remember_handled_error
 
 type ExceptionHandlerT = Callable[[Request, Any], JSONResponse]
 
 # Ответ на исключение вне AppError / необработанное исключение: наружу не утекают детали внутренней ошибки.
 _INTERNAL_ERROR_CONTENT = {"code": "internal", "message": "Внутренняя ошибка сервера"}
+_VALIDATION_ERROR_CODE = "validation_error"
 
 
 def _create_error_response(exc: AppError) -> JSONResponse:
@@ -46,10 +45,10 @@ def app_error_handler(request: Request, exc: Exception) -> JSONResponse:
     Scenarios:
         - любой запрос, завершившийся ошибкой приложения
     """
-    # Логирование выполняется в HTTPLoggingMiddleware. Handler зарегистрирован на
-    # AppError, поэтому exc гарантированно AppError; HTTP-статус и тело берём
+    # Handler зарегистрирован на AppError, поэтому exc гарантированно AppError; HTTP-статус и тело берём
     # прямо из исключения через единый resolve_http_status.
     if isinstance(exc, AppError):
+        remember_handled_error(request=request, exc=exc, code=exc.code)
         return _create_error_response(exc)
 
     # Страховка на случай прямого вызова с исключением вне AppError.
@@ -70,7 +69,7 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
         - любой запрос, не прошедший валидацию тела или параметров
 
     Args:
-        request: HTTP-запрос (не используется, требуется сигнатурой handler'а)
+        request: HTTP-запрос, на который отвечаем
         exc: Исключение валидации pydantic с детализацией по полям
 
     Returns:
@@ -85,10 +84,11 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
     ]
 
     error_response = ErrorResponse(
-        code="validation_error",
+        code=_VALIDATION_ERROR_CODE,
         message="Переданы некорректные данные",
         details={"fields": fields},
     )
+    remember_handled_error(request=request, exc=exc, code=_VALIDATION_ERROR_CODE)
 
     return JSONResponse(
         status_code=422,
@@ -108,14 +108,14 @@ def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     if isinstance(exc, AppError):
         return app_error_handler(request, exc)
 
-    # Логирование выполняется в HTTPLoggingMiddleware.
+    # Лог здесь не пишем: исключение проходит сквозь middleware логирования, и строку с трейсбеком пишет оно.
     return JSONResponse(status_code=500, content=_INTERNAL_ERROR_CONTENT)
 
 
 BASE_EXCEPTION_HANDLERS: dict[type[Exception], ExceptionHandlerT] = {
-    # AppError регистрируем явно, чтобы Starlette положил handler в ExceptionMiddleware
-    # (внутренний слой). Иначе он попадёт в ServerErrorMiddleware (внешний) и не вызовется
-    # корректно из-за известной проблемы BaseHTTPMiddleware с пробрасыванием исключений.
+    # AppError регистрируем явно, чтобы Starlette положил handler в ExceptionMiddleware (внутренний слой).
+    # Иначе ошибку приложения поймает handler на Exception во внешнем ServerErrorMiddleware, а тот после ответа
+    # поднимает исключение дальше, до сервера.
     AppError: app_error_handler,
     # RequestValidationError перехватываем явно, иначе FastAPI вернёт дефолтный
     # 422 {"detail": [...]} без поля code — в обход нашего ErrorResponse-контракта.

@@ -52,13 +52,13 @@ COMPOSE      := $(COMPOSE_BASE) -f ops/docker-compose.yaml
 COMPOSE_PROD := $(COMPOSE_BASE) -f ops/docker-compose.prod.yaml
 
 run: ## Поднять dev-стек (app+worker+pg+frontend+логирование); миграции и газеттир — one-shot'ами до app
-	$(COMPOSE) up -d --build
+	$(COMPOSE) up -d --build --remove-orphans
 
 watch: ## Dev-стек в foreground: пересобирает backend при правке pyproject.toml / uv.lock
 	$(COMPOSE) watch
 
 stop: ## Остановить dev-стек (тома/данные сохраняются)
-	$(COMPOSE) down
+	$(COMPOSE) down --remove-orphans
 
 restart: ## Перезапустить dev-стек
 	$(COMPOSE) restart
@@ -105,10 +105,10 @@ prod-pull: ## Стянуть свежие образы из GHCR
 	$(COMPOSE_PROD) pull
 
 prod-up: ## Поднять прод-стек (one-shot миграции прогоняются автоматически до app)
-	$(COMPOSE_PROD) up -d
+	$(COMPOSE_PROD) up -d --remove-orphans
 
 prod-down: ## Остановить прод-стек (тома/данные сохраняются)
-	$(COMPOSE_PROD) down
+	$(COMPOSE_PROD) down --remove-orphans
 
 # --- Git hooks: мерж-гейт покрытия без CI ---
 # Разовая активация pre-commit hook'а (.githooks/pre-commit): блокирует commit при покрытии < 90%.

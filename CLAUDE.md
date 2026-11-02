@@ -9,7 +9,7 @@ Claude читает или правит подходящие файлы (frontma
 
 MyJourney — FastAPI-сервис (Python 3.14+, async), Domain-Driven Design. Менеджер пакетов — **uv**.
 БД — PostgreSQL через SQLAlchemy 2.0 async (типизированный ORM: `DeclarativeBase` + `Mapped`/`mapped_column`).
-Работает в Docker со стеком логов Loki/Promtail/Grafana. Фронтенд — Vite/React SPA.
+Работает в Docker со стеком логов Loki/Alloy/Grafana. Фронтенд — Vite/React SPA.
 
 ### Архитектурная политика (осознанные решения владельца)
 

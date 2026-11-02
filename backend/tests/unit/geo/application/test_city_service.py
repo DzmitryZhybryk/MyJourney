@@ -43,21 +43,26 @@ async def test_search_cities_resolves_names_under_language_and_flags_missing(
     city_service: CityService,
     fake_city_repository: FakeCityRepository,
 ) -> None:
-    """search_cities: имена резолвятся под язык; нет перевода → фоллбэк en + лог geo.city_name_missing."""
+    """search_cities: имена под язык, без перевода — фоллбэк en; такие города — одной строкой лога в порядке выдачи."""
     moscow = make_city(en="Moscow", ru="Москва", population=10_000_000)
+    mosul = make_city(en="Mosul", ru=None, country_code="IQ", population=1_000_000)
     mostar = make_city(en="Mostar", ru=None, country_code="BA", population=100_000)
-    fake_city_repository.cities.extend([moscow, mostar])
+    fake_city_repository.cities.extend([moscow, mostar, mosul])
 
     with capture_logs() as logs:
         result = await city_service.search_cities(
             SearchCitiesCommand(search_text="Mos", language=LanguageEnum.RU, limit=10),
         )
 
-    assert [item.name for item in result.items] == ["Москва", "Mostar"]
-    missing = [log for log in logs if log["event"] == "geo.city_name_missing"]
+    assert [item.name for item in result.items] == ["Москва", "Mosul", "Mostar"]
+    missing = [log for log in logs if log["event"] == "geo.city_names_missing"]
     assert len(missing) == 1
     assert missing[0]["language"] is LanguageEnum.RU
-    assert missing[0]["city_id"] == mostar.city_id
+    assert missing[0]["count"] == 2
+    assert missing[0]["cities"] == (
+        {"city_id": mosul.city_id, "name": "Mosul", "country_code": "IQ", "population": 1_000_000},
+        {"city_id": mostar.city_id, "name": "Mostar", "country_code": "BA", "population": 100_000},
+    )
 
 
 async def test_resolve_cities_returns_names_in_requested_language_with_en_fallback(

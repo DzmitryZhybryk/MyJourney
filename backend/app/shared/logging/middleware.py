@@ -1,96 +1,163 @@
-"""Middleware для логирования HTTP запросов и исключений."""
+"""Middleware, которое пишет одну строку лога на каждый HTTP-запрос."""
 
 import logging
 import time
-from typing import Any
+from dataclasses import dataclass
+from http import HTTPStatus
 
-from starlette.middleware.base import BaseHTTPMiddleware
+import structlog
+from fastapi.exceptions import RequestValidationError
+from opentelemetry import trace
+from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.semconv.attributes.http_attributes import HTTP_ROUTE
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.shared.logging.classify import get_log_level_for_exception
+from app.shared.logging.classify import get_log_level_for_exception, get_log_level_for_status
 from app.shared.logging.config import get_logger
-from app.shared.logging.context import (
-    build_error_log_context,
-    build_log_context,
-    extract_request_context,
-)
-from app.shared.logging.events import get_event_name
+from app.shared.types import DictStrAny
 
 logger = get_logger(__name__)
 
+_REQUEST_EVENT = "http.request"
+_REQUEST_ERROR_KEY = "request_error"
 
-class HTTPLoggingMiddleware(BaseHTTPMiddleware):
+
+@dataclass(frozen=True, slots=True)
+class _RequestError:
+    exc: Exception
+    code: str | None
+
+
+def remember_handled_error(*, request: Request, exc: Exception, code: str) -> None:
     """
-    Unified middleware для логирования HTTP запросов и исключений.
+    Оставляет для строки лога запроса ошибку, которую хендлер превратил в ответ.
 
-    Заменяет стандартное логирование uvicorn.access и позволяет
-    обогащать логи дополнительными данными (user_id и т.д.).
-    Также перехватывает необработанные исключения на уровне ASGI и логирует их
-    в нужном формате. Исключения AppError сюда не доходят как exception: их
-    раньше конвертирует ExceptionMiddleware, и они приходят готовым Response.
+    Хендлер отвечает клиенту раньше, чем запрос возвращается в middleware; без этой записи строка знала бы
+    только статус ответа.
+
+    Scenarios:
+        - ответ на ошибку приложения
+        - ответ на невалидный запрос
+
+    Args:
+        request: Запрос, на который хендлер отвечает
+        exc: Исключение, превращённое в ответ
+        code: Код ошибки, ушедший клиенту
+    """
+    request.scope.setdefault("state", {})[_REQUEST_ERROR_KEY] = _RequestError(exc=exc, code=code)
+
+
+class HTTPLoggingMiddleware:
+    """
+    Пишет одну строку лога на каждый HTTP-запрос: метод, путь, шаблон маршрута, статус, время и ошибку.
+
+    Чистый ASGI, а не ``BaseHTTPMiddleware``: тот запускает приложение отдельной задачей, и контекст лога,
+    положенный глубже (``user_id`` при проверке токена), до строки запроса не доходит. Ошибку, которую хендлер
+    уже превратил в ответ, берёт из ``remember_handled_error``; необработанное исключение пишет сам и пропускает
+    дальше — ответ 500 строит внешний слой приложения.
     """
 
-    async def dispatch(self, request: Request, call_next: Any) -> Response:
-        """
-        Обрабатывает запрос, логирует его и перехватывает исключения.
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
-        Scenarios:
-            - каждый HTTP-запрос
-        """
-        start_time = time.perf_counter()
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        request_context = extract_request_context(request)
+        structlog.contextvars.clear_contextvars()
+        started_at = time.perf_counter()
+        # Пока ответ не начался, клиент получит 500 от внешнего слоя: так кончаются и необработанное исключение,
+        # и приложение, не отправившее ответ.
+        status_code: int = HTTPStatus.INTERNAL_SERVER_ERROR.value
+
+        async def send_and_remember_status(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+
+            await send(message)
 
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_and_remember_status)
         except Exception as exc:
-            process_time = time.perf_counter() - start_time
-
-            log_context, _, include_traceback = build_error_log_context(
-                request=request,
-                exc=exc,
-                process_time=process_time,
-                context=request_context,
+            _log_request(
+                scope=scope,
+                status_code=status_code,
+                error=_RequestError(exc=exc, code=None),
+                started_at=started_at,
             )
-
-            log_level = get_log_level_for_exception(exc)
-
-            event = get_event_name(request)
-
-            if log_level == logging.ERROR:
-                logger.exception(
-                    event=event,
-                    exc_info=exc if include_traceback else None,
-                    **log_context,
-                )
-            elif log_level == logging.WARNING:
-                logger.warning(event=event, **log_context)
-            else:
-                logger.info(event=event, **log_context)
-
             raise
-        else:
-            process_time = time.perf_counter() - start_time
 
-            log_context = build_log_context(
-                request=request,
-                status_code=response.status_code,
-                process_time=process_time,
-                context=request_context,
-            )
+        _log_request(
+            scope=scope,
+            status_code=status_code,
+            error=scope.get("state", {}).get(_REQUEST_ERROR_KEY),
+            started_at=started_at,
+        )
 
-            event = get_event_name(request)
 
-            # Уровень лога зависит от статуса: 5xx -> error, 4xx -> warning, иначе info.
-            # Исключения AppError конвертируются ExceptionMiddleware в Response
-            # и приходят сюда как готовый response, а не exception.
-            match response.status_code:
-                case status if status >= 500:
-                    logger.error(event=event, **log_context)
-                case status if status >= 400:
-                    logger.warning(event=event, **log_context)
-                case _:
-                    logger.info(event=event, **log_context)
+def _log_request(*, scope: Scope, status_code: int, error: _RequestError | None, started_at: float) -> None:
+    """
+    Пишет строку лога запроса; уровень — по ошибке, а без неё — по статусу ответа.
 
-            return response
+    Scenarios:
+        - каждый HTTP-запрос
+
+    Args:
+        scope: ASGI-scope запроса
+        status_code: Статус, ушедший клиенту
+        error: Ошибка, которой закончился запрос, если была
+        started_at: Момент входа запроса в middleware (``time.perf_counter``)
+    """
+    fields: DictStrAny = {
+        "method": scope["method"],
+        "path": scope["path"],
+        "status_code": status_code,
+        "process_time": round(time.perf_counter() - started_at, 4),
+    }
+    if route_template := _get_route_template():
+        fields["route"] = route_template
+
+    if client := scope.get("client"):
+        fields["client_ip"] = client[0]
+
+    if query := scope.get("query_string"):
+        fields["query_params"] = query.decode("latin-1")
+
+    if error is None:
+        logger.log(get_log_level_for_status(status_code), _REQUEST_EVENT, **fields)
+        return
+
+    fields["error_type"] = type(error.exc).__name__
+    if error.code is not None:
+        fields["error_code"] = error.code
+
+    # pydantic хранит в ошибке валидации сырой ввод клиента, пароль в том числе, — её текст в лог не идёт.
+    if not isinstance(error.exc, RequestValidationError):
+        fields["error_message"] = str(error.exc)
+
+    level = get_log_level_for_exception(error.exc)
+    logger.log(level, _REQUEST_EVENT, exc_info=error.exc if level == logging.ERROR else None, **fields)
+
+
+def _get_route_template() -> str | None:
+    """
+    Возвращает полный шаблон пути совпавшего маршрута (``/v1/journeys/{journey_id}/``).
+
+    Маршрут из ``scope`` знает только свой путь внутри подключённого роутера, без префикса; полный шаблон
+    FastAPI пишет в span запроса атрибутом ``http.route``.
+
+    Scenarios:
+        - строка лога запроса: поле ``route``
+
+    Returns:
+        Шаблон пути или ``None``, если маршрут не совпал или span'а запроса нет
+    """
+    span = trace.get_current_span()
+    if not isinstance(span, ReadableSpan) or span.attributes is None:
+        return None
+
+    route_template = span.attributes.get(HTTP_ROUTE)
+    return route_template if isinstance(route_template, str) else None

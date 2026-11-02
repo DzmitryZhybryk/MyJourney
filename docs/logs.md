@@ -1,147 +1,91 @@
-# Просмотр логов из Loki
+# Логи
 
-Логи приложения собираются в Loki через Promtail. Для просмотра логов можно использовать curl запросы к Loki API.
+## Откуда берутся
 
-## Базовые команды
+Каждый контейнер пишет логи в stdout. Бэкенд (API, воркер, CLI-шаги) пишет **одну JSON-строку на запись** — и
+свои строки, и строки библиотек (uvicorn, procrastinate).
 
-### Проверка доступности Loki
-
-```bash
-curl http://localhost:3100/ready
+```
+контейнеры myjourney* ──stdout──▶ Alloy (ops/alloy-config.alloy) ──▶ Loki (ops/loki.yaml, 7 дней) ──▶ Grafana
 ```
 
-### Получить список всех меток
+- **Alloy** читает логи через Docker API, только у контейнеров с `myjourney` в имени, и помнит позицию чтения в
+  томе `alloy_data`. Из JSON-строки он достаёт `level` и `logger` в метки, а `timestamp` — во время строки.
+- **Grafana** подключает Loki сама (`ops/grafana/provisioning/datasources/loki.yaml`), руками ничего настраивать не
+  нужно. Дев: `http://localhost:${GRAFANA_PORT:-3000}`; прод — по SSH-туннелю (`docs/deployment.md`, раздел 8).
+  Логин и пароль — `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` из `.env`.
 
-```bash
-curl -s "http://localhost:3100/loki/api/v1/labels" | jq
+## Метки (по ним Loki ищет быстро)
+
+| Метка | Значение |
+|---|---|
+| `app` | всегда `myjourney` |
+| `container` | имя контейнера: `myjourney_app`, `myjourney_worker`, … |
+| `stream` | `stdout` или `stderr` |
+| `level` | `debug`, `info`, `warning`, `error`, `critical` — только у JSON-строк |
+| `logger` | имя логгера: `app.shared.logging.middleware`, `procrastinate.worker`, `uvicorn.error`, … |
+
+## Поля строки
+
+Есть всегда: `event` (имя события), `level`, `logger`, `timestamp`.
+
+Внутри HTTP-запроса API к любой строке добавляются:
+
+- `trace_id` — номер запроса: по нему находятся все строки одного запроса;
+- `span_id` — этап запроса, на котором написана строка;
+- `user_id` — если запрос авторизован.
+
+**Строка запроса** (`event="http.request"`, одна на каждый HTTP-запрос): `method`, `path`, `route` (шаблон пути,
+например `/v1/journeys/{journey_id}`), `status_code`, `process_time` (секунды), `client_ip`, `query_params`. Если
+запрос закончился ошибкой — ещё `error_type`, `error_code` (код, ушедший клиенту) и `error_message`; у ошибки
+уровня `error` есть `exception` с трейсбеком. Текст ошибки валидации (422) не пишется: в нём сырой ввод клиента.
+
+Уровень строки запроса: наш сбой (500, необработанное исключение) — `error` с трейсбеком; ошибка клиента (4xx) —
+`warning`; остальное — `info`.
+
+**Имена событий** — `<домен или вертикаль>.<что случилось>`: `geo.city_ids_unknown`, `http_client.timeout`,
+`component.startup_failed`, `api.started`. Строки библиотек сохраняют собственный текст в `event`, кроме
+procrastinate: у него событие — `procrastinate.<действие>` (`start_job`, `job_success`, `job_error`,
+`jobs_deferred`, …), а аргументы задач из строки убраны — среди них бывают секреты. Id задачи, имя, очередь и
+длительность остаются в полях `job` и `jobs`.
+
+## Частые запросы (LogQL, Grafana → Explore → Loki)
+
+```logql
+# Все строки одного запроса
+{app="myjourney"} | json | trace_id="e051fadea4d9e0c466de59cca022cbfd"
+
+# Ошибки бэкенда
+{container="myjourney_app", level="error"}
+
+# Запросы с ошибкой сервера и их тип
+{container="myjourney_app"} | json | event="http.request" and status_code >= 500
+
+# Медленные запросы
+{container="myjourney_app"} | json | event="http.request" and process_time > 1
+
+# Запросы к одному эндпоинту
+{container="myjourney_app"} | json | route="/v1/journeys/{journey_id}"
+
+# Всё, что делал пользователь
+{app="myjourney"} | json | user_id="<uuid>"
+
+# Фоновые задачи
+{container="myjourney_worker", logger="procrastinate.worker"}
+
+# Упавшие фоновые задачи
+{container="myjourney_worker"} | json | event=~"procrastinate.job_error.*"
 ```
 
-### Получить список всех контейнеров
+## Без Grafana
 
-```bash
-curl -s "http://localhost:3100/loki/api/v1/label/container/values" | jq
-```
-
-## Формат логов
-
-Логи приложения выводятся в формате JSON со следующими полями:
-
-```json
-{
-  "endpoint": "/v1/messages/",
-  "event": "Получен запрос на создание сообщения",
-  "level": "info",
-  "logger": "app.routes.v1.message",
-  "timestamp": "2025-12-28T09:47:56.557145Z"
-}
-```
-
-**Доступные поля для фильтрации:**
-
-- `level` - уровень лога (debug, info, warning, error, critical)
-- `logger` - имя логгера (например, `app.routes.v1.message`)
-- `event` - основное сообщение лога
-- `timestamp` - время события в ISO формате
-- `endpoint` - endpoint API (если указан при логировании)
-- Другие поля, добавленные при вызове логгера (например, `user_id`, `request_id` и т.д.)
-
-## Запросы логов
-
-### Все логи приложения за последний час
+В деве Loki открыт на порту 3100:
 
 ```bash
 curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode 'query={container="myjourney_app"}' \
+  --data-urlencode 'query={container="myjourney_app", level="error"}' \
   --data-urlencode "start=$(($(date +%s) - 3600))000000000" \
-  --data-urlencode "end=$(date +%s)000000000" \
-  --data-urlencode 'limit=100' | jq -r '.data.result[]?.values[]?[1]'
-```
-
-### Поиск по тексту
-
-```bash
-curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode 'query={container="myjourney_app"} |= "Получен запрос"' \
-  --data-urlencode "start=$(($(date +%s) - 3600))000000000" \
-  --data-urlencode "end=$(date +%s)000000000" \
   --data-urlencode 'limit=50' | jq -r '.data.result[]?.values[]?[1]'
 ```
 
-### Логи с определенным endpoint
-
-```bash
-curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode 'query={container="myjourney_app"} | json | endpoint="/v1/messages/"' \
-  --data-urlencode "start=$(($(date +%s) - 3600))000000000" \
-  --data-urlencode "end=$(date +%s)000000000" \
-  --data-urlencode 'limit=50' | jq -r '.data.result[]?.values[]?[1]'
-```
-
-### Логи по уровню (INFO, WARNING, ERROR)
-
-```bash
-curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode 'query={container="myjourney_app"} | json | level="info"' \
-  --data-urlencode "start=$(($(date +%s) - 3600))000000000" \
-  --data-urlencode "end=$(date +%s)000000000" \
-  --data-urlencode 'limit=50' | jq -r '.data.result[]?.values[]?[1]'
-```
-
-### Все логи всех контейнеров myjourney
-
-```bash
-curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
-  --data-urlencode 'query={app="myjourney"}' \
-  --data-urlencode "start=$(($(date +%s) - 3600))000000000" \
-  --data-urlencode "end=$(date +%s)000000000" \
-  --data-urlencode 'limit=100' | jq -r '.data.result[]?.values[]?[1]'
-```
-
-## Просмотр логов через Grafana
-
-Grafana предоставляет графический интерфейс для просмотра и анализа логов из Loki.
-
-### Первоначальная настройка
-
-1. **Запустите стек (Grafana поднимается вместе с ним):**
-
-   ```bash
-   make run
-   ```
-
-2. **Откройте Grafana в браузере:**
-   - URL: `http://localhost:3000`
-   - Логин: `admin`
-   - Пароль: `admin` (при первом входе предложат сменить)
-
-3. **Настройте подключение к Loki:**
-   - Перейдите в **Configuration** → **Data Sources**
-   - Нажмите **Add data source**
-   - Выберите **Loki**
-   - В поле **URL** укажите: `http://loki:3100`
-   - Нажмите **Save & Test** (должно показать "Data source connected and labels found")
-
-### Использование Explore
-
-1. Перейдите в **Explore** (иконка компаса слева)
-2. Выберите источник данных **Loki**
-3. Используйте LogQL запросы для фильтрации логов:
-   - `{container="myjourney_app"}` - все логи приложения
-   - `{container="myjourney_app"} | json | level="error"` - только ошибки
-   - `{container="myjourney_app"} | json | endpoint="/v1/messages/"` - логи по endpoint
-
-### Создание Dashboard
-
-Можно создать дашборд с панелями для:
-
-- Общее количество логов по уровням
-- Логи по контейнерам
-- График ошибок во времени
-- Таблица последних логов
-
-## Примечания
-
-- Для работы команд требуется установленный `jq` (для форматирования JSON)
-- Временные интервалы указываются в Unix timestamp в наносекундах
-- `start` и `end` вычисляются динамически через `date +%s`
-- Grafana доступна на порту `3000` после запуска
+Последние строки одного контейнера без Loki: `docker logs --tail 50 myjourney_app`.

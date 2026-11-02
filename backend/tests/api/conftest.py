@@ -56,9 +56,15 @@ def api_app() -> BFastAPI:
 
 
 @pytest.fixture
-def openapi_schema() -> DictStrAny:
+def production_app() -> BFastAPI:
+    """Боевое приложение из ``create_app`` — со всеми роутерами, middleware и телеметрией; компоненты не стартуют."""
+    return create_app()
+
+
+@pytest.fixture
+def openapi_schema(production_app: BFastAPI) -> DictStrAny:
     """Схема боевого приложения — со всеми роутерами, тегами и версией (в отличие от ``api_app``)."""
-    return create_app().openapi()
+    return production_app.openapi()
 
 
 @pytest.fixture

@@ -1,5 +1,6 @@
 import pytest
 from procrastinate import JobContext
+from structlog.testing import capture_logs
 
 from app.auth.infra.tasks import send_verification_email
 from app.shared.infra.http.exceptions import ExternalAPIPersistentError, ExternalAPITemporaryError
@@ -19,6 +20,18 @@ async def test_send_verification_email_renders_and_sends(
     assert message.subject
     assert "123456" in message.html
     assert "123456" in message.text
+
+
+async def test_send_verification_email_logs_sending_without_personal_data(
+    job_context: JobContext,
+    fake_email_transport: FakeEmailTransport,
+) -> None:
+    """Отправка пишется в лог с user_id; ни адреса, ни кода в строке нет."""
+    with capture_logs() as logs:
+        await send_verification_email(job_context, user_id="user-1", email="user@example.com", code="123456")
+
+    assert len(fake_email_transport.sent) == 1
+    assert logs == [{"event": "auth.verification_email.sent", "user_id": "user-1", "log_level": "info"}]
 
 
 async def test_send_verification_email_propagates_temporary_error(

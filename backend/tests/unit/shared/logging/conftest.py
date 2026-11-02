@@ -1,80 +1,86 @@
 """
 Фикстуры logging-тестов.
 
-``restore_logging`` снимает и восстанавливает глобальное состояние stdlib-logging и
-structlog (``configure_logging`` мутирует root-logger и structlog-дефолты — без
-restore это протекло бы в другие тесты). ``routed_app`` — минимальное FastAPI-приложение
-с именованным роутом для тестов ``get_event_name``.
+``restore_logging`` снимает и восстанавливает глобальное состояние логирования: root-logger, логгеры uvicorn,
+structlog-дефолты и контекст лога. ``configure_logging`` и ``bind_log_context`` меняют его на весь процесс — без
+restore это протекло бы в другие тесты. ``verification_job`` — задача письма с одноразовым кодом в аргументах.
+``json_log_lines`` читает из перехваченного stdout строки, которые написал настоящий обработчик.
 """
 
+import json
+import logging
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from typing import Any
 
 import pytest
 import structlog
-from fastapi import FastAPI
-from starlette.requests import Request
+from procrastinate.jobs import Job
+
+from app.shared.types import DictStrAny
+
+_UVICORN_LOGGER_NAMES = ("uvicorn", "uvicorn.error", "uvicorn.access")
+
+
+@dataclass(frozen=True, slots=True)
+class _LoggerState:
+    level: int
+    propagate: bool
+    disabled: bool
+    handlers: tuple[logging.Handler, ...]
+    filters: tuple[Any, ...]
+
+
+def _snapshot(logger: logging.Logger) -> _LoggerState:
+    return _LoggerState(
+        level=logger.level,
+        propagate=logger.propagate,
+        disabled=logger.disabled,
+        handlers=tuple(logger.handlers),
+        filters=tuple(logger.filters),
+    )
+
+
+def _restore(*, logger: logging.Logger, state: _LoggerState) -> None:
+    logger.setLevel(state.level)
+    logger.propagate = state.propagate
+    logger.disabled = state.disabled
+    logger.handlers[:] = state.handlers
+    logger.filters[:] = state.filters
 
 
 @pytest.fixture
 def restore_logging() -> Iterator[None]:
-    """Снимок root-logger (handlers + level) и structlog-дефолтов с восстановлением после теста."""
-    import logging
-
-    root_logger = logging.getLogger()
-    saved_handlers = root_logger.handlers[:]
-    saved_level = root_logger.level
+    """Снимок root-logger'а и логгеров uvicorn с восстановлением после теста; structlog и контекст лога — в дефолт."""
+    loggers = [logging.getLogger(), *(logging.getLogger(name) for name in _UVICORN_LOGGER_NAMES)]
+    states = [_snapshot(logger) for logger in loggers]
+    structlog.contextvars.clear_contextvars()
     yield
-    root_logger.handlers[:] = saved_handlers
-    root_logger.setLevel(saved_level)
+    for logger, state in zip(loggers, states, strict=True):
+        _restore(logger=logger, state=state)
+
     structlog.reset_defaults()
+    structlog.contextvars.clear_contextvars()
 
 
 @pytest.fixture
-def make_request() -> Callable[..., Request]:
-    """
-    Фабрика ``starlette.Request`` из минимального scope для logging-тестов.
+def json_log_lines(capsys: pytest.CaptureFixture[str]) -> Callable[[], tuple[DictStrAny, ...]]:
+    """Читает строки, накопленные в stdout с прошлого чтения, и разбирает каждую как JSON."""
 
-    Параметры опциональны: ``app`` (для ``get_event_name`` — нужен ``request.app.routes``),
-    ``client``/``query``/``state`` (для ``extract_request_context``), ``path``/``method``.
-    """
+    def _read() -> tuple[DictStrAny, ...]:
+        return tuple(json.loads(line) for line in capsys.readouterr().out.splitlines() if line)
 
-    def _make(
-        *,
-        app: FastAPI | None = None,
-        path: str = "/v1/ping",
-        method: str = "GET",
-        client: tuple[str, int] | None = None,
-        query: bytes = b"",
-        state: dict[str, Any] | None = None,
-    ) -> Request:
-        scope: dict[str, Any] = {
-            "type": "http",
-            "method": method,
-            "path": path,
-            "raw_path": path.encode(),
-            "query_string": query,
-            "headers": [],
-            "state": state or {},
-        }
-        if app is not None:
-            scope["app"] = app
-
-        if client is not None:
-            scope["client"] = client
-
-        return Request(scope)
-
-    return _make
+    return _read
 
 
 @pytest.fixture
-def routed_app() -> FastAPI:
-    """FastAPI с одним именованным GET-роутом ``/v1/ping`` (имя — ``ping_handler``)."""
-    app = FastAPI()
-
-    @app.get("/v1/ping", name="ping_handler")
-    async def _ping() -> dict[str, str]:
-        return {}
-
-    return app
+def verification_job() -> Job:
+    """Задача письма подтверждения: в аргументах email и одноразовый код, как их передаёт сервис."""
+    return Job(
+        id=42,
+        queue="default",
+        lock="email_verification:user:user-1",
+        queueing_lock=None,
+        task_name="send_verification_email",
+        task_kwargs={"user_id": "user-1", "email": "ann@example.org", "code": "483921"},
+    )
