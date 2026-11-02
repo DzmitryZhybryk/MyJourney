@@ -110,3 +110,17 @@
   dropped `route` from the request log line.
 - Revisit when: traces are exported — decide whether the client's sampled flag may switch tracing of its requests.
 - Source: logging audit, 2026-11-02
+
+## Integration tests run each in its own event loop; the Postgres schema is created synchronously
+- The async engine is function-scoped (`db_engine` in `tests/integration/conftest.py`); the schema is built once
+  per session by a sync `create_all`. `asyncio_default_fixture_loop_scope = "function"`: an async fixture wider
+  than a function declares its `loop_scope` explicitly and hands out only data, never a loop-bound object
+  (`media_storage_settings`).
+- Why: an async psycopg connection is bound to the loop it was opened in; a shared loop lets a task leaked by one
+  test live into the next.
+- Rejected: building the schema with an async engine in a session-loop fixture, for symmetry with RustFS — the
+  RustFS fixture is async because it reuses the dev stack's async `bootstrap_buckets`; Postgres has no such code.
+- Rejected: one async engine per session with tests in the session loop — weaker isolation and two loop
+  conventions in one suite, for a speed-up nobody measured.
+- Revisit when: integration time becomes a bottleneck and a measurement shows engine setup is the cost.
+- Source: integration harness review, 2026-11-02
