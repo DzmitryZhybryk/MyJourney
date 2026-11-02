@@ -199,19 +199,22 @@ async def test_authenticated_request_binds_user_id_and_next_request_starts_clean
     assert [entry.get("user_id") for entry in logs if entry["event"] == _REQUEST_EVENT] == [user_id, None]
 
 
-async def test_incoming_traceparent_continues_its_trace(
+@pytest.mark.parametrize("sampled_flag", ["01", "00"])
+async def test_incoming_traceparent_continues_its_trace_whatever_its_sampled_flag(
     middleware_app: BFastAPI,
     make_async_client: MakeAsyncClient,
     request_log_processors: tuple[Processor, ...],
+    sampled_flag: str,
 ) -> None:
-    """Входящий W3C traceparent продолжается: в строке его trace_id — на это опирается связка с трейсингом фронта."""
+    """Входящий W3C traceparent продолжается: в строке его trace_id; флаг sampled клиента не убирает шаблон маршрута."""
     trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
     with capture_logs(processors=request_log_processors) as logs:
         async with make_async_client(middleware_app) as client:
-            await client.get("/v1/items/1/", headers={"traceparent": f"00-{trace_id}-00f067aa0ba902b7-01"})
+            await client.get("/v1/items/1/", headers={"traceparent": f"00-{trace_id}-00f067aa0ba902b7-{sampled_flag}"})
 
     (line,) = [entry for entry in logs if entry["event"] == _REQUEST_EVENT]
     assert line["trace_id"] == trace_id
+    assert line["route"] == "/v1/items/{item_id}/"
 
 
 async def test_non_http_scope_passes_through_without_request_line() -> None:

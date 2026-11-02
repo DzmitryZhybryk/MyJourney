@@ -12,14 +12,17 @@ import json
 import logging
 import logging.config
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 import structlog
 from procrastinate.jobs import Job
 from uvicorn.config import LOGGING_CONFIG
+from uvicorn.protocols import http as uvicorn_http_protocols
 
-from app.shared.infra.telemetry.tracing import get_tracer_provider
+from app.shared.infra.telemetry import get_tracer_provider
 from app.shared.logging import bind_log_context, configure_logging
+from app.shared.logging.config import _UVICORN_APP_EXCEPTION_PREFIX
 from app.shared.types import DictStrAny
 
 type JsonLogLines = Callable[[], tuple[DictStrAny, ...]]
@@ -81,6 +84,39 @@ def test_configure_logging_routes_uvicorn_warnings_to_json_stdout(
     assert line["event"] == "Application startup failed. Exiting."
     assert line["level"] == "error"
     assert line["logger"] == "uvicorn.error"
+
+
+@pytest.mark.parametrize(
+    ("uvicorn_log_level", "expected_events"),
+    [
+        (logging.INFO, ("Invalid HTTP request received.", "Application startup failed. Exiting.")),
+        (logging.ERROR, ("Application startup failed. Exiting.",)),
+    ],
+)
+def test_configure_logging_keeps_uvicorn_log_level_stricter_than_warning(
+    restore_logging: None,
+    json_log_lines: JsonLogLines,
+    uvicorn_log_level: int,
+    expected_events: tuple[str, ...],
+) -> None:
+    """WARNING uvicorn проходит, пока его ``--log-level`` не строже; уровень ERROR из флага остаётся в силе."""
+    logging.config.dictConfig(copy.deepcopy(LOGGING_CONFIG))
+    logging.getLogger("uvicorn.error").setLevel(uvicorn_log_level)
+    configure_logging()
+
+    logging.getLogger("uvicorn.error").warning("Invalid HTTP request received.")
+    logging.getLogger("uvicorn.error").error("Application startup failed. Exiting.")
+
+    assert tuple(line["event"] for line in json_log_lines()) == expected_events
+
+
+def test_uvicorn_http_protocols_log_app_exception_with_dropped_prefix() -> None:
+    """Каждый HTTP-протокол uvicorn пишет необработанное исключение тем текстом, по которому отбрасывается дубль."""
+    sources = [path.read_text() for path in Path(uvicorn_http_protocols.__file__).parent.glob("*.py")]
+    asgi_runner_sources = [source for source in sources if "async def run_asgi" in source]
+
+    assert asgi_runner_sources
+    assert all(f'"{_UVICORN_APP_EXCEPTION_PREFIX}' in source for source in asgi_runner_sources)
 
 
 def test_configure_logging_drops_uvicorn_duplicate_of_app_exception(

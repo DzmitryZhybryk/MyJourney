@@ -4,6 +4,7 @@ from functools import cache
 from typing import TYPE_CHECKING
 
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.sampling import ALWAYS_ON
 
 if TYPE_CHECKING:
     from fastapi.telemetry import TelemetryConfig
@@ -17,13 +18,16 @@ def get_tracer_provider() -> TracerProvider:
     Трейсы никуда не отправляются: провайдер нужен, чтобы у запроса появился trace_id. Закрывать у него нечего,
     поэтому это фабрика, а не компонент; с появлением отправки трейсов станет компонентом.
 
+    Span записывается у каждого запроса, флаг sampled входящего ``traceparent`` не учитывается: из
+    незаписанного span'а строка лога не получит шаблон маршрута, и флаг ``00`` от клиента убирал бы его.
+
     Scenarios:
-        - номер запроса в строках лога API
+        - номер запроса и шаблон маршрута в строках лога API
 
     Returns:
         Один на процесс ``TracerProvider`` без обработчиков span'ов
     """
-    return TracerProvider()
+    return TracerProvider(sampler=ALWAYS_ON)
 
 
 def get_api_telemetry_config() -> TelemetryConfig:

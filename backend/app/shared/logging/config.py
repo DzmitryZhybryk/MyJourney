@@ -102,7 +102,8 @@ def _route_uvicorn_logs_to_root() -> None:
     """
     Пускает логи uvicorn через наш JSON-обработчик, чтобы ошибки сервера и падение старта попадали в лог.
 
-    Свой текстовый обработчик uvicorn вешает на родительский логгер ``uvicorn`` — его и снимаем. Строку о
+    Свой текстовый обработчик uvicorn вешает на родительский логгер ``uvicorn`` — его и снимаем. Его записи
+    пропускаем не ниже WARNING, а уровень строже, заданный флагом ``--log-level``, оставляем. Строку о
     необработанном исключении отбрасываем: такую же с трейсбеком уже написал middleware логирования. Журнал
     запросов uvicorn выключен — строку на каждый запрос пишет то же middleware.
 
@@ -114,7 +115,7 @@ def _route_uvicorn_logs_to_root() -> None:
     uvicorn_logger.propagate = True
 
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
-    uvicorn_error_logger.setLevel(logging.WARNING)
+    uvicorn_error_logger.setLevel(max(uvicorn_error_logger.level, logging.WARNING))
     uvicorn_error_logger.addFilter(_is_not_app_exception_duplicate)
 
     uvicorn_access_logger = logging.getLogger("uvicorn.access")

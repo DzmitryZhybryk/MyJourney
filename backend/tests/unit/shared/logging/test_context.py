@@ -7,7 +7,7 @@ Span создаётся провайдером процесса (``get_tracer_pr
 import structlog
 from structlog.testing import capture_logs
 
-from app.shared.infra.telemetry.tracing import get_tracer_provider
+from app.shared.infra.telemetry import get_tracer_provider
 from app.shared.logging.context import add_trace_context, bind_log_context
 
 

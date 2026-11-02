@@ -20,7 +20,7 @@ from app.shared.infra.email.component import ResendComponent
 from app.shared.infra.postgres.component import SqlAlchemyComponent
 from app.shared.infra.procrastinate.bus_component import TaskBusComponent
 from app.shared.infra.procrastinate.component import ProcrastinateComponent
-from app.shared.infra.telemetry.tracing import get_api_telemetry_config
+from app.shared.infra.telemetry import get_api_telemetry_config
 from app.shared.logging import configure_logging, get_logger
 from app.shared.logging.middleware import HTTPLoggingMiddleware
 from app.shared.schemas.base import BFastAPI

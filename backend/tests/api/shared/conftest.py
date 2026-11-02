@@ -22,7 +22,7 @@ from structlog.typing import Processor
 from app.shared.exceptions import InternalError, NotFoundError
 from app.shared.exceptions.handlers import register_exception_handlers
 from app.shared.infra.jwt.dependency import current_user_id_dependency
-from app.shared.infra.telemetry.tracing import get_api_telemetry_config
+from app.shared.infra.telemetry import get_api_telemetry_config
 from app.shared.logging.context import add_trace_context
 from app.shared.logging.middleware import HTTPLoggingMiddleware
 from app.shared.schemas.base import BFastAPI

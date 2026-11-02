@@ -102,8 +102,11 @@
 
 ## An incoming `traceparent` is accepted at the edge
 - `ops/Caddyfile` passes `traceparent`/`tracestate` to the API, so a request's trace may start in the client.
+- The client's sampled flag is ignored: the provider samples every request (`ALWAYS_ON`).
 - Why: a frontend trace joins the backend's through this header. A client-chosen id only groups that client's own
   lines: the format is validated and our ids are not exposed.
 - Rejected: stripping the headers in Caddy (proposed 2026-11-02) — closes front-to-back tracing for no real protection.
+- Rejected: honouring the sampled flag (until 2026-11-02) — an unsampled span is not recorded, so a client's `-00`
+  dropped `route` from the request log line.
 - Revisit when: traces are exported — decide whether the client's sampled flag may switch tracing of its requests.
 - Source: logging audit, 2026-11-02

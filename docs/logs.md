@@ -32,11 +32,12 @@
 Внутри HTTP-запроса API к любой строке добавляются:
 
 - `trace_id` — номер запроса: по нему находятся все строки одного запроса;
-- `span_id` — этап запроса, на котором написана строка;
+- `span_id` — span, в котором написана строка. Пока отдельных этапов внутри запроса нет, у всех его строк он
+  один;
 - `user_id` — если запрос авторизован.
 
 **Строка запроса** (`event="http.request"`, одна на каждый HTTP-запрос): `method`, `path`, `route` (шаблон пути,
-например `/v1/journeys/{journey_id}`), `status_code`, `process_time` (секунды), `client_ip`, `query_params`. Если
+например `/v1/journeys/{journey_id}/`), `status_code`, `process_time` (секунды), `client_ip`, `query_params`. Если
 запрос закончился ошибкой — ещё `error_type`, `error_code` (код, ушедший клиенту) и `error_message`; у ошибки
 уровня `error` есть `exception` с трейсбеком. Текст ошибки валидации (422) не пишется: в нём сырой ввод клиента.
 
@@ -46,8 +47,8 @@
 **Имена событий** — `<домен или вертикаль>.<что случилось>`: `geo.city_ids_unknown`, `http_client.timeout`,
 `component.startup_failed`, `api.started`. Строки библиотек сохраняют собственный текст в `event`, кроме
 procrastinate: у него событие — `procrastinate.<действие>` (`start_job`, `job_success`, `job_error`,
-`jobs_deferred`, …), а аргументы задач из строки убраны — среди них бывают секреты. Id задачи, имя, очередь и
-длительность остаются в полях `job` и `jobs`.
+`jobs_deferred`, …), а аргументы задач из строки убраны — среди них бывают секреты. Id задачи, имя и очередь
+остаются в полях `job` и `jobs`, длительность выполненной задачи — в поле `duration`.
 
 ## Частые запросы (LogQL, Grafana → Explore → Loki)
 
@@ -65,7 +66,7 @@ procrastinate: у него событие — `procrastinate.<действие>`
 {container="myjourney_app"} | json | event="http.request" and process_time > 1
 
 # Запросы к одному эндпоинту
-{container="myjourney_app"} | json | route="/v1/journeys/{journey_id}"
+{container="myjourney_app"} | json | route="/v1/journeys/{journey_id}/"
 
 # Всё, что делал пользователь
 {app="myjourney"} | json | user_id="<uuid>"
