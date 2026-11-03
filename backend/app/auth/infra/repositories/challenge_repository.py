@@ -46,9 +46,9 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
         """
         Находит активный challenge заданного типа и блокирует строку до конца транзакции.
 
-        ``SELECT ... FOR UPDATE`` нужен для verify-флоу: гарантирует, что
-        параллельные запросы на ввод кода сериализуются и не дают потерять
-        increment счётчика попыток (read-modify-write race под READ COMMITTED).
+        ``SELECT ... FOR UPDATE`` сериализует параллельные запросы к одному challenge'у:
+        ввод кода не теряет increment счётчика попыток (read-modify-write race под
+        READ COMMITTED), а две повторные отправки не проходят cooldown обе.
 
         Args:
             user_id: ID пользователя
@@ -105,8 +105,9 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
             "id": challenge_entity.challenge_id,
             "user_id": challenge_entity.user_id,
             "challenge_type": challenge_entity.challenge_type.value,
-            "code_hash": challenge_entity.code_hash,
+            "code_ciphertext": challenge_entity.code_ciphertext,
             "expires_at": challenge_entity.expires_at,
+            "last_sent_at": challenge_entity.last_sent_at,
             "attempts": challenge_entity.attempts,
             "used_at": challenge_entity.used_at,
             "created_at": challenge_entity.created_at,
@@ -131,8 +132,9 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
             challenge_id=challenge_model.id,
             user_id=challenge_model.user_id,
             challenge_type=ChallengeTypeEnum(challenge_model.challenge_type),
-            code_hash=challenge_model.code_hash,
+            code_ciphertext=challenge_model.code_ciphertext,
             expires_at=challenge_model.expires_at,
+            last_sent_at=challenge_model.last_sent_at,
             attempts=challenge_model.attempts,
             used_at=challenge_model.used_at,
             created_at=challenge_model.created_at,

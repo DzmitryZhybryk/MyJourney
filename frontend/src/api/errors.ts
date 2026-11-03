@@ -25,6 +25,9 @@ type FormLike = {
   setFieldError: (path: string, error: string) => void;
 };
 
+/** Interpolation values for an error text, e.g. `{ minutes: 9 }` for `{{minutes}}`. */
+export type ErrorParams = Readonly<Record<string, number>>;
+
 /**
  * Prefix of an i18n token for a backend error code (`errors` namespace).
  *
@@ -43,18 +46,18 @@ export function errorCodeToken(code: string): string {
 /**
  * Resolves a stored error token to text in the active language; `undefined` for an empty or
  * non-string token. The token is either a backend code (`errors:<code>`) or a namespaced
- * frontend validation key. Call it on every render.
+ * frontend validation key. Call it on every render; `params` fill the text's placeholders.
  */
-export function resolveErrorToken(token: unknown): string | undefined {
+export function resolveErrorToken(token: unknown, params?: ErrorParams): string | undefined {
   if (typeof token !== "string" || token.length === 0) {
     return undefined;
   }
 
   if (token.startsWith(ERROR_CODE_PREFIX)) {
-    return messageForCode(token.slice(ERROR_CODE_PREFIX.length));
+    return messageForCode(token.slice(ERROR_CODE_PREFIX.length), undefined, params);
   }
 
-  return i18n.t(token);
+  return i18n.t(token, params);
 }
 
 /**
@@ -71,9 +74,9 @@ export function withLocalizedError<T extends { error?: unknown }>(
  * User-facing message for a backend error code, from the `errors` namespace. The backend
  * `message` is never shown. An unknown code resolves to `fallback` (default `errors:fallback`).
  */
-export function messageForCode(code: string, fallback?: string): string {
+export function messageForCode(code: string, fallback?: string, params?: ErrorParams): string {
   const resolvedFallback = fallback ?? i18n.t("fallback", { ns: "errors" });
-  return i18n.t(code, { ns: "errors", defaultValue: resolvedFallback });
+  return i18n.t(code, { ...params, ns: "errors", defaultValue: resolvedFallback });
 }
 
 function snakeToCamel(value: string): string {

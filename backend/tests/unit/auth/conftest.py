@@ -4,7 +4,8 @@
 Фейки I/O-границы (репозитории, UoW, users-client, hasher'ы, task-bus, email-настройки)
 переехали в корневой ``tests/conftest.py`` — они переиспользуются и api-уровнем. Здесь
 остаётся только доменно-специфичная проводка сервисов-под-тестом, чтобы тесты не повторяли
-её. ``TokenIssuer`` и ``JWTService`` — реальные (stateless infra, дешёвые и детерминированные).
+её. ``TokenIssuer``, ``JWTService`` и шифратор кодов — реальные (stateless infra, дешёвые и
+детерминированные).
 """
 
 import pytest
@@ -14,6 +15,7 @@ from app.auth.application.services.account import AccountService
 from app.auth.application.services.auth import AuthService
 from app.auth.application.services.email_verification import EmailVerificationService
 from app.auth.application.services.token_issuer import TokenIssuer
+from app.shared.infra.crypto.fernet import FernetSecretCipher
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
 from app.shared.infra.jwt.service import JWTService
 from tests.fakes import (
@@ -66,13 +68,13 @@ def account_service(fake_uow: FakeAuthUnitOfWork) -> AccountService:
 @pytest.fixture
 def email_verification_service(
     fake_uow: FakeAuthUnitOfWork,
-    fake_salted_hasher: FakeSaltedHasher,
+    secret_cipher: FernetSecretCipher,
     fake_task_bus: FakeTaskBus,
     email_verification_config: EmailVerificationConfig,
 ) -> EmailVerificationService:
     return EmailVerificationService(
         uow=fake_uow,
-        salted_hasher=fake_salted_hasher,
+        secret_cipher=secret_cipher,
         task_bus=fake_task_bus,
         config=email_verification_config,
     )

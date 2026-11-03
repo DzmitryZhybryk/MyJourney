@@ -1,3 +1,4 @@
+import hmac
 from uuid import UUID
 
 from app.auth.application.config import EmailVerificationConfig
@@ -11,7 +12,7 @@ from app.auth.exceptions import (
     ChallengeNotFoundError,
     VerificationCodeInvalidError,
 )
-from app.shared.infra.crypto import SaltedHasherPort
+from app.shared.infra.crypto import SecretCipherPort
 from app.shared.infra.procrastinate import TaskBusPort
 
 
@@ -20,28 +21,26 @@ class EmailVerificationService:
         self,
         *,
         uow: AuthUnitOfWorkPort,
-        salted_hasher: SaltedHasherPort,
+        secret_cipher: SecretCipherPort,
         task_bus: TaskBusPort,
         config: EmailVerificationConfig,
     ) -> None:
         self._uow = uow
-        self._salted_hasher = salted_hasher
+        self._secret_cipher = secret_cipher
         self._task_bus = task_bus
         self._config = config
 
     async def request_email_verification(self, user_id: UUID) -> None:
         """
-        Создаёт код подтверждения email и атомарно ставит таску на его отправку.
+        Отправляет код подтверждения email: тот же, пока он жив, или новый.
 
-        Если у пользователя уже есть активный challenge типа email_verification
-        и cooldown не истёк — отказывает с ``ChallengeResendCooldownError``.
-        Иначе старый challenge переводится в ``used_at = now()`` (партиальный
-        unique-индекс по ``WHERE used_at IS NULL`` пропустит вставку нового),
-        создаётся новый и его plaintext уходит в письмо через procrastinate-таску.
+        Живой код с невыбранными попытками отправляется снова, и его срок продлевается: любое
+        письмо, дошедшее позже, несёт действующий код. Пока код исчерпан и не истёк, нового нет —
+        иначе повторная отправка обходила бы лимит попыток. Истёкший код гасится
+        (``used_at = now()``, чтобы партиальный unique-индекс пропустил новый), и выдаётся новый.
 
-        Defer таски и INSERT нового challenge'а коммитятся одной транзакцией —
-        невозможно состояние «в БД challenge есть, в очереди job'а нет» (или
-        наоборот).
+        Запись challenge'а и defer таски коммитятся одной транзакцией — невозможно состояние
+        «в БД challenge есть, в очереди job'а нет» (или наоборот).
 
         Scenarios:
             - регистрация: код уходит на почту сразу
@@ -53,7 +52,8 @@ class EmailVerificationService:
         Raises:
             AccountNotFoundError: Если учётной записи с таким ``user_id`` не существует
             EmailAlreadyVerifiedError: Если email уже подтверждён
-            ChallengeResendCooldownError: Если активный challenge ещё свежее cooldown'а
+            ChallengeResendCooldownError: Если код отправлялся позже, чем cooldown назад
+            ChallengeAttemptsExceededError: Если попытки ввода живого кода исчерпаны
         """
         async with self._uow.transaction():
             user_credentials_entity = await self._uow.user_credentials_repository.find_user_credentials_by_user_id(
@@ -68,28 +68,37 @@ class EmailVerificationService:
                 user_id=user_id,
                 challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
             )
-            if existing_challenge_entity is not None:
+            if existing_challenge_entity is not None and not existing_challenge_entity.is_expired():
+                existing_challenge_entity.ensure_not_exhausted(max_attempts=self._config.max_attempts)
                 existing_challenge_entity.ensure_resend_cooldown_passed(
                     cooldown_seconds=self._config.resend_cooldown_seconds,
                 )
-                existing_challenge_entity.mark_used()
+                existing_challenge_entity.resend(ttl_minutes=self._config.ttl_minutes)
                 await self._uow.challenge_repository.update_challenge_by_id(challenge_entity=existing_challenge_entity)
+                challenge_entity = existing_challenge_entity
+            else:
+                if existing_challenge_entity is not None:
+                    existing_challenge_entity.mark_used()
+                    await self._uow.challenge_repository.update_challenge_by_id(
+                        challenge_entity=existing_challenge_entity
+                    )
 
-            code = ChallengeEntity.generate_code()
-            new_challenge_entity = ChallengeEntity.create(
-                user_id=user_id,
-                challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
-                code_hash=self._salted_hasher.hash(secret=code),
-                ttl_minutes=self._config.ttl_minutes,
-            )
-            await self._uow.challenge_repository.insert_challenge(challenge_entity=new_challenge_entity)
+                code = ChallengeEntity.generate_code()
+                challenge_entity = ChallengeEntity.create(
+                    user_id=user_id,
+                    challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
+                    code_ciphertext=self._secret_cipher.encrypt(secret=code),
+                    ttl_minutes=self._config.ttl_minutes,
+                )
+                await self._uow.challenge_repository.insert_challenge(challenge_entity=challenge_entity)
 
             await self._task_bus.bind_to(self._uow.session).defer(
                 task_name=SEND_VERIFICATION_EMAIL_TASK,
                 lock=f"email_verification:user:{user_id}",
                 user_id=str(user_id),
                 email=user_credentials_entity.email,
-                code=code,
+                code_ciphertext=challenge_entity.code_ciphertext,
+                expires_at=challenge_entity.expires_at.isoformat(),
             )
             await self._uow.commit()
 
@@ -135,7 +144,9 @@ class EmailVerificationService:
 
             challenge_entity.ensure_can_attempt(max_attempts=self._config.max_attempts)
 
-            if not self._salted_hasher.verify(secret=command.code, hashed=challenge_entity.code_hash):
+            stored_code = self._secret_cipher.decrypt(ciphertext=challenge_entity.code_ciphertext)
+            # Байты, а не str: схема пропускает не-ASCII цифры, а compare_digest на таких str бросает TypeError.
+            if not hmac.compare_digest(stored_code.encode(), command.code.get_secret_value().encode()):
                 challenge_entity.register_failed_attempt()
                 await self._uow.challenge_repository.update_challenge_by_id(challenge_entity=challenge_entity)
                 await self._uow.commit()

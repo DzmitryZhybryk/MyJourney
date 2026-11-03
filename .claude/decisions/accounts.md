@@ -31,6 +31,40 @@
   transaction, plus monitoring of failed jobs. Never a saga.
 - Source: 2026-06-13
 
+## A resend sends the same one-time code while it is live and extends its expiry
+- A live code with attempts left is re-sent and its TTL restarts from this send; an expired one is
+  burned and replaced. The resend cooldown counts from `last_sent_at`.
+- Why: email arrives late or out of order (our retry queue, the mail path itself). With one code per
+  challenge every letter in the inbox carries a working code. Industry model: Twilio Verify.
+- Rejected: a new code on every resend (until 2026-11-03) — a delayed letter carries a burned code,
+  and entering it costs an attempt on the new one.
+- Rejected: several live codes per challenge (Okta) — breaks the one-active-challenge index, one
+  check per live code on every attempt, guessing odds multiply by the number of codes.
+- Rejected: fixing only our queue (the task checks the challenge before sending, cancel the pending
+  job, skip the resend while a job is in flight) — leaves delays outside our queue.
+- Source: stale verification code (#43), 2026-11-03
+
+## One-time codes are stored encrypted, not hashed
+- `SecretCipherPort` (Fernet, `CHALLENGE_CODE_ENCRYPTION_KEY`) for every challenge type; the send
+  task gets the ciphertext and decrypts in the worker, so no plaintext code sits in the job table.
+- Why: a code sent again must be read back, which a hash forbids. Encryption keeps a leaked database
+  or backup useless without the key, and leaves each future code type free to pick its resend policy.
+- Rejected: Argon2 hash (until 2026-11-03) — cannot resend the same code.
+- Rejected: plain text — fine for email verification alone, wrong for future payment or 2FA codes
+  in the same table.
+- Rejected: AES-GCM / ChaCha20 from `cryptography.hazmat` — nonce uniqueness is on us; PyNaCl,
+  pycryptodome, Tink — nothing gained over `cryptography`, or heavier.
+- Revisit when: the key needs rotation — `MultiFernet` with the old and new key.
+- Source: stale verification code (#43), 2026-11-03
+
+## After exhausted attempts a new code waits until the old one expires
+- Both send-verification and verify answer 429 `auth.challenge_attempts_exceeded` with
+  `details.retry_after_seconds`; the exhausted check runs before the cooldown.
+- Why: otherwise a resend hands out fresh attempts and the attempt limit is bypassed.
+- Rejected: a new code right after exhaustion (until 2026-11-03) — five guesses per minute.
+- Rejected: the `Retry-After` header — the frontend's `ApiError` reads only the body.
+- Source: stale verification code (#43), 2026-11-03
+
 ## There is no generic `user_preferences` table
 - A UI preference (language, theme) becomes a nullable column on `users`. A domain preference
   (e.g. travel interests) belongs to its own domain.

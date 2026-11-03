@@ -20,6 +20,11 @@ from app.shared.exceptions.schemas import ErrorResponse
 from app.shared.infra.jwt import InvalidAccessTokenError
 from app.shared.types import DictStrAny
 
+_ATTEMPTS_EXCEEDED_EXAMPLE: Final[DictStrAny] = {
+    **error_response_example(ChallengeAttemptsExceededError),
+    "details": {"retry_after_seconds": 540},
+}
+
 REGISTER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     400: {
         "description": "Ошибка валидации",
@@ -163,11 +168,20 @@ SEND_EMAIL_VERIFICATION_RESPONSES: Final[dict[int | str, DictStrAny]] = {
         },
     },
     429: {
-        "description": "Cooldown повторной отправки кода ещё не истёк",
+        "description": "Cooldown повторной отправки ещё не истёк или попытки ввода живого кода исчерпаны",
         "model": ErrorResponse,
         "content": {
             "application/json": {
-                "example": error_response_example(ChallengeResendCooldownError),
+                "examples": {
+                    "auth.challenge_resend_cooldown": {
+                        "summary": "Cooldown повторной отправки кода ещё не истёк",
+                        "value": error_response_example(ChallengeResendCooldownError),
+                    },
+                    "auth.challenge_attempts_exceeded": {
+                        "summary": "Попытки исчерпаны; новый код — через retry_after_seconds",
+                        "value": _ATTEMPTS_EXCEEDED_EXAMPLE,
+                    },
+                },
             }
         },
     },
@@ -226,7 +240,7 @@ VERIFY_EMAIL_RESPONSES: Final[dict[int | str, DictStrAny]] = {
         "model": ErrorResponse,
         "content": {
             "application/json": {
-                "example": error_response_example(ChallengeAttemptsExceededError),
+                "example": _ATTEMPTS_EXCEEDED_EXAMPLE,
             }
         },
     },

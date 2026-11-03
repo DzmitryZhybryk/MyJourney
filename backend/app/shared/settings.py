@@ -2,7 +2,8 @@ from functools import cache
 from pathlib import Path
 from typing import Final
 
-from pydantic import BaseModel, Field, SecretStr
+from cryptography.fernet import Fernet
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.shared.enums import AppEnvEnum
@@ -107,6 +108,36 @@ class EmailVerificationSettings(BaseModel):
     EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: int = 60
 
 
+class ChallengeSettings(BaseModel):
+    CHALLENGE_CODE_ENCRYPTION_KEY: SecretStr
+
+    @field_validator("CHALLENGE_CODE_ENCRYPTION_KEY")
+    @classmethod
+    def _ensure_fernet_key(cls, value: SecretStr) -> SecretStr:
+        """
+        Проверяет, что ключ шифрования одноразовых кодов — валидный ключ Fernet.
+
+        Scenarios:
+            - запуск API и воркера: неверный ключ останавливает старт, а не первую отправку кода
+
+        Args:
+            value: Ключ из окружения
+
+        Returns:
+            Тот же ключ
+
+        Raises:
+            ValueError: Ключ не 32 байта в url-safe base64
+        """
+        try:
+            Fernet(value.get_secret_value())
+        except ValueError as error:
+            message = "CHALLENGE_CODE_ENCRYPTION_KEY должен быть ключом Fernet: 32 байта в url-safe base64"
+            raise ValueError(message) from error
+
+        return value
+
+
 class GeoDatasetsSettings(BaseModel):
     GEO_DATASETS_CACHE_DIR: Path = _ROOT_DIR / ".geo-cache"
 
@@ -142,6 +173,7 @@ class Settings(
     JWTSettings,
     ResendSettings,
     EmailVerificationSettings,
+    ChallengeSettings,
     GeoDatasetsSettings,
     MediaStorageSettings,
     ProcrastinateSettings,

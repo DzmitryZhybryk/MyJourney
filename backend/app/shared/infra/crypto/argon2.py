@@ -58,6 +58,6 @@ def get_argon2_salted_hasher() -> Argon2SaltedHasher:
     на presentation-обёртке.
 
     Scenarios:
-        - домен, который хранит пароли и одноразовые коды
+        - домен, который хранит пароли
     """
     return Argon2SaltedHasher()

@@ -8,8 +8,9 @@
     "verification_code_invalid": "Неверный код подтверждения",
     "challenge_not_found": "Нет активного кода. Запросите новый",
     "challenge_expired": "Срок действия кода истёк. Запросите новый",
-    "challenge_attempts_exceeded": "Слишком много попыток. Запросите новый код",
-    "challenge_resend_cooldown": "Подождите, прежде чем запрашивать новый код",
+    "challenge_attempts_exceeded": "Слишком много попыток. Новый код можно будет запросить позже",
+    "challenge_attempts_exceeded_retry": "Слишком много попыток. Новый код можно запросить через {{minutes}} мин",
+    "challenge_resend_cooldown": "Подождите, прежде чем отправлять код повторно",
     "invalid_access_token": "Сессия истекла. Войдите снова",
     "invalid_refresh_token": "Сессия истекла. Войдите снова",
     "account_not_found": "Сессия истекла. Войдите снова"

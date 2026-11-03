@@ -6,7 +6,7 @@ may already have been rejected. Writing or changing an entry: skill `decision-re
 
 | File | Questions it answers |
 |---|---|
-| `accounts.md` | which domain stores email, username and the profile; what a valid token without an account gets; how registration spans auth and users; where user preferences live |
+| `accounts.md` | which domain stores email, username and the profile; what a valid token without an account gets; how registration spans auth and users; where user preferences live; how one-time codes are resent, stored and locked out |
 | `domains.md` | whether tables of different domains may reference each other; where an HTTP status is decided |
 | `geo.md` | how a city differs from a place and why they are separate; what a journey stores about a city and where names come from; how gazetteer names are stored per language; where gazetteer data comes from and what a provider must allow |
 | `journeys.md` | what one journey record represents; what date a journey carries |

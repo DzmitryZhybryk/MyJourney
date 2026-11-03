@@ -8,8 +8,9 @@
     "verification_code_invalid": "Invalid verification code",
     "challenge_not_found": "No active code. Request a new one",
     "challenge_expired": "The code has expired. Request a new one",
-    "challenge_attempts_exceeded": "Too many attempts. Request a new code",
-    "challenge_resend_cooldown": "Please wait before requesting a new code",
+    "challenge_attempts_exceeded": "Too many attempts. You can request a new code later",
+    "challenge_attempts_exceeded_retry": "Too many attempts. You can request a new code in {{minutes}} min",
+    "challenge_resend_cooldown": "Please wait before resending the code",
     "invalid_access_token": "Your session has expired. Please sign in again",
     "invalid_refresh_token": "Your session has expired. Please sign in again",
     "account_not_found": "Your session has expired. Please sign in again"

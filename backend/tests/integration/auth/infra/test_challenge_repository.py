@@ -21,6 +21,7 @@ from app.auth.infra.repositories import ChallengeRepository
 from tests.builders import make_challenge
 
 _EXPIRES_AT = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
+_LAST_SENT_AT = dt.datetime(2029, 12, 31, 23, 45, tzinfo=dt.UTC)
 _USED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
 
@@ -34,8 +35,9 @@ async def test_insert_then_find_active_for_update_roundtrip(
     challenge_entity = make_challenge(
         user_id=user_id,
         challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
-        code_hash="roundtrip-code",
+        code_ciphertext="roundtrip-code",
         expires_at=_EXPIRES_AT,
+        last_sent_at=_LAST_SENT_AT,
     )
     async with session_factory() as writer:
         await ChallengeRepository(session=writer).insert_challenge(challenge_entity=challenge_entity)
@@ -51,7 +53,9 @@ async def test_insert_then_find_active_for_update_roundtrip(
     assert found.challenge_id == challenge_entity.challenge_id
     assert found.user_id == user_id
     assert found.challenge_type is ChallengeTypeEnum.EMAIL_VERIFICATION
-    assert found.code_hash == "roundtrip-code"
+    assert found.code_ciphertext == "roundtrip-code"
+    assert found.expires_at == _EXPIRES_AT
+    assert found.last_sent_at == _LAST_SENT_AT
     assert found.attempts == 0
 
 
@@ -81,11 +85,11 @@ async def test_find_active_excludes_used_challenge(
     assert found is None
 
 
-async def test_update_challenge_persists_attempts(
+async def test_update_challenge_persists_attempts_and_resend(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``update_challenge_by_id`` персистит изменённый счётчик попыток (виден из новой сессии)."""
+    """``update_challenge_by_id`` персистит счётчик попыток и продление после повторной отправки."""
     user_id = uuid4()
     challenge_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="ch-update@example.com", username="ch_update")
@@ -100,11 +104,13 @@ async def test_update_challenge_persists_attempts(
         await ChallengeRepository(session=writer).insert_challenge(challenge_entity=challenge_entity)
         await writer.commit()
 
+    resent_at = _LAST_SENT_AT + dt.timedelta(minutes=5)
     incremented = make_challenge(
         challenge_id=challenge_id,
         user_id=user_id,
         challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
-        expires_at=_EXPIRES_AT,
+        expires_at=resent_at + dt.timedelta(minutes=15),
+        last_sent_at=resent_at,
         attempts=3,
     )
     async with session_factory() as writer:
@@ -119,6 +125,8 @@ async def test_update_challenge_persists_attempts(
 
     assert found is not None
     assert found.attempts == 3
+    assert found.last_sent_at == resent_at
+    assert found.expires_at == resent_at + dt.timedelta(minutes=15)
 
 
 async def test_second_active_same_type_raises_integrity_error(
