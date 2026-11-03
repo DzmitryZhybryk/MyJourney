@@ -6,12 +6,11 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import "./public-header.css";
 
 /**
- * Шапка публичной зоны (лендинг + login/signup). Смонтирована один раз в
- * `PublicLayout`, поэтому переживает навигацию вместе с глобусом — при переходе
- * лендинг → форма она не перерисовывается, что и держит ощущение одного мира.
+ * Public zone header (landing + login/signup). Mounted once in `PublicLayout`, so it survives
+ * navigation together with the globe and is not redrawn going landing -> form.
  *
- * Активная пилюля выводится из маршрута: на `/signup` подсвечена «Sign up», на
- * `/login` — «Log in», на лендинге по умолчанию «Sign up» как главное действие.
+ * The active pill comes from the route: "Sign up" on `/signup`, "Log in" on `/login`, and on the
+ * landing "Sign up" by default as the primary action.
  */
 export function PublicHeader() {
   const { t } = useTranslation("landing");

@@ -1,18 +1,19 @@
 """
 In-memory фейки домена users: репозиторий и UoW.
 
-Реализуют порты из ``app.users.application.ports`` — тот же контракт, что и боевой
+Реализуют порты из ``app.users.application.ports.*`` — тот же контракт, что и боевой
 SQLAlchemy-репозиторий/UoW. ``ty`` сверяет обе реализации с портом, поэтому фейк не
 может молча разойтись с реальной сигнатурой. Сторадж — ``dict`` по ``user_id``;
 сущность кладётся по ссылке (моделирует identity map SA-сессии).
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 from uuid import UUID
 
-from app.users.application.ports import UserRepositoryPort, UserUnitOfWorkPort
+from app.users.application.ports.unit_of_work import UserUnitOfWorkPort
+from app.users.application.ports.user_repository import UserRepositoryPort
 from app.users.domain.entities import UserEntity
 
 
@@ -24,6 +25,9 @@ class FakeUserRepository(UserRepositoryPort):
 
     async def insert_user(self, user_entity: UserEntity) -> None:
         self.by_user_id[user_entity.user_id] = user_entity
+
+    async def find_user_by_id(self, user_id: UUID) -> UserEntity | None:
+        return self.by_user_id.get(user_id)
 
 
 class FakeUserUnitOfWork(UserUnitOfWorkPort):
@@ -40,7 +44,7 @@ class FakeUserUnitOfWork(UserUnitOfWorkPort):
         self.commit_mock = AsyncMock()
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
+    async def transaction(self) -> AsyncGenerator[None]:
         yield
 
     async def commit(self) -> None:

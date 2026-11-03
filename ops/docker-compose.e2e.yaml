@@ -1,98 +1,100 @@
-# Одноразовый стек для фронтовых Playwright-e2e.
+# Одноразовый стек для фронтовых Playwright-e2e, override поверх docker-compose.base.yaml.
 #
-# Зачем отдельный файл, а не дев-стек: e2e сеют пользователей через POST /v1/auth/register/,
-# и при прогоне против дев-стека (docker-compose.yaml) они копятся в персистентной mindtrace_pg
-# (том pg_data) навсегда. Здесь Postgres живёт в tmpfs (RAM) без named-тома → БД исчезает на
-# `down`, дев-база не трогается. Это перенос подхода backend-testcontainers (одноразовая БД на
-# прогон) на уровень стека — e2e нужно всё приложение, а не голый Postgres.
+# Зачем отдельный стек, а не дев: e2e сеют пользователей через POST /v1/auth/register/,
+# и при прогоне против дев-стека они копятся в персистентной myjourney_pg (том pg_data) навсегда.
+# Здесь Postgres живёт в tmpfs (RAM) без named-тома → БД исчезает на `down`, дев-база не трогается.
+# Это перенос подхода backend-testcontainers (одноразовая БД на прогон) на уровень стека — e2e
+# нужно всё приложение, а не голый Postgres.
 #
-# Запуск — корневым `make test-e2e` (up --wait frontend → playwright → down -v). Свой проект
-# (`name`) изолирует контейнеры/тома/сеть от дев-стека: можно держать оба разом. `container_name`
-# нигде не задаём (compose сам префиксует проектом → нет клеша с дев), сеть — дефолтная проектная
-# (`docker network create` не нужен). Имена сервисов mindtrace_pg/app совпадают с хостами в .env и
-# vite.config (API_PROXY_TARGET) → .env переиспользуется как есть, без env-оверрайдов кроме Resend.
-name: mindtrace_e2e
+# Запуск — корневым `make test-e2e` (up --wait → playwright → down -v). Свой проект (`name`)
+# изолирует контейнеры/тома/сеть от дев-стека: можно держать оба разом. `container_name` нигде не
+# задаём (compose сам префиксует проектом → нет клеша с дев), сеть — дефолтная проектная
+# (`docker network create` не нужен). Имена сервисов myjourney_pg/app совпадают с хостами в .env и
+# vite.config (API_PROXY_TARGET) → .env переиспользуется как есть. Оверрайды — только Resend и адрес
+# S3-эмулятора: у e2e свой порт (9051), чтобы стек жил рядом с дев-стеком, а дев-.env указывает на 9050.
+name: myjourney_e2e
+
+x-e2e-backend: &e2e-backend
+  build:
+    target: dev
+
+x-e2e-storage-endpoint: &e2e-storage-endpoint
+  MEDIA_S3_ENDPOINT_URL: "http://s3.localhost:9051"
 
 services:
 
-  # Имя сервиса = POSTGRES_HOST из .env. tmpfs → данные в RAM, без named-тома: умирают на `down`.
-  mindtrace_pg:
-    image: postgres:17-alpine
-    env_file: .env
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    command: postgres -c log_min_messages=warning
+  myjourney_pg:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
-      timeout: 5s
       retries: 15
       start_period: 5s
 
-  # One-shot: накатывает app-схему существующей командой alembic и выходит. Не новый код — дев
-  # делает то же (`docker exec mindtrace_app uv run alembic upgrade head`). app ждёт его завершения.
-  migrate:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: dev
-    command: sh -c "uv run alembic upgrade head"
-    env_file: .env
-    # dev-образ код внутрь не копирует (см. backend/Dockerfile, target dev) — монтируем как базовый compose.
-    volumes: &backend_mounts
-      - ./backend/app:/src/app
-      - ./backend/migrations:/src/migrations
-      - ./backend/alembic.ini:/src/alembic.ini:ro
-      - ./backend/pyproject.toml:/src/pyproject.toml:ro
-    depends_on:
-      mindtrace_pg:
-        condition: service_healthy
-    restart: "no"
+  myjourney_migrate:
+    <<: *e2e-backend
 
-  # Штатный worker: на старте применяет схему procrastinate (_ensure_procrastinate_schema) — именно
-  # так схема попадает в БД и в деве. register делает atomic-defer письма в procrastinate_jobs, без
-  # этой схемы он падает 500 и валит все e2e. RESEND_BASE_URL → мёртвый адрес: письма-джобы упрутся
-  # в connection refused (упадут в throwaway-БД), реальный Resend не дёргается.
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: dev
-    command: python -m app.worker
-    env_file: .env
+  # Кеш датасетов общий с дев-стеком и с кешем CI (хостовый backend/.geo-cache).
+  myjourney_geo_load:
+    <<: *e2e-backend
+    volumes:
+      - ./backend/.geo-cache:/src/.geo-cache
+
+  # Тот же эмулятор, что в деве (там — почему один порт внутри и снаружи), но данные в RAM.
+  myjourney_s3:
+    image: rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
     environment:
-      RESEND_BASE_URL: "http://localhost:9"
-    volumes: *backend_mounts
-    depends_on:
-      mindtrace_pg:
-        condition: service_healthy
-    # healthy = таблица procrastinate_jobs создана → схема готова. Снимает гонку: app стартует
-    # только после этого, поэтому первый register уже видит схему.
+      RUSTFS_ADDRESS: ":9051"
+      RUSTFS_ACCESS_KEY: ${MEDIA_S3_ACCESS_KEY_ID}
+      RUSTFS_SECRET_KEY: ${MEDIA_S3_SECRET_ACCESS_KEY}
+    ports:
+      - "9051:9051"
+    # tmpfs монтируется от root, а RustFS работает под своим пользователем (uid 10001).
+    tmpfs:
+      - /data:uid=10001,gid=10001
     healthcheck:
-      test:
-        - "CMD"
-        - "python"
-        - "-c"
-        - "import os,psycopg;c=psycopg.connect(host=os.environ['POSTGRES_HOST'],port=os.environ['POSTGRES_PORT'],dbname=os.environ['POSTGRES_DB'],user=os.environ['POSTGRES_USER'],password=os.environ['POSTGRES_PASSWORD']);v=c.execute(\"select to_regclass('public.procrastinate_jobs')\").fetchone()[0];c.close();exit(0 if v else 1)"
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9051/health"]
       interval: 3s
       timeout: 5s
       retries: 20
-      start_period: 3s
+    networks:
+      default:
+        aliases:
+          - s3.localhost
 
-  # Имя сервиса = API_PROXY_TARGET host из vite.config. Ждёт обе схемы: app-таблицы (migrate) и
-  # procrastinate (worker healthy). Без хост-порта — фронт ходит к нему по внутренней сети проекта.
-  app:
+  myjourney_s3_bootstrap:
+    <<: *e2e-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: dev
-    command: sh -c "uvicorn app.main:create_app --factory --no-use-colors --host 0.0.0.0 --port 8000 --log-level error"
     env_file: .env
-    volumes: *backend_mounts
+    environment: *e2e-storage-endpoint
+    command: python -m devtools.storage_bootstrap --cors-origin http://localhost:5273
+    depends_on:
+      myjourney_s3:
+        condition: service_healthy
+    restart: "no"
+
+  # RESEND_BASE_URL → мёртвый адрес: письма-джобы упрутся в connection refused (упадут в
+  # throwaway-БД), реальный Resend не дёргается.
+  myjourney_worker:
+    <<: *e2e-backend
+    environment:
+      <<: *e2e-storage-endpoint
+      RESEND_BASE_URL: "http://localhost:9"
+    depends_on:
+      myjourney_s3_bootstrap:
+        condition: service_completed_successfully
+
+  # Без хост-порта — фронт ходит к нему по внутренней сети проекта.
+  app:
+    <<: *e2e-backend
+    environment: *e2e-storage-endpoint
+    depends_on:
+      myjourney_s3_bootstrap:
+        condition: service_completed_successfully
+    command: sh -c "uvicorn app.main:create_app --factory --no-use-colors --host 0.0.0.0 --port 8000 --log-level error"
     # 127.0.0.1, а не localhost: uvicorn слушает IPv4 (--host 0.0.0.0), а localhost в alpine/musl
     # резолвится в IPv6 ::1 первым → connection refused (та же ловушка, что у frontend ниже).
     healthcheck:
@@ -101,19 +103,12 @@ services:
       timeout: 5s
       retries: 20
       start_period: 3s
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      worker:
-        condition: service_healthy
 
   # Единственный проброшенный наружу порт (5273 ≠ дев-5173). Playwright бьёт сюда (E2E_BASE_URL),
   # /v1 проксируется на app внутри сети проекта. dev-CMD сам делает npm install (named-volume
   # node_modules на первом старте пуст — см. frontend/Dockerfile).
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
       # target: dev — Vite dev-сервер (:5173). Без target собралась бы последняя стадия
       # `final` (nginx :80): фронт вставал nginx'ом, healthcheck на :5173 не проходил → unhealthy.
       target: dev

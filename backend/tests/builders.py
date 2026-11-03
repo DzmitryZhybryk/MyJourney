@@ -7,21 +7,29 @@
 """
 
 import datetime as dt
+import hashlib
 from uuid import UUID, uuid4
 
+from procrastinate.jobs import Job
+
 from app.auth.domain.entities import ChallengeEntity, RefreshTokenEntity, UserCredentialsEntity
-from app.auth.domain.enums import ChallengeType, UserRole
+from app.auth.domain.enums import ChallengeTypeEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
-from app.geo.domain.entities import PlaceEntity
-from app.geo.domain.value_objects import PlaceNames
+from app.geo.domain.entities import CityEntity
+from app.geo.domain.value_objects import LocalizedNames
+from app.geo.infra.datasets.manifest import DatasetFormatEnum, DatasetSpec
+from app.journeys.application.ports.cities_client import CityLocationResponse
 from app.journeys.domain.entities import JourneyEntity
-from app.journeys.domain.enums import TransportType
-from app.journeys.domain.value_objects import ApproximateDate, GeoPoint
+from app.journeys.domain.enums import TransportTypeEnum
+from app.journeys.domain.value_objects import GeoPoint
+from app.shared.types import DictStrAny
 from app.users.domain.entities import UserEntity
 
 # Опорные координаты для детерминированных journeys/geo тестов (Москва→Лондон ≈ 2500 км).
 _MOSCOW_LAT, _MOSCOW_LNG = 55.75, 37.62
 _LONDON_LAT, _LONDON_LNG = 51.5, -0.12
+MOSCOW_CITY_ID = UUID("00000000-0000-0000-0000-000000000001")
+LONDON_CITY_ID = UUID("00000000-0000-0000-0000-000000000002")
 
 
 def make_password(*, hash: str = "argon2-hash") -> Password:
@@ -31,22 +39,18 @@ def make_password(*, hash: str = "argon2-hash") -> Password:
 def make_user_entity(
     *,
     user_id: UUID | None = None,
-    username: str = "user",
-    email: str = "user@example.com",
+    display_name: str = "user",
     terms_accepted_at: dt.datetime | None = None,
     marketing_emails_consent: bool = False,
-    display_name: str | None = None,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
     deleted_at: dt.datetime | None = None,
 ) -> UserEntity:
     return UserEntity(
         user_id=user_id or uuid4(),
-        username=username,
-        email=email,
+        display_name=display_name,
         terms_accepted_at=terms_accepted_at or dt.datetime.now(tz=dt.UTC),
         marketing_emails_consent=marketing_emails_consent,
-        display_name=display_name,
         created_at=created_at,
         updated_at=updated_at,
         deleted_at=deleted_at,
@@ -84,7 +88,7 @@ def make_user_credentials(
     email: str = "user@example.com",
     username: str = "user",
     password: Password | None = None,
-    role: UserRole = UserRole.FREE,
+    role: UserRoleEnum = UserRoleEnum.FREE,
     email_verified_at: dt.datetime | None = None,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
@@ -105,9 +109,10 @@ def make_challenge(
     *,
     challenge_id: UUID | None = None,
     user_id: UUID | None = None,
-    challenge_type: ChallengeType = ChallengeType.EMAIL_VERIFICATION,
-    code_hash: str = "code-hash",
+    challenge_type: ChallengeTypeEnum = ChallengeTypeEnum.EMAIL_VERIFICATION,
+    code_ciphertext: str = "code-ciphertext",
     expires_at: dt.datetime | None = None,
+    last_sent_at: dt.datetime | None = None,
     attempts: int = 0,
     used_at: dt.datetime | None = None,
     created_at: dt.datetime | None = None,
@@ -117,8 +122,9 @@ def make_challenge(
         challenge_id=challenge_id or uuid4(),
         user_id=user_id or uuid4(),
         challenge_type=challenge_type,
-        code_hash=code_hash,
+        code_ciphertext=code_ciphertext,
         expires_at=expires_at or (dt.datetime.now(tz=dt.UTC) + dt.timedelta(minutes=15)),
+        last_sent_at=last_sent_at or dt.datetime.now(tz=dt.UTC),
         attempts=attempts,
         used_at=used_at,
         created_at=created_at,
@@ -128,16 +134,22 @@ def make_challenge(
 
 def make_geo_point(
     *,
-    name: str = "Moscow",
+    city_id: UUID = MOSCOW_CITY_ID,
     country_code: str = "RU",
     latitude: float = _MOSCOW_LAT,
     longitude: float = _MOSCOW_LNG,
 ) -> GeoPoint:
-    return GeoPoint(name=name, country_code=country_code, latitude=latitude, longitude=longitude)
+    return GeoPoint(city_id=city_id, country_code=country_code, latitude=latitude, longitude=longitude)
 
 
-def make_approximate_date(*, year: int = 2020, month: int | None = None, day: int | None = None) -> ApproximateDate:
-    return ApproximateDate.from_parts(year=year, month=month, day=day)
+def make_city_location_response(
+    *,
+    city_id: UUID = MOSCOW_CITY_ID,
+    country_code: str = "RU",
+    latitude: float = _MOSCOW_LAT,
+    longitude: float = _MOSCOW_LNG,
+) -> CityLocationResponse:
+    return CityLocationResponse(city_id=city_id, country_code=country_code, latitude=latitude, longitude=longitude)
 
 
 def make_journey(
@@ -146,8 +158,10 @@ def make_journey(
     user_id: UUID | None = None,
     origin: GeoPoint | None = None,
     destination: GeoPoint | None = None,
-    transport_type: TransportType = TransportType.AIR,
-    traveled_on: ApproximateDate | None = None,
+    transport_type: TransportTypeEnum = TransportTypeEnum.AIR,
+    distance_km: int = 2500,
+    traveled_year: int = 2020,
+    sort_key: str | None = None,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
     deleted_at: dt.datetime | None = None,
@@ -155,32 +169,69 @@ def make_journey(
     return JourneyEntity(
         journey_id=journey_id or uuid4(),
         user_id=user_id or uuid4(),
-        origin=origin or make_geo_point(name="Moscow", country_code="RU"),
+        origin=origin or make_geo_point(country_code="RU"),
         destination=destination
-        or make_geo_point(name="London", country_code="GB", latitude=_LONDON_LAT, longitude=_LONDON_LNG),
+        or make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=_LONDON_LAT, longitude=_LONDON_LNG),
         transport_type=transport_type,
-        traveled_on=traveled_on or make_approximate_date(),
+        distance_km=distance_km,
+        traveled_year=traveled_year,
+        sort_key=sort_key if sort_key is not None else f"{uuid4().hex}1",
         created_at=created_at,
         updated_at=updated_at,
         deleted_at=deleted_at,
     )
 
 
-def make_place(
+def make_city(
     *,
-    place_id: UUID | None = None,
+    city_id: UUID | None = None,
     en: str = "Moscow",
     ru: str | None = "Москва",
     country_code: str = "RU",
     latitude: float = _MOSCOW_LAT,
     longitude: float = _MOSCOW_LNG,
-    population: int = 10_000_000,
-) -> PlaceEntity:
-    return PlaceEntity(
-        place_id=place_id or uuid4(),
-        names=PlaceNames(en=en, ru=ru),
+    population: int | None = 10_000_000,
+) -> CityEntity:
+    return CityEntity(
+        city_id=city_id or uuid4(),
+        names=LocalizedNames(en=en, ru=ru),
         country_code=country_code,
         latitude=latitude,
         longitude=longitude,
         population=population,
+    )
+
+
+def make_dataset_spec(
+    *,
+    content: bytes,
+    name: str = "test-cities",
+    format: DatasetFormatEnum = DatasetFormatEnum.CITIES,
+    version: str = "2026-01-01",
+    url: str = "https://example.test/test-cities.csv.gz",
+) -> DatasetSpec:
+    """Датасет манифеста, чей sha256 совпадает с ``content`` — байтами «скачиваемого» файла."""
+    return DatasetSpec(
+        name=name,
+        format=format,
+        version=version,
+        url=url,
+        sha256=hashlib.sha256(content).hexdigest(),
+    )
+
+
+def make_job(
+    *,
+    job_id: int | None = None,
+    task_name: str = "some_task",
+    lock: str | None = None,
+    task_kwargs: DictStrAny | None = None,
+) -> Job:
+    return Job(
+        id=job_id,
+        queue="default",
+        lock=lock,
+        queueing_lock=None,
+        task_name=task_name,
+        task_kwargs=task_kwargs or {},
     )

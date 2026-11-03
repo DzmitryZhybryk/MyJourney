@@ -12,12 +12,14 @@ class JWTDecodeError(Exception):
 
 
 class JWTService:
-    def __init__(self, secret: str, algorithm: str, access_token_expire_minutes: int) -> None:
+    """Реализация ``AccessTokenIssuerPort`` и проверка access-токенов запроса."""
+
+    def __init__(self, *, secret: str, algorithm: str, access_token_expire_minutes: int) -> None:
         self._secret = secret
         self._algorithm = algorithm
         self._expire_minutes = access_token_expire_minutes
 
-    def create_access_token(self, user_id: UUID, role: str, email_verified: bool) -> str:
+    def create_access_token(self, *, user_id: UUID, role: str, email_verified: bool) -> str:
         now = dt.datetime.now(tz=dt.UTC)
         payload = {
             "sub": str(user_id),
@@ -36,6 +38,9 @@ class JWTService:
         и невалидный ``sub`` оборачиваются в ``JWTDecodeError`` — инкапсулируем
         зависимость от pyjwt в инфраструктурном слое, presentation работает
         только с этим типом.
+
+        Scenarios:
+            - любой эндпоинт, которому нужен текущий пользователь
 
         Args:
             token: Plaintext JWT access-токен из заголовка Authorization
@@ -69,9 +74,13 @@ def get_jwt_service() -> JWTService:
     JWTService stateless и иммутабельный — пересоздавать на каждый запрос
     бессмысленно. Тестируемость сохраняется через ``app.dependency_overrides``
     на presentation-обёртке.
+
+    Scenarios:
+        - выпуск access-токена
+        - любой эндпоинт, которому нужен текущий пользователь
     """
     return JWTService(
-        secret=settings.JWT_SECRET_KEY,
+        secret=settings.JWT_SECRET_KEY.get_secret_value(),
         algorithm=settings.JWT_ALGORITHM,
         access_token_expire_minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES,
     )

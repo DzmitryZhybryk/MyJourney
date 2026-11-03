@@ -1,11 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.application.ports import (
-    AuthUnitOfWorkPort,
-    ChallengeRepositoryPort,
-    RefreshTokenRepositoryPort,
-    UserCredentialsRepositoryPort,
-)
+from app.auth.application.ports.challenge_repository import ChallengeRepositoryPort
+from app.auth.application.ports.refresh_token_repository import RefreshTokenRepositoryPort
+from app.auth.application.ports.unit_of_work import AuthUnitOfWorkPort
+from app.auth.application.ports.user_credentials_repository import UserCredentialsRepositoryPort
 from app.auth.infra.repositories import (
     ChallengeRepository,
     RefreshTokenRepository,

@@ -22,6 +22,11 @@ jobs:
   backend:
     name: Backend gate
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Через env, а не флагом: иначе `uv run` внутри make молча перепишет устаревший uv.lock,
+    # и гейт останется зелёным, а `uv sync --locked` в Dockerfile упадёт уже по пути в прод.
+    env:
+      UV_LOCKED: "true"
     defaults:
       run:
         working-directory: backend
@@ -29,16 +34,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
 
-      - name: Install Python (из backend/.python-version)
-        run: uv python install
-
-      - name: Sync deps (frozen)
-        run: uv sync --frozen
+      - name: Sync deps (locked; Python по requires-python из pyproject.toml)
+        run: uv sync
 
       - name: Quality gate (format-check, lint, typecheck, arch, dead-code, audit, unit+api)
         run: make check-ci
@@ -46,6 +48,7 @@ jobs:
   frontend:
     name: Frontend gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -53,7 +56,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Install Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: 26
           cache: npm
@@ -62,5 +65,20 @@ jobs:
       - name: Install deps (ci)
         run: npm ci
 
+      - name: Codegen drift (src/api/generated == backend/openapi.json)
+        run: |
+          make generate-api
+          git diff --exit-code -- src/api/generated \
+            || { echo "::error::SDK устарел — прогони 'make fe-generate-api' и закоммить результат"; exit 1; }
+
+      - name: Codegen drift (src/data/world-countries.topo.json == data/world-countries.geo.json)
+        run: |
+          make generate-world
+          git diff --exit-code -- src/data/world-countries.topo.json \
+            || { echo "::error::Границы стран устарели — прогони 'make fe-generate-world' и закоммить результат"; exit 1; }
+
       - name: Quality gate (lint, typecheck, unit+component)
         run: make check
+
+      - name: Bundle budget (prod build, static import graph per page)
+        run: make budget

@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.journeys.application.ports import JourneyRepositoryPort, JourneyUnitOfWorkPort
+from app.journeys.application.ports.journey_repository import JourneyRepositoryPort
+from app.journeys.application.ports.unit_of_work import JourneyUnitOfWorkPort
 from app.journeys.infra.repositories import JourneyRepository
 from app.shared.infra.postgres.uow import BaseUnitOfWork
 

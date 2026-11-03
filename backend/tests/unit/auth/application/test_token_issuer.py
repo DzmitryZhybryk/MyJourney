@@ -1,10 +1,10 @@
 import datetime as dt
 from uuid import uuid4
 
-from app.auth.application.schemas import ClientMetadata
-from app.auth.application.token_issuer import TokenIssuer
-from app.shared.infra.crypto import Sha256DeterministicHasher
-from app.shared.infra.jwt import JWTService
+from app.auth.application.schemas.metadata import ClientMetadata
+from app.auth.application.services.token_issuer import TokenIssuer
+from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
+from app.shared.infra.jwt.service import JWTService
 from tests.builders import make_user_credentials
 
 

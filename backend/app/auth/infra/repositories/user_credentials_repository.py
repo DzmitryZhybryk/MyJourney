@@ -3,9 +3,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.application.ports import UserCredentialsRepositoryPort
+from app.auth.application.ports.user_credentials_repository import UserCredentialsRepositoryPort
 from app.auth.domain.entities import UserCredentialsEntity
-from app.auth.domain.enums import UserRole
+from app.auth.domain.enums import UserRoleEnum
 from app.auth.domain.value_objects import Password
 from app.auth.infra.models import UserCredentials
 from app.shared.repositories.base_repository import BaseDBRepository
@@ -27,8 +27,8 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         Добавляет учётные данные пользователя в сессию без коммита.
 
         Запись становится видимой другим транзакциям только после ``commit()``
-        в UnitOfWork. Уникальные индексы по ``email`` и ``username`` могут
-        выбросить ``IntegrityError`` на flush, если конфликт не был отловлен
+        в UnitOfWork. Уникальные индексы по ``lower(email)`` и ``lower(username)``
+        могут выбросить ``IntegrityError`` на flush, если конфликт не был отловлен
         предварительной проверкой.
 
         Args:
@@ -68,32 +68,58 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         user_credentials_model = await self._fetch_one(query=query)
         return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
 
-    async def find_user_credentials_by_email_or_username(
-        self,
-        email: str,
-        username: str,
-    ) -> list[UserCredentialsEntity]:
+    async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
         """
-        Загружает все записи, у которых совпадает email или username.
-
-        Используется при регистрации, чтобы одним запросом обнаружить конфликт
-        по обоим полям. PostgreSQL планирует это как ``BitmapOr`` из двух
-        independent index scan'ов по уникальным индексам ``email`` и
-        ``username``, поэтому возвращается максимум 2 строки.
+        Загружает учётные данные по email без учёта регистра.
 
         Args:
-            email: Email из запроса регистрации
-            username: Username из запроса регистрации
+            email: Email в любом регистре
 
         Returns:
-            Список найденных доменных сущностей (0..2 элементов)
+            Доменная сущность учётных данных либо ``None``, если запись не найдена
         """
-        query = sa.select(UserCredentials).where(
-            (UserCredentials.email == email) | (UserCredentials.username == username),
+        query = sa.select(UserCredentials).where(sa.func.lower(UserCredentials.email) == sa.func.lower(email))
+        user_credentials_model = await self._fetch_one(query=query)
+        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+
+    async def find_user_credentials_by_username(self, username: str) -> UserCredentialsEntity | None:
+        """
+        Загружает учётные данные по username без учёта регистра.
+
+        Args:
+            username: Username в любом регистре
+
+        Returns:
+            Доменная сущность учётных данных либо ``None``, если запись не найдена
+        """
+        query = sa.select(UserCredentials).where(sa.func.lower(UserCredentials.username) == sa.func.lower(username))
+        user_credentials_model = await self._fetch_one(query=query)
+        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+
+    async def find_user_credentials_by_login(self, login: str) -> UserCredentialsEntity | None:
+        """
+        Загружает учётные данные по логину — email или username, без учёта регистра.
+
+        Один запрос при любом исходе, чтобы время ответа login не выдавало, нашёлся ли
+        аккаунт и по какому полю. Если строка — чей-то email и одновременно чужой username,
+        возвращается владелец email.
+
+        Args:
+            login: Email или username в любом регистре
+
+        Returns:
+            Доменная сущность учётных данных либо ``None``, если запись не найдена
+        """
+        login_lower = sa.func.lower(login)
+        email_matches = sa.func.lower(UserCredentials.email) == login_lower
+        query = (
+            sa.select(UserCredentials)
+            .where(email_matches | (sa.func.lower(UserCredentials.username) == login_lower))
+            .order_by(email_matches.desc())
+            .limit(1)
         )
-        result = await self._session.execute(query)
-        models = result.scalars().all()
-        return [self._to_entity(user_credentials_model=user_credentials_model) for user_credentials_model in models]
+        user_credentials_model = await self._fetch_one(query=query)
+        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
 
     def _to_columns(self, user_credentials_entity: UserCredentialsEntity) -> DictStrAny:
         """
@@ -102,6 +128,10 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         Источник истины для обоих путей записи: INSERT (``UserCredentials(**columns)``)
         и UPDATE (те же колонки минус PK). Новое поле добавляется здесь один раз —
         и попадает и в INSERT, и в UPDATE, рассинхрон между ними невозможен.
+
+        Scenarios:
+            - регистрация
+            - верный код в диалоге «Подтвердите email»
 
         Args:
             user_credentials_entity: Доменная сущность учётных данных
@@ -125,6 +155,12 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         """
         Конвертирует ORM-модель в доменную сущность учётных данных.
 
+        Scenarios:
+            - регистрация: проверка, что email и username свободны
+            - вход и обновление сессии
+            - отправка и ввод кода в диалоге «Подтвердите email»
+            - данные входа текущего пользователя
+
         Args:
             user_credentials_model: ORM-модель из БД
 
@@ -136,7 +172,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             email=user_credentials_model.email,
             username=user_credentials_model.username,
             password=Password(hash=user_credentials_model.password_hash),
-            role=UserRole(user_credentials_model.role),
+            role=UserRoleEnum(user_credentials_model.role),
             email_verified_at=user_credentials_model.email_verified_at,
             created_at=user_credentials_model.created_at,
             updated_at=user_credentials_model.updated_at,

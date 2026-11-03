@@ -5,6 +5,7 @@
 # любой неожиданный edge (напр. application → infra) — это нарушение.
 
 source_roots = ["."]
+forbid_circular_dependencies = true
 
 exclude = [
     "migrations",
@@ -13,13 +14,18 @@ exclude = [
     "**/__pycache__",
 ]
 
+# Исключения домена — общий для его слоёв модуль; каждый слой объявляет его, только если импортирует.
 [[modules]]
-path = "app.auth.domain"
+path = "app.auth.exceptions"
 depends_on = ["app.shared"]
 
 [[modules]]
+path = "app.auth.domain"
+depends_on = ["app.auth.exceptions", "app.shared"]
+
+[[modules]]
 path = "app.auth.application"
-depends_on = ["app.auth.domain", "app.shared"]
+depends_on = ["app.auth.domain", "app.auth.exceptions", "app.shared"]
 
 [[modules]]
 path = "app.auth.infra"
@@ -27,11 +33,18 @@ depends_on = ["app.auth.domain", "app.shared", "app.users.application", "app.aut
 
 [[modules]]
 path = "app.auth.presentation"
-depends_on = ["app.auth.application", "app.shared", "app.auth.infra", "app.users.application", "app.users.infra"]
+depends_on = [
+    "app.auth.application",
+    "app.auth.exceptions",
+    "app.shared",
+    "app.auth.infra",
+    "app.users.application",
+    "app.users.presentation",
+]
 
 [[modules]]
 path = "app.geo.domain"
-depends_on = ["app.shared"]
+depends_on = []
 
 [[modules]]
 path = "app.geo.application"
@@ -43,42 +56,73 @@ depends_on = ["app.geo.domain", "app.geo.application", "app.shared"]
 
 [[modules]]
 path = "app.geo.presentation"
-depends_on = ["app.geo.application", "app.geo.infra", "app.geo.domain", "app.shared", "app.auth.presentation"]
+depends_on = ["app.geo.application", "app.geo.infra", "app.geo.domain", "app.shared"]
 
 [[modules]]
-path = "app.users.domain"
+path = "app.users.exceptions"
 depends_on = ["app.shared"]
 
 [[modules]]
+path = "app.users.domain"
+depends_on = ["app.shared", "app.users.exceptions"]
+
+[[modules]]
 path = "app.users.application"
-depends_on = ["app.users.domain"]
+depends_on = ["app.users.domain", "app.users.exceptions"]
 
 [[modules]]
 path = "app.users.infra"
 depends_on = ["app.shared", "app.users.application", "app.users.domain"]
 
 [[modules]]
-path = "app.journeys.domain"
+path = "app.users.presentation"
+depends_on = ["app.users.application", "app.users.exceptions", "app.users.infra", "app.shared"]
+
+[[modules]]
+path = "app.journeys.exceptions"
 depends_on = ["app.shared"]
 
 [[modules]]
+path = "app.journeys.domain"
+depends_on = ["app.journeys.exceptions", "app.shared"]
+
+[[modules]]
 path = "app.journeys.application"
-depends_on = ["app.journeys.domain", "app.shared"]
+depends_on = ["app.journeys.domain", "app.journeys.exceptions", "app.shared"]
 
 [[modules]]
 path = "app.journeys.infra"
-depends_on = ["app.journeys.domain", "app.journeys.application", "app.shared"]
+depends_on = ["app.journeys.domain", "app.journeys.application", "app.shared", "app.geo.application"]
 
 [[modules]]
 path = "app.journeys.presentation"
 depends_on = [
     "app.journeys.application",
+    "app.journeys.exceptions",
     "app.journeys.infra",
     "app.journeys.domain",
     "app.shared",
-    "app.auth.presentation",
+    "app.geo.application",
+    "app.geo.presentation",
 ]
+
+[[modules]]
+path = "app.media.exceptions"
+depends_on = ["app.shared"]
+
+[[modules]]
+path = "app.media.application"
+depends_on = []
+
+[[modules]]
+path = "app.media.infra"
+depends_on = ["app.media.application", "app.media.exceptions", "app.shared"]
 
 [[modules]]
 path = "app.shared"
 depends_on = []
+
+# Инструменты локальной разработки и тестов вне пакета app: в образ прода не попадают, app о них не знает.
+[[modules]]
+path = "devtools"
+depends_on = ["app.media.infra", "app.shared"]

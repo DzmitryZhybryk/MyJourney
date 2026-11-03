@@ -1,6 +1,6 @@
-# MindTrace — backend
+# MyJourney — backend
 
-FastAPI-сервис (Python 3.14, async, Domain-Driven Design) — бэкенд монорепозитория MindTrace.
+FastAPI-сервис (Python 3.14, async, Domain-Driven Design) — бэкенд монорепозитория MyJourney.
 
 Общая документация лежит в корне репозитория:
 
@@ -20,4 +20,4 @@ make typecheck          # ty: тайпчек
 uv run pytest           # тесты (asyncio_mode=auto)
 ```
 
-Полный стек (app + worker + postgres + frontend + логирование) поднимается из **корня** репозитория одной командой `docker compose up -d`.
+Полный стек (app + worker + postgres + frontend + логирование) поднимается из **корня** репозитория одной командой `make run`.

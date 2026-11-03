@@ -1,24 +1,25 @@
 /*
- * Дашборд: приветствие сверху, планета по центру и поля-маргиналии по бокам — всё на
- * ночной поверхности продукта. Колонки держатся тихими штемпелями (моно, капитель),
- * как подписи на полях карты; имена мест — антиквой. Цвета берутся только из
- * семантического слоя токенов (см. index.css).
+ * Dashboard: greeting on top, planet in the center and margin columns on the sides, all on the
+ * product's night surface. The columns stay quiet stamps (mono, small caps), like captions in a
+ * map's margins; place names are in the serif. Colours come only from the semantic token layer
+ * (see index.css).
  */
 
 /*
- * Дашборд показывает app-global глобус-фон СКВОЗЬ себя: ночь-подложку держит корневой
- * `.persistent-globe` (z-0, фиксированный), поэтому оболочка Home прозрачна — иначе
- * непрозрачная ночь `.app-shell` (index.css) закрасила бы глобус. На /journeys, где глобус
- * спрятан, ночь остаётся у `.app-shell`. Двойная специфичность бьёт одиночный `.app-shell`.
+ * The dashboard shows the app-global globe background THROUGH itself: the root `.persistent-globe`
+ * (z-0, fixed) holds the night backdrop, so the Home shell is transparent; otherwise the opaque
+ * night of `.app-shell` (index.css) would paint over the globe. The same trick is used by the
+ * journey form (`.journeys-shell--globe`); on other /journeys* routes, where the globe is hidden,
+ * the night stays with `.app-shell`. Double specificity beats the single `.app-shell`.
  */
 .app-shell.home-shell {
   background: transparent;
 }
 
 /*
- * Десктоп (фланговый режим, >1280px): Home — экран фиксированной высоты без прокрутки.
- * height:100vh + overflow:hidden убирают полосу скролла. На ≤1280px правило не действует —
- * там Home скроллится (это ок для стека).
+ * Desktop (flank mode, >1280px): Home is a fixed-height screen with no scrolling.
+ * height:100vh + overflow:hidden remove the scrollbar. At <=1280px the rule does not apply:
+ * Home scrolls there (fine for the stacked layout).
  */
 @media (min-width: 1281px) {
   .home-shell {
@@ -27,11 +28,11 @@
   }
 
   /*
-   * `.home-main` выведён из потока, чтобы email-баннер (он в потоке) НЕ толкал композицию
-   * перевёрсткой (это давало рывок приветствия). Позиция стабильна: `top` — под шапкой, `bottom`
-   * — у низа вьюпорта (подпись остаётся прибитой). Смещение приветствия под баннер делаем
-   * трансформом (ниже) — он анимируется, как и глобус. Баннер всплывает поверх (z-index в
-   * EmailVerificationBanner).
+   * `.home-main` is taken out of flow so the email banner (which is in flow) does NOT push the
+   * composition around by reflow (that made the greeting jerk). The position is stable: `top` is
+   * under the header, `bottom` at the viewport bottom (the caption stays pinned). The greeting is
+   * shifted under the banner by a transform (below), which animates like the globe. The banner
+   * floats on top (z-index in EmailVerificationBanner).
    */
   .home-main {
     position: absolute;
@@ -42,16 +43,16 @@
   }
 
   /*
-   * Приветствие плавно уезжает вверх при закрытии баннера — тем же трансформом и с той же
-   * длительностью, что глобус, поэтому текст и планета движутся синхронно (без рывка).
-   * Пока баннер висит, приветствие сдвинуто вниз под него; класс снят → трансформ уходит в 0.
+   * The greeting glides up when the banner closes, with the same transform and duration as the
+   * globe, so text and planet move in sync (no jerk). While the banner shows, the greeting is
+   * shifted down under it; when the class is removed the transform returns to 0.
    */
   .home-greeting {
-    transition: transform 1.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--dur-glide) var(--ease-glide);
   }
 
-  /* Сдвиг ≈ высоте email-баннера (~50px): держит приветствие под ним, пока он висит. Жёсткой
-     связи с версткой баннера нет — значение сверяется глазами (ручная UI-проверка). */
+  /* Shift is about the email banner height (~50px): holds the greeting under it while it shows.
+     There is no hard link to the banner markup; the value is checked by eye (manual UI check). */
   body.has-verify-banner .home-greeting {
     transform: translateY(52px);
   }
@@ -62,17 +63,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Колонка, ЗАПОЛНЯЮЩАЯ доступную высоту: приветствие прижато к ВЕРХУ (живёт под шапкой/
-     баннером — сам уезжает вверх, когда баннер закрыт), подпись «атмосфера · тихо» — к НИЗУ
-     (низ `.home-main` = низ вьюпорта, стабилен к баннеру), а средний слот-резина между ними
-     растёт/сжимается. Глобус-фон синхронно подрастает/сжимается под баннер (см.
-     persistent-globe.css, класс body.has-verify-banner). */
+  /* A column FILLING the available height: the greeting is pinned to the TOP (under the header/
+     banner; it moves up itself when the banner closes), the "atmosphere · quiet" caption to the
+     BOTTOM (the `.home-main` bottom = viewport bottom, stable against the banner), and the middle
+     elastic slot between them grows/shrinks. The globe background grows/shrinks in sync for the
+     banner (see persistent-globe.css, class body.has-verify-banner). */
   justify-content: space-between;
   gap: 22px;
   padding: 24px 32px 32px;
 }
 
-/* ---- Приветствие: единственная человеческая фраза на экране, оттого антиква ---- */
+/* ---- Greeting: the only human phrase on screen, hence the serif ---- */
 
 .home-greeting {
   display: flex;
@@ -104,24 +105,24 @@
   margin: 0;
 }
 
-/* ---- Планета на ночной поверхности -------------------------------------------------------
- * Ни подложки, ни рамки: только сама планета со своим свечением атмосферы.
- * Блок остаётся исключительно мерой размера — держит глобус в пределах экрана.
+/* ---- Planet on the night surface -------------------------------------------------------
+ * No backdrop and no frame: just the planet with its own atmosphere glow.
+ * The block is purely a size measure: it keeps the globe within the screen.
  */
 
 /*
- * Пустой средний слот-РЕЗИНА. Глобус здесь не живёт (он — фиксированный фон,
- * `.persistent-globe`); слот лишь занимает промежуток между приветствием и подписью, чтобы
- * они разошлись к краям. `flex: 1` растягивает его на всё свободное место — при закрытии
- * баннера места становится больше, промежуток растёт, и глобус-фон подрастает в него.
- * На стеке (≤1280px) переопределяется фиксированной полосой (см. медиазапрос ниже).
+ * Empty middle ELASTIC slot. The globe does not live here (it is the fixed background,
+ * `.persistent-globe`); the slot only takes the gap between the greeting and the caption so they
+ * spread to the edges. `flex: 1` stretches it over all free space: when the banner closes there is
+ * more room, the gap grows and the globe background grows into it.
+ * On the stacked layout (<=1280px) it is overridden by a fixed strip (see the media query below).
  */
 .home-stage {
   flex: 1;
   min-height: 0;
 }
 
-/* ---- Поля: маргиналии вокруг пластины ---------------------------------------- */
+/* ---- Margins: marginalia around the plate ---------------------------------------- */
 
 .home-recommend {
   position: absolute;
@@ -140,7 +141,7 @@
   gap: 8px;
 }
 
-/* Заголовок поля — моно-штемпель закатным свечением. */
+/* Margin title: a mono stamp in the sunset glow. */
 .home-recommend__title,
 .home-stats__title,
 .home-recent__title {
@@ -166,9 +167,9 @@
   gap: 10px;
 }
 
-/* Подзаголовок группы — тот же акцент, что и заголовок поля; ступень между ними
-   задаётся кеглем, а не цветом. Правило по всему экрану: штемпель, НАЗЫВАЮЩИЙ блок,
-   идёт акцентом, а штемпель с ДАННЫМИ (дата, счётчик) — приглушённым. */
+/* Group subtitle: the same accent as the margin title; the step between them comes from size, not
+   colour. Rule across the screen: a stamp NAMING a block uses the accent, a stamp with DATA (date,
+   counter) is muted. */
 .home-recommend__group-label {
   font-family: var(--font-mono);
   font-size: var(--fs-10);
@@ -198,8 +199,7 @@
   cursor: pointer;
 }
 
-/* Имя записи — антиква: в маргиналиях именно названия мест несут смысл, всё
-   остальное вокруг них служебное. */
+/* Entry name in the serif: in the marginalia place names carry the meaning, everything around them is auxiliary. */
 .home-recommend__name,
 .home-stat__name,
 .home-recent__city {
@@ -216,7 +216,7 @@
   align-self: flex-start;
 }
 
-/* Подчёркивание при наведении — закатным акцентом (единый цвет взаимодействия). */
+/* Hover underline in the sunset accent (the shared interaction colour). */
 .home-recommend__name::after,
 .home-stat__name::after,
 .home-recent__city::after {
@@ -253,7 +253,7 @@
   color: var(--text-muted);
 }
 
-/* Цифры и даты — штемпелем: это данные, а не проза. */
+/* Numbers and dates as stamps: they are data, not prose. */
 .home-stat__meta,
 .home-recent__date {
   font-family: var(--font-mono);
@@ -292,11 +292,10 @@
 }
 
 /*
- * ---- Узкие экраны: фланговые absolute-колонки → вертикальный поток --------
- * На десктопе «you might like» (слева) и achievements/recent (справа) висят
- * по бокам глобуса через position:absolute. Ниже ~1280px глобус (vmin) начинает
- * с ними пересекаться, поэтому возвращаем колонки в нормальный поток: greeting →
- * глобус → подпись → рекомендации → статистика, одной колонкой, без наезжаний.
+ * ---- Narrow screens: flank absolute columns -> vertical flow --------
+ * On desktop "you might like" (left) and achievements/recent (right) hang at the globe's sides via
+ * position:absolute. Below ~1280px the globe (vmin) starts to overlap them, so the columns return
+ * to normal flow: greeting -> globe -> caption -> recommendations -> stats, one column, no overlap.
  */
 @media (max-width: 1280px) {
   .home-main {
@@ -305,8 +304,8 @@
     padding: 16px 20px 48px;
   }
 
-  /* На стеке слот-резина не тянется на всю высоту (оголил бы фон), а держит компактную
-     полосу под глобус; ниже неё в потоке идут колонки. */
+  /* On the stack the elastic slot does not stretch over the full height (it would expose the
+     background) but holds a compact strip for the globe; the columns follow it in flow. */
   .home-stage {
     flex: none;
     height: 60vmin;
@@ -322,7 +321,7 @@
     align-items: flex-start;
   }
 
-  /* Правая колонка на десктопе выровнена вправо — в потоке выравниваем влево. */
+  /* The right column is right-aligned on desktop; in flow, align it left. */
   .home-right,
   .home-stats,
   .home-stats__list,
@@ -334,7 +333,7 @@
     text-align: left;
   }
 
-  /* Подчёркивание правой колонки в потоке растёт слева, как у левой. */
+  /* The right column's underline in flow grows from the left, like the left column's. */
   .home-stat__name::after,
   .home-recent__city::after {
     transform-origin: left;
@@ -342,9 +341,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Приветствие едет синхронно с глобусом-фоном при появлении/скрытии баннера. Глобус свой
-     transition в reduced-motion гасит (persistent-globe.css) — гасим и здесь, иначе текст поедет,
-     а планета встанет мгновенно: ровно тот рассинхрон, который фича устраняет. */
+  /* The greeting moves in sync with the globe background when the banner appears/hides. The globe
+     drops its own transition under reduced motion (persistent-globe.css); drop it here too, or the
+     text would move while the planet snaps: exactly the desync this avoids. */
   .home-greeting,
   .home-recommend__name::after,
   .home-stat__name::after,

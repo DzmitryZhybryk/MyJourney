@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import "./soon-badge.css";
 
 /**
- * Компактный pill-бейдж «Soon» для ещё не реализованных, отключённых пунктов
- * навигации и действий. Текст берётся из common-namespace (единый источник,
- * переключается вместе с языком) — бейдж переиспользуется в шапке и в панели
- * раздела, поэтому не тянет за собой namespace вызывающего компонента.
+ * Compact "Soon" pill for unimplemented, disabled navigation items and actions. Text comes from
+ * the `common` namespace (single source, follows the language), so the badge works in the header
+ * and the section panel without the caller's namespace.
  */
 export function SoonBadge() {
   const { t } = useTranslation("common");

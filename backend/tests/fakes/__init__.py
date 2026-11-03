@@ -1,31 +1,39 @@
-"""Переиспользуемые in-memory фейки: репозитории, UoW, клиенты, hasher'ы, task bus, сервисы."""
+"""
+Переиспользуемые in-memory фейки, модуль на владельца порта: домен (``auth``, ``geo``,
+``journeys``, ``media``, ``users``) или shared-вертикаль (``crypto``, ``di``, ``email``, ``procrastinate``).
+"""
 
-from tests.fakes.clients import CreatedUserCall, FakeUsersClient
-from tests.fakes.email import FakeEmailTransport
-from tests.fakes.geo import FakePlaceRepository
-from tests.fakes.hashers import FakeSaltedHasher
-from tests.fakes.journeys import FakeJourneyRepository, FakeJourneyUnitOfWork
-from tests.fakes.repositories import (
+from tests.fakes.auth import (
+    FakeAuthUnitOfWork,
     FakeChallengeRepository,
+    FakeEmailVerificationService,
     FakeRefreshTokenRepository,
     FakeUserCredentialsRepository,
+    FakeUsersClient,
 )
-from tests.fakes.services import FakeEmailVerificationService
-from tests.fakes.task_bus import DeferredTask, FakeSessionBoundTaskBus, FakeTaskBus
-from tests.fakes.uow import FakeAuthUnitOfWork
+from tests.fakes.crypto import FakeSaltedHasher
+from tests.fakes.di import FakeComponent
+from tests.fakes.email import FakeEmailTransport
+from tests.fakes.geo import FakeCityRepository, FakeGeoUnitOfWork
+from tests.fakes.journeys import FakeCitiesClient, FakeJourneyRepository, FakeJourneyUnitOfWork, MovementConnectionQuery
+from tests.fakes.media import FakeS3ResponseStream
+from tests.fakes.procrastinate import DeferredTask, FakeSessionBoundTaskBus, FakeTaskBus
 from tests.fakes.users import FakeUserRepository, FakeUserUnitOfWork
 
 __all__ = [
-    "CreatedUserCall",
     "DeferredTask",
     "FakeAuthUnitOfWork",
     "FakeChallengeRepository",
+    "FakeCitiesClient",
+    "FakeCityRepository",
+    "FakeComponent",
     "FakeEmailTransport",
     "FakeEmailVerificationService",
+    "FakeGeoUnitOfWork",
     "FakeJourneyRepository",
     "FakeJourneyUnitOfWork",
-    "FakePlaceRepository",
     "FakeRefreshTokenRepository",
+    "FakeS3ResponseStream",
     "FakeSaltedHasher",
     "FakeSessionBoundTaskBus",
     "FakeTaskBus",
@@ -33,4 +41,5 @@ __all__ = [
     "FakeUserRepository",
     "FakeUserUnitOfWork",
     "FakeUsersClient",
+    "MovementConnectionQuery",
 ]

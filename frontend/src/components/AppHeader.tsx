@@ -3,47 +3,47 @@ import { useDisclosure } from "@mantine/hooks";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 
-import { logout } from "../api/auth";
+import { logout } from "../api/sdk";
 import { useAuth } from "../auth/useAuth";
+import { useCurrentUser } from "../user/useCurrentUser";
 import { BrandMark } from "./BrandMark";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { SoonBadge } from "./SoonBadge";
 import "./app-header.css";
 
-// `soon: true` — раздел ещё не реализован: таб рендерится неактивным (не ссылка)
-// с бейджем «Soon». Так пункт остаётся видимым как анонс, но не ведёт в никуда.
+// `soon: true` marks an unimplemented section: the tab renders inactive (not a link) with a
+// "Soon" badge, visible as an announcement but leading nowhere.
 const TABS = [
   { key: "journeys", to: "/journeys", soon: false },
   { key: "mind", to: "/mind", soon: true },
 ] as const;
 
-// Имя профиля захардкожено: бэк пока не отдаёт профиль (в JWT только sub / exp /
-// email_verified). Заменить на данные пользователя, когда появится эндпоинт /me.
-const PLACEHOLDER_PROFILE_NAME = "Dzmitry Zhybryk";
-
 /**
- * Шапка приложения, общая для всех внутренних экранов (Home, Journeys, ...).
- * Держит бренд, первичную навигацию с подсветкой активного раздела, выбор
- * языка и меню профиля (logout идемпотентен на бэке). Под шапкой рендерит
- * баннер верификации email — единая точка, чтобы он не дублировался по страницам.
+ * App header shared by all inner screens (Home, Journeys, ...): brand, primary navigation with
+ * the active section highlighted, language picker and profile menu (logout is idempotent on the
+ * backend). Renders the email verification banner under itself, the single place for it.
  *
- * На узких экранах (<sm) первичная навигация уезжает в бургер-Drawer, чтобы шапка
- * не переполнялась; язык и профиль остаются в шапке.
+ * On narrow screens (<sm) primary navigation moves into a burger Drawer; language and profile
+ * stay in the header.
  */
 export function AppHeader() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { emailVerified, clearSession, openVerifyDialog } = useAuth();
+  const currentUser = useCurrentUser();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
+
+  // Until the profile loads, name is undefined and Mantine Avatar shows a generic icon.
+  const profileName = currentUser.status === "ready" ? currentUser.user.displayName : undefined;
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await logout({ throwOnError: true });
     } catch {
-      // Logout идемпотентен на бэке (204 даже без cookie); сетевая ошибка
-      // не должна оставить пользователя залогиненным локально.
+      // Logout is idempotent on the backend (204 even without a cookie); a network error must
+      // not leave the user logged in locally.
     } finally {
       clearSession();
       navigate("/login");
@@ -97,7 +97,7 @@ export function AppHeader() {
                     offset={4}
                     withBorder
                   >
-                    <Avatar radius="xl" size="md" color="slate" name={PLACEHOLDER_PROFILE_NAME} />
+                    <Avatar radius="xl" size="md" color="slate" name={profileName} />
                   </Indicator>
                 </UnstyledButton>
               </Menu.Target>

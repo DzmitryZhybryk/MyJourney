@@ -3,7 +3,7 @@
   min-height: 100vh;
 }
 
-/* Контент над фиксированным глобусом-фоном (корневой `.persistent-globe`, z-index: 0). */
+/* Content above the fixed globe background (the root `.persistent-globe`, z-index: 0). */
 .public-layout__content {
   position: relative;
   z-index: 1;

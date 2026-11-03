@@ -4,7 +4,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.application.ports import RefreshTokenRepositoryPort
+from app.auth.application.ports.refresh_token_repository import RefreshTokenRepositoryPort
 from app.auth.domain.entities import RefreshTokenEntity
 from app.auth.infra.models import RefreshToken
 from app.shared.repositories.base_repository import BaseDBRepository
@@ -96,6 +96,11 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
         и UPDATE (те же колонки минус PK). Новое поле добавляется здесь один раз —
         и попадает и в INSERT, и в UPDATE, рассинхрон между ними невозможен.
 
+        Scenarios:
+            - регистрация и вход
+            - выход из аккаунта
+            - обновление сессии
+
         Args:
             refresh_token_entity: Доменная сущность refresh-токена
 
@@ -118,6 +123,10 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
     def _to_entity(self, refresh_token_model: RefreshToken) -> RefreshTokenEntity:
         """
         Конвертирует ORM-модель в доменную сущность.
+
+        Scenarios:
+            - выход из аккаунта
+            - обновление сессии
 
         Args:
             refresh_token_model: ORM-модель из БД

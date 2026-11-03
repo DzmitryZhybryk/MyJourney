@@ -1,61 +1,61 @@
-import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useLocation, useOutlet } from "react-router";
 
 import "./public-crossfade.css";
 
-/** Задержка + длительность фейда; должно совпадать с `public-crossfade.css`. */
+/** Fade delay + duration; must match `public-crossfade.css`. */
 const FADE_DELAY_MS = 300;
 const FADE_DURATION_MS = 550;
 
 interface LeavingScreen {
   pathname: string;
   node: ReactNode;
-  /** Скролл на момент ухода — см. `top` в `public-crossfade.css`. */
+  /** Scroll position at the moment of leaving; see `top` in `public-crossfade.css`. */
   scrollY: number;
 }
 
 /**
- * Кросс-фейд между экранами публичной зоны: лендинг ↔ signup ↔ login.
+ * Cross-fade between public zone screens: landing <-> signup <-> login.
  *
- * Экраны публичной зоны — разные РОУТЫ, и React снимает старую страницу в том же
- * кадре, оттого переключение читалось бы рывком. Обёртка держит её
- * смонтированной ещё на длину фейда и гасит поверх входящего: оба фейда идут
- * одновременно и с той же задержкой, что в прототипе.
+ * Public screens are different ROUTES and React removes the old page in the same frame, so the
+ * switch would read as a jerk. The wrapper keeps the old page mounted for the fade length and
+ * fades it out over the incoming one: both fades run simultaneously with the same delay.
  *
- * Ключ обёртки — путь, а структура обоих слотов (`div > Suspense > узел`) одинакова:
- * по ключу React узнаёт узел, переехавший из активного слота в уходящий, и
- * переиспользует его вместо перемонтирования. Иначе гасла бы свежая копия страницы —
- * с обнулённой формой и заново отработавшими эффектами монтирования.
+ * The wrapper key is the path and both slots have the same structure (`div > Suspense > node`):
+ * by key React recognizes a node that moved from the active slot to the leaving one and reuses it
+ * instead of remounting. Otherwise a fresh copy of the page would fade out, with a reset form and
+ * mount effects rerun.
  *
- * `Suspense` здесь СВОЙ, а не общий из `App`: дочерние страницы ленивые, и будь
- * единственный Suspense выше `<Routes>`, загрузка чанка соседнего экрана размонтировала
- * бы весь лейаут вместе с глобусом — WebGL пересоздался бы, а камера встала бы на новую
- * грань мгновенно, без перелёта. Отдельная граница на каждый экран нужна по той же
- * причине: подвисший на загрузке входящий экран не должен гасить уходящий.
+ * `Suspense` is OWN here, not the shared one from `App`: child pages are lazy, and with a single
+ * Suspense above `<Routes>` loading a neighbouring screen's chunk would unmount the whole layout
+ * with the globe: WebGL would be recreated and the camera would snap to the new face without a
+ * flight. A separate boundary per screen is needed for the same reason: an incoming screen stuck
+ * loading must not fade out the leaving one.
  */
 export function PublicCrossfade() {
   const { pathname } = useLocation();
   const outlet = useOutlet();
   const [shownPath, setShownPath] = useState(pathname);
   const [leaving, setLeaving] = useState<LeavingScreen | null>(null);
-  // Узел ПРЕДЫДУЩЕГО рендера: ref обновляется в эффекте (после коммита), поэтому в
-  // момент смены пути здесь ещё лежит уходящий экран — то, что и нужно погасить.
-  const previousNodeRef = useRef<ReactNode>(outlet);
+  // Node of the PREVIOUS render: updated below right in render (not in an effect). React does not
+  // guarantee reading a ref during render, while state adjusted the same way as shownPath/leaving
+  // above gives the same "one render behind" safely.
+  const [previousNode, setPreviousNode] = useState<ReactNode>(outlet);
 
   if (shownPath !== pathname) {
     setLeaving({
       pathname: shownPath,
-      node: previousNodeRef.current,
-      // Скролл читаем здесь, до коммита: после него документ уже сожмётся под входящий
-      // экран и браузер обрежет позицию прокрутки — «где был пользователь» будет потеряно.
+      node: previousNode,
+      // Read scroll here, before commit: afterwards the document shrinks to the incoming screen
+      // and the browser clamps the scroll position, losing where the user was.
       scrollY: window.scrollY,
     });
     setShownPath(pathname);
   }
 
-  useEffect(() => {
-    previousNodeRef.current = outlet;
-  });
+  if (previousNode !== outlet) {
+    setPreviousNode(outlet);
+  }
 
   useEffect(() => {
     if (leaving === null) return;

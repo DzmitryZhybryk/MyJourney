@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class UserRole(StrEnum):
+class UserRoleEnum(StrEnum):
     """Роль пользователя, определяющая уровень доступа и привилегии."""
 
     FREE = "free"
@@ -9,7 +9,7 @@ class UserRole(StrEnum):
     ADMIN = "admin"
 
 
-class ChallengeType(StrEnum):
+class ChallengeTypeEnum(StrEnum):
     """
     Тип challenge'а — discriminator для одной записи `challenge` на разные сценарии.
 

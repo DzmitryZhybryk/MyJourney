@@ -1,35 +1,57 @@
 """
-In-memory фейк geo-репозитория поверх ``list[PlaceEntity]``.
+In-memory фейки geo: репозиторий поверх ``list[CityEntity]`` и UoW вокруг него.
 
-Реализует ``PlaceRepositoryPort`` — тот же контракт, что и боевой SQLAlchemy-репозиторий,
-поэтому ``ty`` ловит расхождение сигнатур. Повторяет наблюдаемое поведение поиска
+Реализуют порты ``app.geo.application.ports.*`` — тот же контракт, что и боевые реализации,
+поэтому ``ty`` ловит расхождение сигнатур. Репозиторий повторяет наблюдаемое поведение поиска
 (префиксный матч по имени en/ru, сортировка по убыванию населения, лимит), чтобы тот же
 фейк годился и на api-уровне через ``app.dependency_overrides``.
 """
 
-from app.geo.application.ports import PlaceRepositoryPort
-from app.geo.domain.entities import PlaceEntity
-from app.geo.domain.enums import Language
+from collections.abc import AsyncGenerator, Collection
+from contextlib import asynccontextmanager
+from uuid import UUID
+
+from app.geo.application.ports.city_repository import CityRepositoryPort
+from app.geo.application.ports.unit_of_work import GeoUnitOfWorkPort
+from app.geo.domain.entities import CityEntity
+from app.geo.domain.enums import LanguageEnum
 
 
-class FakePlaceRepository(PlaceRepositoryPort):
-    """Фейк read-only поиска мест поверх ``list`` с префиксным матчем по имени."""
+class FakeCityRepository(CityRepositoryPort):
+    """Фейк read-only поиска городов поверх ``list`` с префиксным матчем по имени."""
 
     def __init__(self) -> None:
-        self.places: list[PlaceEntity] = []
+        self.cities: list[CityEntity] = []
 
-    async def search_places_by_name(self, *, search_text: str, limit: int) -> list[PlaceEntity]:
+    async def search_cities_by_name(self, *, search_text: str, limit: int) -> tuple[CityEntity, ...]:
         prefix = search_text.strip().lower()
         matched = [
-            place_entity
-            for place_entity in self.places
-            if self._matches_prefix(place_entity=place_entity, prefix=prefix)
+            city_entity for city_entity in self.cities if self._matches_prefix(city_entity=city_entity, prefix=prefix)
         ]
-        matched.sort(key=lambda place_entity: place_entity.population, reverse=True)
-        return matched[:limit]
+        matched.sort(key=lambda city_entity: (city_entity.population is None, -(city_entity.population or 0)))
+        return tuple(matched[:limit])
+
+    async def find_cities_by_ids(self, *, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
+        return tuple(city_entity for city_entity in self.cities if city_entity.city_id in city_ids)
 
     @staticmethod
-    def _matches_prefix(*, place_entity: PlaceEntity, prefix: str) -> bool:
+    def _matches_prefix(*, city_entity: CityEntity, prefix: str) -> bool:
         """Совпадение, если имя на en ИЛИ ru начинается с префикса (как ``LIKE 'q%'`` в боевом репо)."""
-        names = (place_entity.localized_name(language=Language.EN), place_entity.localized_name(language=Language.RU))
+        names = (
+            city_entity.localized_name(language=LanguageEnum.EN),
+            city_entity.localized_name(language=LanguageEnum.RU),
+        )
         return any(name is not None and name.lower().startswith(prefix) for name in names)
+
+
+class FakeGeoUnitOfWork(GeoUnitOfWorkPort):
+    """In-memory UoW geo: фейк-репозиторий и no-op ``transaction``, считающая открытые области."""
+
+    def __init__(self, *, city_repository: CityRepositoryPort) -> None:
+        self.city_repository = city_repository
+        self.transactions_started = 0
+
+    @asynccontextmanager
+    async def transaction(self) -> AsyncGenerator[None]:
+        self.transactions_started += 1
+        yield

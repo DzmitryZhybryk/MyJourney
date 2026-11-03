@@ -1,8 +1,8 @@
 from app.shared.logging.config import configure_logging, get_logger
-from app.shared.logging.middleware import HTTPLoggingMiddleware
+from app.shared.logging.context import bind_log_context
 
 __all__ = [
-    "HTTPLoggingMiddleware",
+    "bind_log_context",
     "configure_logging",
     "get_logger",
 ]

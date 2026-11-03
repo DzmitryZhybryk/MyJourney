@@ -10,8 +10,8 @@ import {
   authPasswordClassNames,
 } from "../components/authInputClasses";
 import { AuthLayout } from "../components/AuthLayout";
-import { register } from "../api/auth";
 import { applyApiError, resolveErrorToken, withLocalizedError } from "../api/errors";
+import { register } from "../api/sdk";
 import { useAuth } from "../auth/useAuth";
 
 type SignUpFormValues = {
@@ -29,8 +29,8 @@ export function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // `controlled` (а не `uncontrolled`), потому что от значений полей зависит рендер:
-  // кнопка отправки гаснет, пока форма не заполнена (см. `canSubmit` ниже).
+  // `controlled` (not `uncontrolled`) because rendering depends on field values: the submit
+  // button is disabled until the form is filled (see `canSubmit` below).
   const form = useForm<SignUpFormValues>({
     mode: "controlled",
     initialValues: {
@@ -40,9 +40,8 @@ export function SignUpPage() {
       termsAccepted: false,
       marketingEmailsConsent: false,
     },
-    // Валидаторы возвращают i18n-ТОКЕН (`auth:validation.*`), а не готовый текст:
-    // резолв в строку делается при рендере (`withLocalizedError`), поэтому уже
-    // показанная ошибка переключается на новый язык вместе с интерфейсом.
+    // Validators return an i18n TOKEN (`auth:validation.*`), not text: it is resolved at render
+    // (`withLocalizedError`), so an error already on screen follows a language switch.
     validate: {
       username: (value) => {
         const trimmed = value.trim();
@@ -51,8 +50,9 @@ export function SignUpPage() {
         return null;
       },
       email: (value) => {
-        if (!/^\S+@\S+\.\S+$/u.test(value)) return "auth:validation.emailInvalid";
-        if (value.length > 254) return "auth:validation.emailTooLong";
+        const trimmed = value.trim();
+        if (!/^\S+@\S+\.\S+$/u.test(trimmed)) return "auth:validation.emailInvalid";
+        if (trimmed.length > 254) return "auth:validation.emailTooLong";
         return null;
       },
       password: (value) => {
@@ -64,10 +64,10 @@ export function SignUpPage() {
     },
   });
 
-  // Кнопка ждёт ЗАПОЛНЕННОСТИ, а не валидности: правила (длина, формат) проверяются по
-  // сабмиту и объясняют себя сообщением под полем. Гаси кнопку по валидности — и
-  // пользователь упирался бы в мёртвую кнопку, не понимая, что именно не так.
-  // Согласие с условиями — часть этого минимума, согласие на рассылку добровольно.
+  // The button waits for the form to be FILLED, not valid: rules (length, format) are checked on
+  // submit and explain themselves with a message under the field. Disabling by validity would
+  // leave the user facing a dead button with no idea what is wrong.
+  // Accepting the terms is part of that minimum; the newsletter consent is optional.
   const formValues = form.getValues();
   const canSubmit =
     formValues.username.trim().length > 0 &&
@@ -79,7 +79,16 @@ export function SignUpPage() {
     setFormError(null);
     setSubmitting(true);
     try {
-      const { accessToken } = await register(values);
+      const { accessToken } = await register({
+        body: {
+          username: values.username.trim(),
+          email: values.email.trim(),
+          password: values.password,
+          termsAccepted: values.termsAccepted,
+          marketingEmailsConsent: values.marketingEmailsConsent,
+        },
+        throwOnError: true,
+      });
       setAccessToken(accessToken);
       navigate("/home");
     } catch (err) {
@@ -90,7 +99,7 @@ export function SignUpPage() {
   };
 
   return (
-    // Форма слева — сфера на этом экране уводится вправо (persistent-globe.css).
+    // Form on the left: the sphere moves right on this screen (persistent-globe.css).
     <AuthLayout side="left">
       <AuthCard title={t("signup.title")} subtitle={t("signup.subtitle")}>
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -153,10 +162,10 @@ export function SignUpPage() {
               {...form.getInputProps("marketingEmailsConsent", { type: "checkbox" })}
             />
 
-            {/* Ошибка операции (409, сеть) — у кнопки, а не в шапке карточки: правило
-                «UI error display» держит operation-scoped сообщение рядом с действием,
-                которое его вызвало. `role="alert"` озвучивает провал скринридеру —
-                узел появляется по условию, поэтому срабатывает именно на ошибку. */}
+            {/* An operation error (409, network) goes by the button, not in the card header: the
+                "UI error display" rule keeps an operation-scoped message next to the action that
+                caused it. `role="alert"` announces the failure to screen readers; the node appears
+                conditionally, so it fires exactly on an error. */}
             {formError && (
               <p className="auth-card__error" role="alert">
                 {resolveErrorToken(formError)}

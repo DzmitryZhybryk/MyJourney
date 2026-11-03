@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { renderWithProviders, waitFor } from "../test/render";
 import { DocumentTitle } from "./DocumentTitle";
 
-/** Рендерит компонент на заданном маршруте и ждёт, пока он проставит заголовок. */
+/** Renders the component at a route and waits until it sets the title. */
 async function titleAt(route: string): Promise<string> {
   renderWithProviders(<DocumentTitle />, { route });
   await waitFor(() => expect(document.title).not.toBe(""));
@@ -12,7 +12,7 @@ async function titleAt(route: string): Promise<string> {
 
 describe("DocumentTitle", () => {
   it("на лендинге ставит полный заголовок с оффером", async () => {
-    // У корня нет «раздела» — там работает ветка с брендом впереди.
+    // The root has no "section", so the branch with the brand first applies.
     expect(await titleAt("/")).toMatch(/^MyJourney — /u);
   });
 
@@ -33,8 +33,8 @@ describe("DocumentTitle", () => {
   });
 
   it("для /journeys/add берёт заголовок формы, а не раздела", async () => {
-    // Порядок веток значим: /journeys/add начинается с /journeys, и при обратном
-    // порядке проверок форма получила бы заголовок раздела.
+    // Branch order matters: /journeys/add starts with /journeys, and with the checks reversed the
+    // form would get the section title.
     expect(await titleAt("/journeys/add")).toBe("New journey · MyJourney");
   });
 

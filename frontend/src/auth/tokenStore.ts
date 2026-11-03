@@ -21,7 +21,7 @@ function writeToSession(token: string | null): void {
       sessionStorage.setItem(STORAGE_KEY, token);
     }
   } catch {
-    // sessionStorage недоступен (приватный режим / отключён) — игнорируем, держим только в памяти.
+    // sessionStorage unavailable (private mode / disabled): keep the token in memory only.
   }
 }
 

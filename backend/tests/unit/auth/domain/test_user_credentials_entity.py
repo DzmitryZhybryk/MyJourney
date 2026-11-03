@@ -4,7 +4,7 @@ from uuid import UUID
 import pytest
 
 from app.auth.domain.entities import UserCredentialsEntity
-from app.auth.domain.enums import UserRole
+from app.auth.domain.enums import UserRoleEnum
 from app.auth.exceptions import EmailAlreadyVerifiedError
 from tests.builders import make_password, make_user_credentials
 
@@ -17,11 +17,23 @@ def test_create_defaults_to_free_role_and_unverified() -> None:
         password=make_password(),
     )
 
-    assert creds.role is UserRole.FREE
+    assert creds.role is UserRoleEnum.FREE
     assert not creds.is_email_verified
     assert creds.email == "user@example.com"
     assert creds.username == "user"
     assert isinstance(creds.user_id, UUID)
+
+
+def test_create_lowercases_email_and_keeps_username_case() -> None:
+    """`create()` приводит email к нижнему регистру, username оставляет как ввели."""
+    creds = UserCredentialsEntity.create(
+        email="Alice@Example.COM",
+        username="Alice",
+        password=make_password(),
+    )
+
+    assert creds.email == "alice@example.com"
+    assert creds.username == "Alice"
 
 
 def test_is_email_verified_reflects_timestamp() -> None:

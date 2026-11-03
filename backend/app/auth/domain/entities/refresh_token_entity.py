@@ -8,6 +8,7 @@ from app.shared.domain.domain_mixins import TimestampedEntityMixin
 class RefreshTokenEntity(TimestampedEntityMixin):
     def __init__(
         self,
+        *,
         token_id: UUID,
         user_id: UUID,
         token_hash: str,
@@ -29,6 +30,7 @@ class RefreshTokenEntity(TimestampedEntityMixin):
     @classmethod
     def create(
         cls,
+        *,
         user_id: UUID,
         token_hash: str,
         ttl_days: int,
@@ -46,12 +48,23 @@ class RefreshTokenEntity(TimestampedEntityMixin):
 
     @property
     def is_revoked(self) -> bool:
-        """Признак того, что токен отозван и больше не должен приниматься."""
+        """
+        Признак того, что токен отозван и больше не должен приниматься.
+
+        Scenarios:
+            - выход из аккаунта
+            - обновление сессии: отозванный токен — признак утечки
+        """
         return self.revoked_at is not None
 
     @property
     def is_expired(self) -> bool:
-        """Признак того, что срок действия токена истёк."""
+        """
+        Признак того, что срок действия токена истёк.
+
+        Scenarios:
+            - обновление сессии
+        """
         return self.expires_at < dt.datetime.now(tz=dt.UTC)
 
     def revoke(self) -> None:
@@ -60,6 +73,10 @@ class RefreshTokenEntity(TimestampedEntityMixin):
 
         Идемпотентно: повторный вызов на уже revoked-токене не меняет состояние,
         чтобы logout/reuse-detection могли звать его без предварительной проверки.
+
+        Scenarios:
+            - выход из аккаунта
+            - обновление сессии: старый токен отзывается при выпуске нового
         """
         if self.is_revoked:
             return

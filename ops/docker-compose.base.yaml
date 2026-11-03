@@ -1,0 +1,70 @@
+# Общая часть стеков dev, e2e и prod: из чего собраны сервисы и в каком порядке стартуют.
+# Не запускается сам по себе — только первым файлом под override стека (корневой Makefile,
+# `-f ops/docker-compose.base.yaml -f ops/docker-compose.<стек>.yaml`).
+
+x-backend: &backend
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file: .env
+
+services:
+
+  myjourney_pg:
+    image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    command: postgres -c log_min_messages=warning
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Одноразовый прогон миграций перед стартом app/worker: таблицы приложения (alembic) и схема
+  # procrastinate (её ждёт и worker, и app — register кладёт письмо в procrastinate_jobs). Гейт
+  # service_completed_successfully гарантирует, что обе схемы накатаны до старта приложения.
+  myjourney_migrate:
+    <<: *backend
+    command: sh -c "alembic upgrade head && python -m app.shared.infra.procrastinate"
+    depends_on:
+      myjourney_pg:
+        condition: service_healthy
+    restart: "no"
+
+  # One-shot: грузит газеттир после миграций; уже загруженные версии датасетов пропускает.
+  myjourney_geo_load:
+    <<: *backend
+    command: python -m app.geo.infra.datasets
+    depends_on:
+      myjourney_migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  app:
+    <<: *backend
+    depends_on:
+      myjourney_pg:
+        condition: service_healthy
+      myjourney_migrate:
+        condition: service_completed_successfully
+      myjourney_geo_load:
+        condition: service_completed_successfully
+
+  myjourney_worker:
+    <<: *backend
+    command: python -m app.worker
+    depends_on:
+      myjourney_pg:
+        condition: service_healthy
+      myjourney_migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile

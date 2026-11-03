@@ -1,7 +1,6 @@
 {
   "auth": {
     "invalid_credentials": "Неверный логин/email или пароль",
-    "user_credentials_not_found": "Неверный логин/email или пароль",
     "email_already_registered": "Этот email уже зарегистрирован",
     "username_already_taken": "Это имя пользователя уже занято",
     "terms_not_accepted": "Чтобы продолжить, примите условия",
@@ -9,18 +8,25 @@
     "verification_code_invalid": "Неверный код подтверждения",
     "challenge_not_found": "Нет активного кода. Запросите новый",
     "challenge_expired": "Срок действия кода истёк. Запросите новый",
-    "challenge_attempts_exceeded": "Слишком много попыток. Запросите новый код",
-    "challenge_resend_cooldown": "Подождите, прежде чем запрашивать новый код",
+    "challenge_attempts_exceeded": "Слишком много попыток. Новый код можно будет запросить позже",
+    "challenge_attempts_exceeded_retry": "Слишком много попыток. Новый код можно запросить через {{minutes}} мин",
+    "challenge_resend_cooldown": "Подождите, прежде чем отправлять код повторно",
     "invalid_access_token": "Сессия истекла. Войдите снова",
-    "invalid_refresh_token": "Сессия истекла. Войдите снова"
+    "invalid_refresh_token": "Сессия истекла. Войдите снова",
+    "account_not_found": "Сессия истекла. Войдите снова"
   },
   "journeys": {
     "same_origin_destination": "Города отправления и назначения должны отличаться",
-    "date_in_future": "Дата поездки не может быть в будущем",
-    "invalid_date": "Некорректная дата поездки"
+    "date_in_future": "Год поездки не может быть в будущем",
+    "unknown_city": "Город не найден. Выберите его из подсказок заново",
+    "journey_not_found": "Этой поездки больше нет",
+    "invalid_move_target": "Не удалось перенести поездку сюда. Список обновлён",
+    "invalid_year_range": "Первый год не может быть позже последнего"
   },
+  "invalid_cursor": "Список устарел. Обновите его",
   "validation_error": "Проверьте введённые данные и попробуйте снова",
   "network": "Ошибка сети. Попробуйте ещё раз.",
+  "temporary": "Не удалось выполнить запрос. Попробуйте ещё раз чуть позже.",
   "invalid_response": "Неожиданный ответ сервера. Попробуйте снова.",
   "fallback": "Что-то пошло не так. Попробуйте ещё раз."
 }

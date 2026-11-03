@@ -4,7 +4,8 @@ from uuid import uuid4
 import jwt
 import pytest
 
-from app.shared.infra.jwt import JWTDecodeError, JWTService
+from app.shared.infra.jwt import JWTDecodeError
+from app.shared.infra.jwt.service import JWTService
 
 
 def test_decode_access_token_roundtrips_user_id(jwt_service: JWTService) -> None:

@@ -1,20 +1,17 @@
 /*
- * Стеклянная auth-карточка поверх глобуса плюс
- * перевод Mantine-инпутов на тёмное стекло.
+ * Glass auth card over the globe, plus restyling Mantine inputs for dark glass.
  *
- * Зацепка за поля — СВОИ классы, розданные через Styles API (`classNames`), а не
- * селекторы вида `.mantine-Input-input`: в Mantine 9 стабильное статическое имя есть
- * только у обёртки (`mantine-Input-wrapper`), остальные узлы получают хешированные
- * классы, поэтому такие селекторы просто не совпадают. Задавать `--input-bg` на
- * карточке тоже бесполезно: Mantine определяет эту переменную ближе к элементу, и
- * наследование от предка проигрывает.
+ * Hook into fields via OWN classes handed out through the Styles API (`classNames`), not selectors
+ * like `.mantine-Input-input`: in Mantine 9 only the wrapper (`mantine-Input-wrapper`) has a
+ * stable static name, other nodes get hashed classes, so such selectors simply do not match.
+ * Setting `--input-bg` on the card is useless too: Mantine defines that variable closer to the
+ * element and inheritance from an ancestor loses.
  */
 
 .auth-card {
   --auth-input-bg: rgb(var(--ink-deep-rgb) / 0.5);
-  /* Тот же цвет поля, но непрозрачным: нужен там, где полупрозрачность пропустила бы
-     сквозь себя чужой фон (автозаполнение, см. ниже). Значение = композит
-     `--auth-input-bg` поверх стекла карточки. */
+  /* The same field colour but opaque: needed where translucency would let a foreign background
+     through (autofill, see below). Value = composite of `--auth-input-bg` over the card glass. */
   --auth-input-bg-solid: #080b16;
   --auth-input-bd: rgb(var(--ink-on-dark-rgb) / 0.18);
   --auth-input-placeholder: rgb(var(--muted-on-dark-rgb) / 0.6);
@@ -45,7 +42,7 @@
   color: var(--muted-on-dark);
 }
 
-/* --- Поля Mantine на тёмном стекле (зацепка — свои классы из Styles API) --- */
+/* --- Mantine fields on dark glass (hooked via own Styles API classes) --- */
 
 .auth-card .auth-input {
   background-color: var(--auth-input-bg);
@@ -53,7 +50,7 @@
   color: var(--ink-on-dark);
 }
 
-/* У PasswordInput настоящее поле ввода вложено внутрь обёртки-«инпута». */
+/* In PasswordInput the real input is nested inside the "input" wrapper. */
 .auth-card .auth-input__inner {
   background: transparent;
   color: var(--ink-on-dark);
@@ -64,7 +61,7 @@
   color: var(--auth-input-placeholder);
 }
 
-/* Кнопка-глаз показа пароля. */
+/* The eye button that reveals the password. */
 .auth-card .auth-input__section {
   color: var(--muted-on-dark);
 }
@@ -76,15 +73,14 @@
 }
 
 /*
- * Автозаполнение. Браузер красит подставленное поле своим светлым фоном через
- * UA-стиль с `!important` — форма логина с сохранённым паролем выглядела белой на
- * тёмном стекле. `background-color` тут не перебить, поэтому фон закрывается сплошной
- * inset-тенью, а цвет текста задаётся `-webkit-text-fill-color` (обычный `color`
- * так же проигрывает UA-стилю). Заливка непрозрачная — полупрозрачная пропустила бы
- * светлый фон насквозь.
+ * Autofill. The browser paints an autofilled field with its own light background via a UA style
+ * with `!important`, so a login form with a saved password looked white on dark glass.
+ * `background-color` cannot override it, so the background is covered with a solid inset shadow
+ * and the text colour is set via `-webkit-text-fill-color` (plain `color` loses to the UA style
+ * too). The fill is opaque: a translucent one would let the light background through.
  *
- * Префиксный и стандартный селекторы разнесены по правилам намеренно: браузер,
- * не знающий один из них, выбросил бы правило целиком вместе со вторым.
+ * The prefixed and standard selectors are split into separate rules on purpose: a browser that
+ * does not know one of them would drop the whole rule along with the other.
  */
 .auth-card .auth-input:-webkit-autofill,
 .auth-card .auth-input__inner:-webkit-autofill {
@@ -100,9 +96,9 @@
   caret-color: var(--ink-on-dark);
 }
 
-/* Фокус на автозаполненном поле: заливка съедает кольцо фокуса — возвращаем его
-   второй тенью. Только для `.auth-input`: у PasswordInput автозаполняется вложенный
-   `__inner`, а кольцо рисует обёртка по `:focus-within`. */
+/* Focus on an autofilled field: the fill eats the focus ring, so restore it with a second shadow.
+   Only for `.auth-input`: in PasswordInput the nested `__inner` is autofilled while the wrapper
+   draws the ring via `:focus-within`. */
 .auth-card .auth-input:-webkit-autofill:focus {
   -webkit-box-shadow:
     0 0 0 100px var(--auth-input-bg-solid) inset,
@@ -124,10 +120,10 @@
 }
 
 /*
- * Поле с ошибкой: index.css возвращает полю нейтральный вид, но значениями СВЕТЛОЙ
- * схемы (`--mantine-color-text` — почти чёрный). На тёмном стекле такой текст
- * нечитаем, поэтому здесь та же нейтрализация, но тёмными значениями. Обёртка —
- * единственный узел со стабильным именем класса в Mantine 9.
+ * Field with an error: index.css restores a neutral look but with LIGHT scheme values
+ * (`--mantine-color-text` is near-black). Such text is unreadable on dark glass, so the same
+ * neutralization is applied here with dark values. The wrapper is the only node with a stable
+ * class name in Mantine 9.
  */
 [data-mantine-color-scheme] .auth-card .mantine-Input-wrapper[data-error] .auth-input,
 [data-mantine-color-scheme] .auth-card .mantine-Input-wrapper[data-error] .auth-input__inner {
@@ -141,8 +137,8 @@
   border-color: var(--auth-input-bd);
 }
 
-/* Цвет — из общего токена ошибки, кегль не трогаем: акцент даём весом, а не размером
-   (правило «UI error display»), и `0.82rem` здесь расходился с `size="sm"` в остальном продукте. */
+/* Colour comes from the shared error token; the size is left alone: emphasis comes from weight,
+   not size (the "UI error display" rule). */
 .auth-card .mantine-InputWrapper-error,
 .auth-card .auth-card__error {
   color: var(--text-error);
@@ -153,21 +149,20 @@
   margin: 0;
 }
 
-/* --- Кнопка отправки и ссылки --- */
+/* --- Submit button and links --- */
 
-/* Цвет метки больше не задаём: его выбирает `autoContrast` в теме, и `theme.black`
-   выставлен в тот же `--on-sun`. Раньше здесь стоял `!important`-обход — он и был
-   причиной того, что auth-кнопка выглядела иначе, чем кнопки journeys и диалогов. */
+/* The label colour is not set here: `autoContrast` in the theme picks it, and `theme.black` is
+   set to the same `--on-sun`. */
 .auth-card .auth-submit {
   font-weight: 600;
 }
 
 /*
- * Отключённая кнопка (signup ждёт согласия с условиями): Mantine подменяет фон на
- * серый светлой схемы — на тёмном стекле это яркое белое пятно, чужое палитре.
- * Держим закатный акцент и гасим прозрачностью: кнопка остаётся из своей палитры,
- * а «пока нельзя» читается. Правило Mantine завёрнуто в `:where()` (нулевая
- * специфичность), поэтому хватает обычного перекрытия — без `!important`.
+ * Disabled button (signup waits for the terms to be accepted): Mantine swaps the background for the
+ * light scheme's grey, which on dark glass is a bright white blotch foreign to the palette. Keep
+ * the sunset accent and dim it with opacity: the button stays in its palette and "not yet" still
+ * reads. Mantine's rule is wrapped in `:where()` (zero specificity), so a plain override is
+ * enough, no `!important`.
  */
 .auth-card .auth-submit:disabled,
 .auth-card .auth-submit[data-disabled] {
@@ -175,31 +170,28 @@
   opacity: 0.5;
 }
 
-/* Подсказка «Забыли пароль?» — приглушённая, но читаемая на тёмном. Раньше это была
-   Mantine `Anchor`, и цвет приходилось перебивать `!important`; теперь это обычный
-   `<span>` (поток восстановления пароля не реализован), поэтому обошлись без него. */
+/* The "Forgot password?" hint: muted but readable on dark. A plain `<span>` (the password
+   recovery flow is not implemented). */
 .auth-card .auth-card__hint {
   color: var(--muted-on-dark);
   font-size: var(--fs-12);
 }
 
-/* Чекбоксы (согласие с условиями, рассылка) — светлый текст на стекле.
-   Кегль не задаём: `<Checkbox size="sm">` уже даёт метке 14px — ровно ступень
-   `--fs-14`. Здесь стояли `0.86rem` (13.76px), то есть подрез под дефолт на четверть
-   пикселя — различие, которого никто не видел, но которое выпадало из шкалы. */
+/* Checkboxes (terms, newsletter): light text on glass. The size is not set: `<Checkbox size="sm">`
+   already gives the label 14px, exactly the `--fs-14` step. */
 .auth-card .auth-label--checkbox {
   color: var(--muted-on-dark);
   line-height: 1.45;
 }
 
 /*
- * Коробка чекбокса одинаково тёмная в обоих состояниях — как поле ввода. Mantine
- * заливает пустую белым (дефолт светлой схемы), а отмеченную — акцентом; и то, и
- * другое на стекле читается ярким квадратом. Состояние показывает галочка.
+ * The checkbox box is equally dark in both states, like the input field. Mantine fills an empty
+ * one with white (the light scheme default) and a checked one with the accent; both read as a
+ * bright square on glass. The state is shown by the tick.
  *
- * `:checked` в селекторе обязателен: без него правило весит РОВНО столько же, сколько
- * `.m_…:checked` у Mantine, и исход решал бы порядок подключения CSS — молчаливая
- * зависимость, которая ломается от смены порядка импортов.
+ * `:checked` in the selector is required: without it the rule weighs EXACTLY as much as Mantine's
+ * `.m_...:checked`, and the outcome would depend on CSS include order, a silent dependency that
+ * breaks when imports are reordered.
  */
 .auth-card .auth-checkbox,
 .auth-card .auth-checkbox:checked {
@@ -207,8 +199,8 @@
   border-color: var(--auth-input-bd);
 }
 
-/* Галочка — закатным акцентом, в цвет активной кнопки: на тёмной коробке она
-   единственный индикатор состояния (8:1 к фону поля). */
+/* The tick uses the sunset accent, matching the active button: on the dark box it is the only
+   state indicator (8:1 against the field background). */
 .auth-card .auth-checkbox__icon {
   color: var(--sun);
 }
@@ -217,7 +209,7 @@
   color: var(--glow);
 }
 
-/* --- Ссылка-переключатель между login и signup под формой --- */
+/* --- Link switching between login and signup under the form --- */
 
 .auth-card__switch {
   margin: 18px 0 0;

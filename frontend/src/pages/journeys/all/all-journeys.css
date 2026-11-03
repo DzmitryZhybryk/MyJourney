@@ -1,0 +1,669 @@
+/* ---- All journeys: filters and feed column right of the navigation panel ------ */
+.all-journeys {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  /* The column top lines up with the left panel top. */
+  padding: var(--content-offset-top) 32px 24px;
+}
+
+.feed-arc__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  animation: feed-arc-draw 0.6s ease-out both;
+}
+
+.feed-arc__dot {
+  fill: var(--accent);
+  animation: feed-arc-dot 0.3s ease-out both;
+}
+
+/* The arrow appears when the line has been drawn to the destination (the draw-in lasts 0.6 s): a
+   marker is painted at the path end regardless of the dash, so without the delay it would show first. */
+.feed-arc__arrow {
+  fill: var(--accent);
+  animation: feed-arc-dot 0.3s ease-out 0.6s both;
+}
+
+/* City name: a background-coloured stroke under the text keeps it readable over land and the arc. */
+.feed-arc__label {
+  fill: var(--text);
+  stroke: var(--surface);
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-family: var(--font-body);
+  font-weight: 500;
+  animation: feed-arc-dot 0.3s ease-out both;
+}
+
+@keyframes feed-arc-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes feed-arc-dot {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The leaving layer remounts the overlay under a new key; replaying the entry would redraw the arc as it fades. */
+.world-map__leaving .feed-arc__line,
+.world-map__leaving .feed-arc__arrow,
+.world-map__leaving .feed-arc__dot,
+.world-map__leaving .feed-arc__label {
+  animation: none;
+}
+
+/* The column is offset from the floating panel (left:32 + width:260), like the add form. */
+.all-journeys__column {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 640px;
+  min-width: 0;
+  margin-left: 276px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Entering the tab: the column fades in with the shared map's own fade (`--journeys-fade`).
+     Opacity only: a transform would make the column the containing block of fixed descendants (a
+     dragged row) and fight the banner-close glide. */
+  animation: all-journeys-enter var(--journeys-fade) var(--journeys-fade-ease) both;
+}
+
+@keyframes all-journeys-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The map is background under the column too: card glass has no blur, land and the arc show through it. */
+.all-journeys__column .journeys-card {
+  backdrop-filter: none;
+}
+
+.all-journeys__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+}
+
+/* Same style as the panel and form titles. */
+.all-journeys__title {
+  margin: 0;
+  font: 600 var(--fs-16)/1.2 var(--font-display);
+  color: var(--text);
+}
+
+.all-journeys__filter-label {
+  margin-bottom: 8px;
+  padding: 0;
+  font: 500 var(--fs-12)/1 var(--font-body);
+  color: var(--text-muted);
+}
+
+/* The feed scrolls inside its card: the section screen does not scroll on desktop. */
+.all-journeys__feed {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 16px;
+}
+
+/* Under the journey card. The filters' own `display: flex` would beat the UA rule for `[hidden]`. */
+.all-journeys__filters[hidden],
+.all-journeys__feed[hidden] {
+  display: none;
+}
+
+/* The feed takes focus only as a fallback on leaving the card; it is not in the tab order. */
+.all-journeys__feed:focus {
+  outline: none;
+}
+
+/* List and card swap with a short fade; a section shown again after `display: none` replays it. */
+.journey-card,
+.all-journeys__filters,
+.all-journeys__feed {
+  animation: journey-card-swap var(--dur-fast) ease-out both;
+}
+
+@keyframes journey-card-swap {
+  from {
+    opacity: 0;
+  }
+}
+
+.all-journeys__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 0;
+}
+
+.all-journeys__add-link {
+  font: 600 var(--fs-14)/1 var(--font-body);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.all-journeys__add-link:hover {
+  text-decoration: underline;
+}
+
+/* ---- Filters: year scale (the movements map slider) and transport chips ------ */
+.all-journeys__years,
+.transport-chips {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.transport-chips__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Transport chips and transport label ---------------------------------- */
+.transport-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Selection shows by fill; hide Mantine's tick. */
+.transport-chips__chip .mantine-Chip-iconWrapper {
+  display: none;
+}
+
+/* ---- Feed ---------------------------------------------------------------- */
+.journey-feed {
+  position: relative;
+  transition: opacity var(--dur-fast) ease;
+}
+
+/* The previous set while a new one loads for changed filters. */
+.journey-feed--stale {
+  opacity: 0.55;
+}
+
+/*
+ * The year sticks to the card top. Only a stuck heading has a background: rows scroll under it,
+ * and it is denser than the card glass so they do not show through. In place the heading is
+ * transparent like the rows. `top: -1px` makes a stuck heading not fully visible to the observer
+ * (see YearHeader).
+ */
+.year-header {
+  position: sticky;
+  top: -1px;
+  z-index: 1;
+  margin: 0 -24px;
+  padding: 16px 24px 8px;
+  font: 600 var(--fs-22)/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  transition: background-color var(--dur-fast) ease;
+}
+
+.year-header[data-stuck] {
+  background: rgb(var(--ink-glass-rgb) / 0.94);
+}
+
+/* While a row is carried, the heading yields to it in step with the rows (a transition like
+   dnd-kit's). On release there is none: the heading takes its place with the feed rebuild. */
+.journey-feed--sorting .year-header {
+  transition:
+    transform 250ms ease,
+    background-color var(--dur-fast) ease;
+}
+
+.journey-feed__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Invisible grid: grip | icon | route | distance, without table rules. */
+.journey-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0 -8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: background var(--dur-fast) ease;
+}
+
+/* Not while a row is carried: rows passing under the pointer would light up one by one. */
+.journey-feed:not(.journey-feed--sorting) .journey-row:hover {
+  background: rgb(var(--ink-on-dark-rgb) / 0.05);
+}
+
+/* Everything but the grip is one link to the journey card, laid out on the row's own columns. */
+.journey-row__open {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.journey-row__open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* The dragged row sits above its neighbours with a backing so it does not blend with them. */
+.journey-row--dragging {
+  z-index: 2;
+  background: rgb(var(--ink-glass-rgb) / 0.96);
+  box-shadow: 0 8px 24px rgb(var(--shadow-rgb) / 0.45);
+}
+
+/* The grip shows on row hover and focus; always on a touch screen. */
+.journey-row__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.journey-row:hover .journey-row__handle,
+.journey-row--dragging .journey-row__handle,
+.journey-row__handle:focus-visible {
+  opacity: 1;
+}
+
+.journey-row--dragging .journey-row__handle {
+  cursor: grabbing;
+}
+
+.journey-row__handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.journey-row__handle:disabled {
+  cursor: default;
+  visibility: hidden;
+}
+
+@media (pointer: coarse) {
+  .journey-row__handle {
+    opacity: 1;
+  }
+}
+
+/* The year hint flips for every new year (the component changes its key). */
+.journey-row__drop-year {
+  display: inline-block;
+  font: 600 var(--fs-13)/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  white-space: nowrap;
+  animation: journey-year-flip 0.25s ease-out both;
+}
+
+@keyframes journey-year-flip {
+  from {
+    opacity: 0;
+    transform: perspective(200px) rotateX(-80deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.journey-feed__error {
+  padding-top: 12px;
+}
+
+.journey-row__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+  font: 500 var(--fs-15)/1.3 var(--font-body);
+  color: var(--text);
+}
+
+.journey-row__city {
+  overflow-wrap: anywhere;
+}
+
+.journey-row__arrow {
+  color: var(--text-muted);
+}
+
+.journey-row__distance {
+  font: 400 var(--fs-13)/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.journey-feed__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+/*
+ * The load-more sentinel is stretched upward from the feed bottom: it enters the screen about half
+ * a screen before the end of what is loaded, so the next page arrives before the list ends.
+ */
+.journey-feed__sentinel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 50vh;
+  pointer-events: none;
+}
+
+/* ---- Journey card: in place of the column's two cards while a journey is open ---- */
+.journey-card {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 20px 24px 28px;
+}
+
+.journey-card__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.journey-card__back {
+  border-radius: 6px;
+  font: 500 var(--fs-14)/1 var(--font-body);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--dur-fast) ease;
+}
+
+.journey-card__back:hover {
+  color: var(--text);
+}
+
+.journey-card__back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* "Saved · Undo" after a save: quiet text at the header's right edge. */
+.journey-card__status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: auto;
+  font: 400 var(--fs-13)/1 var(--font-body);
+  color: var(--text-muted);
+}
+
+/* The "⋯" glyph sits low in body type; line-height 1 and a larger size centre it in the button. */
+.journey-card__menu-icon {
+  font: 600 var(--fs-22)/1 var(--font-body);
+}
+
+.journey-card__undo {
+  border-radius: 4px;
+  font: 600 var(--fs-13)/1 var(--font-body);
+  color: var(--accent);
+}
+
+.journey-card__undo:hover {
+  text-decoration: underline;
+}
+
+.journey-card__undo:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A value edited in place reads as text; a soft backing on hover shows it can be changed. */
+.journey-card__value {
+  margin: -3px -6px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  transition: background var(--dur-fast) ease;
+}
+
+.journey-card__value:hover:not([aria-disabled="true"]) {
+  background: rgb(var(--ink-on-dark-rgb) / 0.08);
+}
+
+.journey-card__value:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.journey-card__value[aria-disabled="true"] {
+  cursor: default;
+}
+
+.journey-card__route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The route is the card's title; it takes focus when the card opens, not by Tab. */
+.journey-card__title {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+  margin: 0;
+  font: 500 var(--fs-30)/1.15 var(--font-display);
+  color: var(--text);
+}
+
+/* A city being edited: the add form's field, in body type, about as wide as a long city name. */
+.journey-card__editor--city {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+  max-width: 20rem;
+  font: 400 var(--fs-15)/1.3 var(--font-body);
+}
+
+.journey-card__editor--year {
+  width: 120px;
+}
+
+/* Closer to the route than the card's section gap: the message belongs to it. */
+.journey-card__route-error {
+  margin-top: -14px;
+}
+
+/* Swap: the add form's icon turned a quarter, since the cities here sit in a row. */
+.journey-card__swap {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.journey-card__swap svg {
+  transform: rotate(90deg);
+}
+
+/* The tap target is 44px (web/performance.md), wider than the drawn circle. */
+.journey-card__swap::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.journey-card__swap:hover:not([aria-disabled="true"]) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.journey-card__swap:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.journey-card__swap[aria-disabled="true"] {
+  cursor: default;
+}
+
+.journey-card__title:focus {
+  outline: none;
+}
+
+.journey-card__city {
+  overflow-wrap: anywhere;
+}
+
+.journey-card__arrow {
+  color: var(--accent);
+}
+
+.journey-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 32px;
+  margin: 0;
+}
+
+/* Same label style as the feed filters. */
+.journey-card__fact dt {
+  margin-bottom: 6px;
+  font: 500 var(--fs-12)/1 var(--font-body);
+  color: var(--text-muted);
+}
+
+.journey-card__fact dd {
+  margin: 0;
+  font: 500 var(--fs-16)/1.3 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.journey-card__distance {
+  transition: opacity var(--dur-fast) ease;
+}
+
+.journey-card__distance--recalculating {
+  opacity: 0.45;
+}
+
+.journey-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journey-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 600 var(--fs-17)/1.2 var(--font-display);
+  color: var(--text);
+}
+
+/* Reduced motion: everything appears and disappears at once. */
+@media (prefers-reduced-motion: reduce) {
+  .all-journeys__column,
+  .all-journeys__filters,
+  .all-journeys__feed,
+  .journey-card,
+  .feed-arc__line,
+  .feed-arc__arrow,
+  .feed-arc__dot,
+  .feed-arc__label,
+  .journey-row__drop-year {
+    animation: none;
+  }
+
+  .journey-feed,
+  .journey-row,
+  .year-header,
+  .journey-feed--sorting .year-header,
+  .journey-card__back,
+  .journey-card__value,
+  .journey-card__swap,
+  .journey-card__distance {
+    transition: none;
+  }
+}
+
+/* ---- Narrow screen: the column is in flow under the panel, the whole page scrolls ---- */
+@media (max-width: 61.99em) {
+  .all-journeys {
+    position: static;
+    inset: auto;
+    padding: 0;
+  }
+
+  .all-journeys__column {
+    flex: 1 1 auto;
+    margin-left: 0;
+  }
+
+  .all-journeys__feed,
+  .journey-card {
+    overflow: visible;
+  }
+}

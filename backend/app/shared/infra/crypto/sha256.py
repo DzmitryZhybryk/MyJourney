@@ -33,5 +33,8 @@ def get_sha256_deterministic_hasher() -> Sha256DeterministicHasher:
 
     Hasher не имеет состояния, плодить инстансы бессмысленно. Тестируемость
     сохраняется через ``app.dependency_overrides`` на presentation-обёртке.
+
+    Scenarios:
+        - домен, который ищет запись по секрету от клиента
     """
     return Sha256DeterministicHasher()

@@ -2,14 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { on } from "../auth/events";
 import { clearAccessToken, getAccessToken, setAccessToken } from "../auth/tokenStore";
-import { apiFetch, ensureRefreshed } from "./client";
+import { jsonResponse, type FetchSignature } from "../test/fetchStub";
+import { appFetch, ensureRefreshed } from "./client";
 import { ApiError } from "./errors";
 
 const REFRESH_PATH = "/v1/auth/refresh/";
+// The transport builds a `Request`, which does not resolve a relative path outside a browser, so
+// addresses in tests are absolute (in the app `sdk.ts` supplies the baseUrl).
+const ORIGIN = "https://app.test";
 
-type FetchSignature = (input: string, init?: RequestInit) => Promise<Response>;
+/** The n-th request the `fetch` stub received. */
+function requestAt(mock: ReturnType<typeof vi.fn<FetchSignature>>, index: number): Request {
+  return mock.mock.calls[index][0] as Request;
+}
 
-/** Управляемый промис: позволяет держать запрос «в полёте» и резолвить его вручную. */
+/** A controllable promise: keeps a request "in flight" and resolves it by hand. */
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason: unknown) => void } {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;
@@ -21,22 +28,14 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
   return { promise, resolve, reject };
 }
 
-/** JSON-ответ с заданным статусом. */
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-/** Считает, сколько раз дёрнули именно `/v1/auth/refresh/`. */
+/** Counts how many times exactly `/v1/auth/refresh/` was called. */
 function refreshCallCount(mock: ReturnType<typeof vi.fn<FetchSignature>>): number {
   return mock.mock.calls.filter(([url]) => url === REFRESH_PATH).length;
 }
 
 let fetchMock: ReturnType<typeof vi.fn<FetchSignature>>;
 
-describe("apiFetch", () => {
+describe("appFetch", () => {
   beforeEach(() => {
     sessionStorage.clear();
     clearAccessToken();
@@ -48,93 +47,77 @@ describe("apiFetch", () => {
     vi.unstubAllGlobals();
   });
 
-  it("возвращает распарсенный JSON при успехе", async () => {
+  it("отдаёт успешный ответ как есть — разбор тела на стороне SDK", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { id: 1 }));
 
-    expect(await apiFetch("/v1/x/")).toEqual({ id: 1 });
+    const response = await appFetch(`${ORIGIN}/v1/x/`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ id: 1 });
   });
 
-  it("возвращает undefined для 204 No Content", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-
-    expect(await apiFetch("/v1/x/", { method: "DELETE" })).toBeUndefined();
-  });
-
-  it("возвращает undefined для успешного ответа с пустым телом (не 204)", async () => {
-    // 202 «принято в async-обработку» с пустым телом (send-verification): не должно
-    // падать на response.json() — parseSuccess отдаёт undefined.
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 202 }));
-
-    expect(await apiFetch("/v1/x/", { method: "POST" })).toBeUndefined();
-  });
-
-  it("на успешный ответ с битым JSON-телом бросает invalid_response", async () => {
-    // 2xx с непустым, но не-JSON телом (прокси отдал HTML под 200, обрезанный ответ):
-    // parseSuccess не даёт JSON.parse выбросить голый SyntaxError — заворачивает в ApiError.
-    fetchMock.mockResolvedValueOnce(
-      new Response("{ broken json", { status: 200, headers: { "Content-Type": "application/json" } }),
-    );
-
-    await expect(apiFetch("/v1/x/")).rejects.toMatchObject({ status: 200, code: "invalid_response" });
-  });
-
-  it("подставляет Authorization, credentials include и Content-Type для json", async () => {
+  it("подставляет Authorization и credentials include", async () => {
     setAccessToken("my-token");
     fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
 
-    await apiFetch("/v1/x/", { json: { a: 1 } });
+    await appFetch(`${ORIGIN}/v1/x/`);
 
-    const [url, options] = fetchMock.mock.calls[0];
-    const headers = new Headers(options?.headers);
-    expect(url).toBe("/v1/x/");
-    expect(options?.credentials).toBe("include");
-    expect(headers.get("Authorization")).toBe("Bearer my-token");
-    expect(headers.get("Content-Type")).toBe("application/json");
-    expect(options?.body).toBe(JSON.stringify({ a: 1 }));
+    const request = requestAt(fetchMock, 0);
+    expect(request.headers.get("Authorization")).toBe("Bearer my-token");
+    expect(request.credentials).toBe("include");
   });
 
   it("не добавляет Authorization без токена", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
 
-    await apiFetch("/v1/x/");
+    await appFetch(`${ORIGIN}/v1/x/`);
 
-    const [, options] = fetchMock.mock.calls[0];
-    expect(new Headers(options?.headers).has("Authorization")).toBe(false);
+    expect(requestAt(fetchMock, 0).headers.has("Authorization")).toBe(false);
   });
 
   it("на 401 invalid_credentials не делает refresh и бросает ApiError", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_credentials", message: "x" }));
 
-    await expect(apiFetch("/v1/auth/login/", { method: "POST" })).rejects.toMatchObject({
+    await expect(appFetch(`${ORIGIN}/v1/auth/login/`, { method: "POST" })).rejects.toMatchObject({
       status: 401,
       code: "auth.invalid_credentials",
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("на 401 email_not_verified эмитит verify-required, не делает refresh и бросает", async () => {
-    const verifyListener = vi.fn();
-    const off = on("verify-required", verifyListener);
-    fetchMock.mockResolvedValueOnce(jsonResponse(401, { code: "auth.email_not_verified", message: "x" }));
-
-    await expect(apiFetch("/v1/x/")).rejects.toMatchObject({ code: "auth.email_not_verified" });
-
-    expect(verifyListener).toHaveBeenCalledTimes(1);
-    expect(refreshCallCount(fetchMock)).toBe(0);
-    off();
-  });
-
-  it("на прочий 401 делает один refresh, повторяет запрос и возвращает результат", async () => {
+  it("на прочий 401 делает один refresh и повторяет запрос ВМЕСТЕ С ТЕЛОМ", async () => {
+    // A request body is a one-shot stream: without a clone before the first send the retry would go
+    // out empty and a POST after an expired token would silently lose its payload.
     fetchMock
       .mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_access_token", message: "x" }))
       .mockResolvedValueOnce(jsonResponse(200, { accessToken: "new-token" }))
       .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
 
-    const result = await apiFetch("/v1/protected/", { method: "POST" });
+    const response = await appFetch(`${ORIGIN}/v1/protected/`, {
+      method: "POST",
+      body: JSON.stringify({ a: 1 }),
+      headers: { "Content-Type": "application/json" },
+    });
 
-    expect(result).toEqual({ ok: true });
+    expect(await response.json()).toEqual({ ok: true });
     expect(getAccessToken()).toBe("new-token");
     expect(refreshCallCount(fetchMock)).toBe(1);
+    const retried = requestAt(fetchMock, 2);
+    expect(retried.method).toBe("POST");
+    expect(await retried.text()).toBe(JSON.stringify({ a: 1 }));
+  });
+
+  it("повтор после refresh уходит с НОВЫМ токеном, а не с протухшим", async () => {
+    setAccessToken("stale-token");
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_access_token", message: "x" }))
+      .mockResolvedValueOnce(jsonResponse(200, { accessToken: "fresh-token" }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+
+    await appFetch(`${ORIGIN}/v1/protected/`);
+
+    expect(requestAt(fetchMock, 0).headers.get("Authorization")).toBe("Bearer stale-token");
+    expect(requestAt(fetchMock, 2).headers.get("Authorization")).toBe("Bearer fresh-token");
   });
 
   it("если повтор после refresh упал — бросает ошибку повтора", async () => {
@@ -143,34 +126,43 @@ describe("apiFetch", () => {
       .mockResolvedValueOnce(jsonResponse(200, { accessToken: "new-token" }))
       .mockResolvedValueOnce(jsonResponse(500, { code: "internal_error", message: "x" }));
 
-    await expect(apiFetch("/v1/protected/")).rejects.toMatchObject({ status: 500, code: "internal_error" });
+    await expect(appFetch(`${ORIGIN}/v1/protected/`)).rejects.toMatchObject({
+      status: 500,
+      code: "internal_error",
+    });
   });
 
-  it("если refresh не удался — эмитит auth-required и бросает исходную ошибку", async () => {
-    const authListener = vi.fn();
-    const off = on("auth-required", authListener);
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_access_token", message: "x" }))
-      .mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_refresh_token", message: "x" }));
+  // account_not_found: a valid token whose account is gone ends the session the same way.
+  it.each(["auth.invalid_access_token", "auth.account_not_found"])(
+    "если refresh после 401 %s не удался — эмитит auth-required и бросает исходную ошибку",
+    async (code) => {
+      const authListener = vi.fn();
+      const off = on("auth-required", authListener);
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse(401, { code, message: "x" }))
+        .mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_refresh_token", message: "x" }));
 
-    await expect(apiFetch("/v1/x/")).rejects.toBeInstanceOf(ApiError);
+      const error: unknown = await appFetch(`${ORIGIN}/v1/x/`).catch((reason: unknown) => reason);
 
-    expect(authListener).toHaveBeenCalledTimes(1);
-    off();
-  });
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ status: 401, code });
+      expect(authListener).toHaveBeenCalledTimes(1);
+      off();
+    },
+  );
 
   it("на ошибку без валидного JSON-тела отдаёт unknown_error", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response("<html>502</html>", { status: 502, headers: { "Content-Type": "text/html" } }),
     );
 
-    await expect(apiFetch("/v1/x/")).rejects.toMatchObject({ status: 502, code: "unknown_error" });
+    await expect(appFetch(`${ORIGIN}/v1/x/`)).rejects.toMatchObject({ status: 502, code: "unknown_error" });
   });
 
   it("на 401 самого /refresh/ не уходит в цикл refresh", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(401, { code: "auth.invalid_refresh_token", message: "x" }));
 
-    await expect(apiFetch(REFRESH_PATH, { method: "POST" })).rejects.toMatchObject({ status: 401 });
+    await expect(appFetch(`${ORIGIN}${REFRESH_PATH}`, { method: "POST" })).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

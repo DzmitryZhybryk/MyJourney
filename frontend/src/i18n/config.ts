@@ -1,9 +1,9 @@
 /**
- * Инициализация i18next для приложения.
+ * i18next setup.
  *
- * Локали грузятся лениво (dynamic `import()`), поэтому в бандл попадает только
- * активный язык — число языков не раздувает основной чанк. `LanguageDetector`
- * выбирает язык: localStorage → язык браузера → `DEFAULT_LANGUAGE`.
+ * Locales load lazily (dynamic `import()`), so only the active language is in the bundle.
+ * `LanguageDetector` picks the language: localStorage, then the browser language, then
+ * `DEFAULT_LANGUAGE`.
  */
 
 import i18n from "i18next";
@@ -13,11 +13,11 @@ import { initReactI18next } from "react-i18next";
 
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGE_CODES } from "./languages";
 
-/** Namespace'ы переводов. Имя файла локали = namespace (`<code>/<ns>.json`). */
+/** Translation namespaces. A locale file name is the namespace (`<code>/<ns>.json`). */
 export const I18N_NAMESPACES = ["common", "auth", "errors", "journeys", "landing"] as const;
 
-/** Ключ в localStorage, под которым хранится выбор языка. */
-export const LANGUAGE_STORAGE_KEY = "mindtrace.language";
+/** localStorage key holding the chosen language. */
+export const LANGUAGE_STORAGE_KEY = "myjourney.language";
 
 void i18n
   .use(LanguageDetector)
@@ -30,12 +30,12 @@ void i18n
   .init({
     fallbackLng: DEFAULT_LANGUAGE,
     supportedLngs: [...SUPPORTED_LANGUAGE_CODES],
-    // ru-RU / en-US нормализуются до базового языка (ru / en)
+    // ru-RU / en-US are normalized to the base language (ru / en)
     load: "languageOnly",
     nonExplicitSupportedLngs: true,
     ns: [...I18N_NAMESPACES],
     defaultNS: "common",
-    // React сам экранирует значения — двойное экранирование не нужно
+    // React already escapes values
     interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],
@@ -44,7 +44,7 @@ void i18n
     },
   });
 
-// Держим атрибут <html lang> в синхроне с активным языком (a11y / SEO)
+// Keep <html lang> in sync with the active language (a11y / SEO)
 i18n.on("languageChanged", (language) => {
   document.documentElement.lang = language;
 });

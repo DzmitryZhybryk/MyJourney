@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+#
+# Мерж-гейт покрытия без CI: не даём закоммитить код с покрытием < 90%.
+# Гоняет coverage обеих сторон (backend --cov-fail-under=90 + frontend vitest thresholds);
+# при провале порога make возвращает ненулевой код → commit блокируется.
+#
+# Гейт гоняется по рабочему дереву, а не по staged-снимку: при частично застейдженных
+# правках результат может отличаться от содержимого коммита.
+#
+# Активация (разово): make hooks   (== git config core.hooksPath .githooks)
+# Обход в исключительном случае: git commit --no-verify
+#
+set -e
+
+echo "pre-commit: coverage gate (backend + frontend, >= 90%)…"
+# Без UV_LOCKED `uv run` перепишет устаревший uv.lock уже после `git add`: в коммит уйдёт
+# старый lock, а новый останется в рабочей копии.
+UV_LOCKED=true make be-coverage
+make fe-coverage

@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class TransportType(StrEnum):
+class TransportTypeEnum(StrEnum):
     """
     Среда передвижения в поездке (а не конкретный вид транспорта).
 
@@ -12,17 +12,3 @@ class TransportType(StrEnum):
     LAND = "land"
     AIR = "air"
     WATER = "water"
-
-
-class DatePrecision(StrEnum):
-    """
-    Точность приблизительной даты поездки.
-
-    Фиксирует, до какого разряда дата осмысленна: ``YEAR`` — известен только год,
-    ``MONTH`` — год и месяц, ``DAY`` — полная дата. Год обязателен, месяц и день
-    опциональны, поэтому «день без месяца» по построению невозможен.
-    """
-
-    YEAR = "year"
-    MONTH = "month"
-    DAY = "day"

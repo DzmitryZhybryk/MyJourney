@@ -1,7 +1,6 @@
 {
   "auth": {
     "invalid_credentials": "Incorrect username/email or password",
-    "user_credentials_not_found": "Incorrect username/email or password",
     "email_already_registered": "This email is already registered",
     "username_already_taken": "This username is already taken",
     "terms_not_accepted": "You must accept the terms to continue",
@@ -9,18 +8,25 @@
     "verification_code_invalid": "Invalid verification code",
     "challenge_not_found": "No active code. Request a new one",
     "challenge_expired": "The code has expired. Request a new one",
-    "challenge_attempts_exceeded": "Too many attempts. Request a new code",
-    "challenge_resend_cooldown": "Please wait before requesting a new code",
+    "challenge_attempts_exceeded": "Too many attempts. You can request a new code later",
+    "challenge_attempts_exceeded_retry": "Too many attempts. You can request a new code in {{minutes}} min",
+    "challenge_resend_cooldown": "Please wait before resending the code",
     "invalid_access_token": "Your session has expired. Please sign in again",
-    "invalid_refresh_token": "Your session has expired. Please sign in again"
+    "invalid_refresh_token": "Your session has expired. Please sign in again",
+    "account_not_found": "Your session has expired. Please sign in again"
   },
   "journeys": {
     "same_origin_destination": "Departure and destination must be different",
-    "date_in_future": "The travel date can't be in the future",
-    "invalid_date": "Invalid travel date"
+    "date_in_future": "The travel year can't be in the future",
+    "unknown_city": "This city wasn't found. Pick it from the suggestions again",
+    "journey_not_found": "This journey no longer exists",
+    "invalid_move_target": "Couldn't move the journey there. The list has been refreshed",
+    "invalid_year_range": "The first year can't be later than the last one"
   },
+  "invalid_cursor": "The list is out of date. Please reload it",
   "validation_error": "Please check the entered data and try again",
   "network": "Network error. Please try again.",
+  "temporary": "Couldn't complete the request. Please try again a bit later.",
   "invalid_response": "Unexpected server response. Please try again.",
   "fallback": "Something went wrong. Please try again."
 }

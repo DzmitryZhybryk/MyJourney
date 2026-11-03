@@ -17,12 +17,20 @@ Cross-доменные фикстуры **уровня unit**.
 ``jwt_secret``/``jwt_algorithm`` отданы рядом, чтобы тесты, собирающие «сырой» токен
 вручную (истёкший, с кривым ``sub``), брали тот же секрет, что и ``jwt_service`` —
 один источник истины, без рассинхрона литералов.
+
+``module_name_of`` нужна и guard'у гигиены импортов, и сборке дерева исключений: оба обходят
+файлы ``app`` и превращают путь в имя модуля.
 """
+
+from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
-from app.shared.infra.jwt import JWTService
+from app.shared.infra.jwt.service import JWTService
 
+# tests/unit/<этот файл> → backend/
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
 _JWT_SECRET = "unit-test-secret-at-least-32-bytes-long"
 _JWT_ALGORITHM = "HS256"
 _ACCESS_TOKEN_EXPIRE_MINUTES = 15
@@ -45,3 +53,17 @@ def jwt_service() -> JWTService:
         algorithm=_JWT_ALGORITHM,
         access_token_expire_minutes=_ACCESS_TOKEN_EXPIRE_MINUTES,
     )
+
+
+@pytest.fixture(scope="session")
+def module_name_of() -> Callable[[Path], str]:
+    """
+    Имя модуля по пути его файла в ``backend/``: ``app/geo/domain/city.py`` → ``app.geo.domain.city``,
+    ``app/geo/__init__.py`` → ``app.geo``.
+    """
+
+    def _module_name(path: Path) -> str:
+        parts = path.resolve().relative_to(_BACKEND_DIR).with_suffix("").parts
+        return ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
+
+    return _module_name

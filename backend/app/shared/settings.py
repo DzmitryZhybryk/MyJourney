@@ -2,23 +2,20 @@ from functools import cache
 from pathlib import Path
 from typing import Final
 
-from pydantic import BaseModel, SecretStr
+from cryptography.fernet import Fernet
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.shared.enums import AppEnvEnum
 from app.shared.types import DictStrAny
-from app.shared.utils.file_reader import read_file
 
 _APP_DIR: Final[Path] = Path(__file__).resolve().parent
 _ROOT_DIR: Final[Path] = _APP_DIR.parent.parent
 
 
-_PYPROJECT_DATA: Final[DictStrAny] = read_file(_ROOT_DIR / "pyproject.toml")
-
-
 class PostgresSettings(BaseModel):
     POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
+    POSTGRES_PASSWORD: SecretStr
     POSTGRES_DB: str
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
@@ -40,21 +37,26 @@ class PostgresSettings(BaseModel):
         Драйвер — psycopg3 (async). Выбран сознательно вместо asyncpg, чтобы
         procrastinate.PsycopgConnector мог делить connection с SQLAlchemy
         для атомарного defer_async() в одной транзакции.
+
+        Scenarios:
+            - подключение приложения, воркера и миграций к базе
         """
         return (
-            f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD.get_secret_value()}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
     @property
-    def procrastinate_dsn(self) -> str:
+    def postgres_libpq_dsn(self) -> str:
         """
-        Plain libpq DSN для procrastinate.PsycopgConnector (без +driver-префикса).
+        Plain libpq DSN (без +driver-префикса) для прямых psycopg-соединений мимо SQLAlchemy.
 
-        Procrastinate шарит БД с приложением — отдельная инстанция PG не предусмотрена.
+        Scenarios:
+            - очередь фоновых задач
+            - массовая загрузка справочных данных в базу
         """
         return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD.get_secret_value()}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
@@ -87,7 +89,7 @@ class WebSettings(BaseModel):
 
 
 class JWTSettings(BaseModel):
-    JWT_SECRET_KEY: str
+    JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
@@ -106,12 +108,58 @@ class EmailVerificationSettings(BaseModel):
     EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: int = 60
 
 
+class ChallengeSettings(BaseModel):
+    CHALLENGE_CODE_ENCRYPTION_KEY: SecretStr
+
+    @field_validator("CHALLENGE_CODE_ENCRYPTION_KEY")
+    @classmethod
+    def _ensure_fernet_key(cls, value: SecretStr) -> SecretStr:
+        """
+        Проверяет, что ключ шифрования одноразовых кодов — валидный ключ Fernet.
+
+        Scenarios:
+            - запуск API и воркера: неверный ключ останавливает старт, а не первую отправку кода
+
+        Args:
+            value: Ключ из окружения
+
+        Returns:
+            Тот же ключ
+
+        Raises:
+            ValueError: Ключ не 32 байта в url-safe base64
+        """
+        try:
+            Fernet(value.get_secret_value())
+        except ValueError as error:
+            message = "CHALLENGE_CODE_ENCRYPTION_KEY должен быть ключом Fernet: 32 байта в url-safe base64"
+            raise ValueError(message) from error
+
+        return value
+
+
+class GeoDatasetsSettings(BaseModel):
+    GEO_DATASETS_CACHE_DIR: Path = _ROOT_DIR / ".geo-cache"
+
+
+class MediaStorageSettings(BaseModel):
+    MEDIA_S3_ENDPOINT_URL: str
+    MEDIA_S3_ACCESS_KEY_ID: SecretStr
+    MEDIA_S3_SECRET_ACCESS_KEY: SecretStr
+    MEDIA_S3_REGION: str = "auto"
+    MEDIA_S3_PRIVATE_BUCKET: str = Field(default="media-private", min_length=3, max_length=63)
+    MEDIA_S3_PUBLIC_BUCKET: str = Field(default="media-public", min_length=3, max_length=63)
+    MEDIA_S3_MAX_ATTEMPTS: int = 3
+    MEDIA_S3_CONNECT_TIMEOUT_SECONDS: float = 5.0
+    MEDIA_S3_READ_TIMEOUT_SECONDS: float = 30.0
+
+
 class ProcrastinateSettings(PostgresSettings):
     """
     Procrastinate шарит БД с приложением — наследует PG-конфиг для DSN.
 
     Procrastinate-специфичны только пул и concurrency; connection info
-    приходит через ``procrastinate_dsn`` из ``PostgresSettings``.
+    приходит через ``postgres_libpq_dsn`` из ``PostgresSettings``.
     """
 
     PROCRASTINATE_POOL_MIN_SIZE: int = 2
@@ -125,18 +173,22 @@ class Settings(
     JWTSettings,
     ResendSettings,
     EmailVerificationSettings,
+    ChallengeSettings,
+    GeoDatasetsSettings,
+    MediaStorageSettings,
     ProcrastinateSettings,
 ):
-    SERVICE_NAME: str = _PYPROJECT_DATA["project"]["name"]
-    SERVICE_VERSION: str = _PYPROJECT_DATA["project"]["version"]
-    SERVICE_DESCRIPTION: str = _PYPROJECT_DATA["project"]["description"]
-
     model_config = SettingsConfigDict(frozen=True, env_file=".env", extra="ignore")
 
 
 @cache
 def get_app_settings() -> Settings:
-    """Get application settings."""
+    """
+    Возвращает настройки приложения, один экземпляр на процесс.
+
+    Scenarios:
+        - запуск API, воркера, миграций и CLI-скриптов
+    """
     return Settings()
 
 

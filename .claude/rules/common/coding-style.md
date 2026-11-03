@@ -5,12 +5,14 @@
 - **KISS** — the simplest solution that works. Optimize for clarity, not cleverness.
 - **DRY** — extract repeated logic.
 
-## Immutability (CRITICAL)
+## Immutability
 
-ALWAYS create new objects, NEVER mutate existing ones. Immutability removes hidden side effects and simplifies debugging.
+Create new objects instead of mutating existing ones: it removes hidden side effects and simplifies
+debugging. A local accumulator built inside one function is the exception; the language rules say
+how it is converted before it leaves.
 
 Language specifics:
-- Python — `@dataclass(frozen=True, slots=True)` for transport objects (see CLAUDE.md → DTO conventions).
+- Python — `@dataclass(frozen=True, slots=True)` for transport objects (see `python/dto.md`).
 - TypeScript — `Readonly<T>` + spread (`{...obj, field: value}`).
 
 ## File Organization
@@ -36,7 +38,7 @@ Validate at system boundaries (HTTP body, external API responses, file content).
 - Constants: `UPPER_SNAKE_CASE`
 - Descriptive names; 1–2 letter names only in short lambdas/loops
 
-> Casing follows the language: Python — `snake_case`/`PascalCase` (PEP 8), TypeScript — `camelCase`/`PascalCase`/`use*` for hooks (see `typescript/coding-style.md`).
+> Casing follows the language: Python — `snake_case`/`PascalCase` (PEP 8), TypeScript — `camelCase`/`PascalCase`/`use*` for hooks (see the language's own style rule).
 
 ## Code Smells
 

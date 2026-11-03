@@ -1,78 +1,83 @@
-# Web Performance
+---
+paths:
+  - "frontend/src/**"
+  - "frontend/index.html"
+  - "frontend/vite.config.ts"
+  - "frontend/scripts/check-bundle-budget.ts"
+  - "frontend/scripts/check-mantine-styles.ts"
+---
 
-> Applies to `frontend/` (React + Vite + Mantine).
+# Web performance (`frontend/`: React + Vite + Mantine)
 
-## Core Web Vitals Targets
+## Core Web Vitals targets
 
 | Metric | Target |
-|--------|--------|
-| LCP    | < 2.5s |
-| INP    | < 200ms |
-| CLS    | < 0.1 |
-| FCP    | < 1.5s |
+|---|---|
+| LCP | < 2.5 s |
+| INP | < 200 ms |
+| CLS | < 0.1 |
+| FCP | < 1.5 s |
 
-## Bundle Budget (gzipped)
+## Bundle budget (gzipped)
 
 | Page | JS | CSS |
-|------|----|----|
-| Landing | < 200kb | < 40kb |
-| App page | < 300kb | < 50kb |
-
-Цифры для лендинга подняты со 150/30 после замера (2026-07-19): пол стека — **~116 kb** и он
-несжимаем без смены архитектуры. Из чего он состоит:
-
-| часть | gz | устранимо? |
 |---|---|---|
-| react-dom | 56.4 kb | нет |
-| i18n-стек | 23.8 kb | нет, копирайт лендинга в i18n |
-| zod | 17.4 kb | нет, валидация ответов API на границе |
-| react-router | 15.0 kb | нет |
-| код приложения | ~4 kb | — |
+| Landing | < 200 kb | < 25 kb |
+| App page | < 300 kb | < 30 kb |
 
-Сверху ложится Mantine. Лендинг ни одного его компонента не использует, но `MantineProvider`
-смонтирован в корне, а `PublicHeader` тянет переключатель языка на Mantine `Menu`
-(`FocusTrap` + `Popover` + `Input` ≈ 24 kb). Уложиться в 150 kb можно только вынеся провайдер
-из корня и переписав переключатель — при том что `/login` и `/signup` живут в том же лейауте
-и Mantine им нужен по-настоящему. Разменивать перекройку провайдерного дерева на 35 kb
-сочли невыгодным.
+The numbers are a working agreement set by measurement, not a physical limit. Exceeding one is a
+reason to look at what grew, not an alarm: if nothing removable is found, raise the limit **and
+write down why the new number is reachable**. A budget that cannot be met teaches people to ignore
+the table.
 
-> **Бюджет, который нельзя выполнить, не дисциплинирует, а приучает игнорировать таблицу.**
-> Если меняешь цифры — меняй вместе с обоснованием, почему новая достижима.
+- **Check with `make fe-budget`, not by hand.** It builds with the Vite manifest, walks each route's
+  **static import graph** (entry + lazy layout + page) and fails when a page exceeds its limit.
+  Measure the graph of static imports, never the entry size: a dynamic `import()` lands in the
+  preload manifest and is easily misread as a static dependency.
+- The limits are duplicated in `frontend/scripts/check-bundle-budget.ts`; change both together. A new
+  lazy route must be added to that script's page list or it goes unmeasured.
+- Before optimizing, look for something on the critical path that the page never renders. That is
+  what paid off so far: a dialog imported statically into the root provider (now `lazy`), and the
+  generated SDK validators on classic zod (now `zod/mini`).
+- Mantine is the one large block and removing it from the landing is not worth it: `MantineProvider`
+  sits at the root and the public header's language switcher uses Mantine `Menu`; `/login` and
+  `/signup`, the next step, load the same chunks anyway.
+- Mantine CSS is loaded per component, never as the whole `@mantine/core/styles.css`:
+  `frontend/src/mantineStyles.ts` imports only the stylesheets the used components need, in the order
+  of `styles.css`. Importing a new Mantine component fails `make fe-mantine-styles` (part of `check`)
+  until its stylesheets are added; the check prints the expected list. Never split these imports
+  across pages: chunk load order is not cascade order.
+- After a Mantine upgrade, look through the screens: a stylesheet moved or renamed upstream leaves a
+  component unstyled with every check green.
 
-Замерять критический путь по ГРАФУ СТАТИЧЕСКИХ ИМПОРТОВ собранных чанков, а не по размеру
-entry: динамический `import()` попадает в манифест предзагрузки и легко читается как
-статическая зависимость.
+## Loading
 
-## Loading Strategy
-
-- Preload only the hero image and primary font
-- Heavy libraries (`react-globe.gl`, `three.js`) — dynamic `import()` only on the globe page
-- Defer non-critical CSS/JS
+- Preload only the hero image and the primary font.
+- Heavy libraries (`react-globe.gl`, `three.js`): dynamic `import()` only on the globe page.
+- Defer non-critical CSS and JS.
 
 ## Images
 
-- Always set explicit `width` and `height`
-- Hero — `loading="eager"` + `fetchpriority="high"`
-- Below-the-fold — `loading="lazy"`
-- AVIF/WebP with fallbacks; do not serve originals larger than the rendered size
+- Always explicit `width` and `height`.
+- Hero: `loading="eager"` + `fetchpriority="high"`; below the fold: `loading="lazy"`.
+- AVIF/WebP with fallbacks; never serve an original larger than the rendered size.
 
 ## Fonts
 
-- ≤ 2 families, `font-display: swap`, preload only the critical weight
+At most 2 families, `font-display: swap`, preload only the critical weight.
 
 ## Animation
 
-- Animate only compositor-friendly properties (transform/opacity)
-- Use `will-change` sparingly and remove it afterward
-- JS animations — `requestAnimationFrame` or libraries; do not attach heavy scroll handlers (use `IntersectionObserver`)
+- Animate only compositor-friendly properties (`transform`, `opacity`).
+- `will-change` sparingly, removed afterwards.
+- JS animation through `requestAnimationFrame` or a library; no heavy scroll handlers (use `IntersectionObserver`).
 
-## UI Quality (manual checks)
+## UI quality (manual checks)
 
-Автотесты у фронта есть (vitest unit + component, Playwright e2e, гейт покрытия 90% — см.
-[typescript/testing.md](../typescript/testing.md)), и они гоняются в CI. Но ниже — то, чего
-автотест не видит в принципе: как оно ВЫГЛЯДИТ. Проверять перед мержем UI-изменений:
+Automated tests cannot see how it **looks**. Before merging a UI change:
 
-- **A11y:** axe-core / Lighthouse a11y, keyboard navigation, `prefers-reduced-motion`, WCAG AA contrast (4.5:1 / 3:1)
-- **Performance:** Lighthouse on key pages (login, signup, home, globe); check INP during globe interaction
-- **Cross-browser:** Chrome / Firefox / Safari (desktop)
-- **Responsive:** breakpoints 320 / 375 / 768 / 1024 / 1440; tap targets ≥ 44×44px
+- **A11y:** axe-core / Lighthouse a11y, keyboard navigation, `prefers-reduced-motion`, WCAG AA contrast (4.5:1 / 3:1).
+- **Performance:** Lighthouse on key pages (login, signup, home, globe); INP during globe interaction.
+- **Cross-browser:** Chrome / Firefox / Safari (desktop).
+- **Responsive:** desktop is the priority; on narrow screens the layout only has to not break and
+  decoration is hidden (mobile will be a separate Flutter app). Tap targets ≥ 44×44 px.

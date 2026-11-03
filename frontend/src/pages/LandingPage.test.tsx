@@ -7,7 +7,7 @@ describe("LandingPage", () => {
   it("рендерит ровно один заголовок первого уровня", () => {
     renderWithProviders(<LandingPage />);
 
-    // Структурный инвариант страницы: h1 один, иначе ломается навигация по заголовкам.
+    // A structural page invariant: there is one h1, otherwise heading navigation breaks.
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
@@ -26,8 +26,8 @@ describe("LandingPage", () => {
   it("разворачивает списки из i18n: фичи, шаги, статистика", () => {
     const { container } = renderWithProviders(<LandingPage />);
 
-    // Три коллекции приходят массивами из переводов — проверяем, что они дошли до DOM,
-    // а не свернулись в пустоту (именно так падал бы битый ключ до guard'а).
+    // The three collections arrive as arrays from translations: check they reached the DOM and did
+    // not collapse into nothing (which is how a broken key would fail without the guard).
     expect(container.querySelectorAll(".lp-card").length).toBeGreaterThan(0);
     expect(container.querySelectorAll(".lp-step").length).toBeGreaterThan(0);
     expect(container.querySelectorAll(".lp-stat").length).toBeGreaterThan(0);
@@ -36,8 +36,8 @@ describe("LandingPage", () => {
   it("шаги размечены упорядоченным списком, а не набором div", () => {
     const { container } = renderWithProviders(<LandingPage />);
 
-    // «Как это работает» — последовательность, и её порядок должен быть виден
-    // вспомогательным технологиям, а не только глазу.
+    // "How it works" is a sequence, and its order must be visible to assistive technologies, not
+    // only to the eye.
     const steps = container.querySelector("ol.lp-steps__list");
     expect(steps).not.toBeNull();
     expect(steps?.querySelectorAll("li").length).toBeGreaterThan(1);

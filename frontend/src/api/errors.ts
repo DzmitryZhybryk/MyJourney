@@ -25,69 +25,44 @@ type FormLike = {
   setFieldError: (path: string, error: string) => void;
 };
 
+/** Interpolation values for an error text, e.g. `{ minutes: 9 }` for `{{minutes}}`. */
+export type ErrorParams = Readonly<Record<string, number>>;
+
 /**
- * Префикс i18n-токена для машинных кодов ошибок бэка (namespace `errors`).
+ * Prefix of an i18n token for a backend error code (`errors` namespace).
  *
- * Токены ошибок хранятся как строки и резолвятся в текст **во время рендера**
- * (`resolveErrorToken`), а не в момент возникновения ошибки — иначе при смене
- * языка уже показанное сообщение осталось бы на старом языке. Этот префикс
- * отличает код бэка (`errors:auth.invalid_credentials`) от i18n-ключа валидации
- * фронта (`auth:validation.usernameMin`) в едином резолвере.
+ * Error tokens are stored as strings and resolved to text at render time, not when the error
+ * happens, so a language switch updates a message that is already on screen. The prefix tells a
+ * backend code (`errors:auth.invalid_credentials`) from a frontend validation key
+ * (`auth:validation.usernameMin`) in the single resolver.
  */
 const ERROR_CODE_PREFIX = "errors:";
 
-/**
- * Оборачивает машинный код ошибки бэка в i18n-токен namespace `errors`.
- *
- * Args:
- *     code: Машинный код из тела ответа бэка (или `"network"` для сетевой ошибки).
- *
- * Returns:
- *     Токен вида `errors:<code>` для отложенного резолва через `resolveErrorToken`.
- */
+/** Wraps a backend error code (or `"network"`) into an `errors:<code>` token for `resolveErrorToken`. */
 export function errorCodeToken(code: string): string {
   return `${ERROR_CODE_PREFIX}${code}`;
 }
 
 /**
- * Резолвит хранимый токен ошибки в текст на языке активной локали.
- *
- * Токен — это либо код бэка (`errors:<code>`, резолвится через `messageForCode`
- * с fallback'ом на неизвестный код), либо namespace-квалифицированный i18n-ключ
- * валидации фронта (`auth:validation.usernameMin`, `journeys:...`). Вызывается
- * на каждом рендере, поэтому текст всегда соответствует текущему языку.
- *
- * Args:
- *     token: Хранимый токен ошибки (строка) или любое другое значение.
- *
- * Returns:
- *     Локализованный текст или `undefined`, если токена нет (пустое/не-строка).
+ * Resolves a stored error token to text in the active language; `undefined` for an empty or
+ * non-string token. The token is either a backend code (`errors:<code>`) or a namespaced
+ * frontend validation key. Call it on every render; `params` fill the text's placeholders.
  */
-export function resolveErrorToken(token: unknown): string | undefined {
+export function resolveErrorToken(token: unknown, params?: ErrorParams): string | undefined {
   if (typeof token !== "string" || token.length === 0) {
     return undefined;
   }
 
   if (token.startsWith(ERROR_CODE_PREFIX)) {
-    return messageForCode(token.slice(ERROR_CODE_PREFIX.length));
+    return messageForCode(token.slice(ERROR_CODE_PREFIX.length), undefined, params);
   }
 
-  return i18n.t(token);
+  return i18n.t(token, params);
 }
 
 /**
- * Локализует `error` в пропсах инпута, полученных из `form.getInputProps`.
- *
- * Mantine хранит в `form.errors` сырой токен (его кладут валидаторы или
- * `applyApiError`); этот хелпер резолвит токен в текст в момент рендера, чтобы
- * сообщение следовало за сменой языка. Остальные пропсы (`value`, `onChange`, …)
- * проходят насквозь без изменений.
- *
- * Args:
- *     props: Объект пропсов инпута с полем `error` (например, из `getInputProps`).
- *
- * Returns:
- *     Те же пропсы с `error`, резолвленным в локализованный текст.
+ * Resolves the `error` token inside input props from `form.getInputProps` at render time, so the
+ * message follows a language switch. Other props pass through unchanged.
  */
 export function withLocalizedError<T extends { error?: unknown }>(
   props: T,
@@ -96,22 +71,12 @@ export function withLocalizedError<T extends { error?: unknown }>(
 }
 
 /**
- * Возвращает локализованное сообщение для пользователя по коду ошибки бэка.
- *
- * Текст берётся из namespace `errors` активного языка (фронт владеет
- * формулировками сам); бэковый `message` для UI не используется. Неизвестный
- * код резолвится в `fallback`.
- *
- * Args:
- *     code: Машинный код ошибки из тела ответа бэка.
- *     fallback: Текст на случай неизвестного кода (по умолчанию — `errors:fallback`).
- *
- * Returns:
- *     Готовое к показу сообщение на языке активной локали.
+ * User-facing message for a backend error code, from the `errors` namespace. The backend
+ * `message` is never shown. An unknown code resolves to `fallback` (default `errors:fallback`).
  */
-export function messageForCode(code: string, fallback?: string): string {
+export function messageForCode(code: string, fallback?: string, params?: ErrorParams): string {
   const resolvedFallback = fallback ?? i18n.t("fallback", { ns: "errors" });
-  return i18n.t(code, { ns: "errors", defaultValue: resolvedFallback });
+  return i18n.t(code, { ...params, ns: "errors", defaultValue: resolvedFallback });
 }
 
 function snakeToCamel(value: string): string {

@@ -6,12 +6,11 @@ interface BrandGlobeGlyphProps {
 }
 
 /**
- * Глиф-глобус, стоящий вместо «o» в слове MyJourney (graticule: контур + меридиан +
- * экватор). Вектор, а не растр — чёткий на любом кегле и без CDN-зависимости.
+ * Globe glyph standing in for the "o" in MyJourney (graticule: outline + meridian + equator).
+ * Vector, so it is crisp at any size with no CDN dependency.
  *
- * Контур на `currentColor` и без заливки: марка наследует цвет текста, поэтому одна
- * и та же разметка работает в обеих шапках — публичной и приложения. Размер задаёт
- * потребитель (em-единицами от кегля слова).
+ * Outline on `currentColor`, no fill: the mark inherits the text colour, so the same markup works
+ * in both headers. The consumer sets the size (em units of the word's font size).
  */
 export function BrandGlobeGlyph({ className, style }: BrandGlobeGlyphProps) {
   return (

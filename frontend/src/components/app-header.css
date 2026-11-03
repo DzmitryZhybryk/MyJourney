@@ -1,14 +1,13 @@
 /*
- * Общая шапка приложения: бренд + первичная навигация + язык + меню профиля.
- * Раньше разметка жила инлайном в HomePage; вынесена сюда, чтобы Home / Journeys
- * (и будущий Mind) делили одну шапку 1-в-1. Класс-нейминг app-* вместо home-*.
+ * Shared app header: brand + primary navigation + language + profile menu, so Home / Journeys
+ * (and a future Mind) share exactly one header. Class naming is app-*, not home-*.
  */
 .app-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: var(--header-inset-block) var(--header-inset);
-  /* Общая с публичной шапкой высота — иначе марка съезжает на переходе через логин. */
+  /* Height shared with the public header, otherwise the mark shifts across login. */
   min-height: var(--header-height);
   position: sticky;
   top: 0;
@@ -58,7 +57,7 @@
   transform: scaleX(0.5);
 }
 
-/* Активный таб: подчёркивание держится постоянно (а не только на hover). */
+/* Active tab: the underline stays permanently (not only on hover). */
 .app-tab--active {
   color: var(--text);
 }
@@ -67,8 +66,8 @@
   transform: scaleX(1);
 }
 
-/* Неактивный таб (раздел ещё не реализован): приглушён, без hover-подчёркивания,
-   курсор default. inline-flex — держит текст и бейдж «Soon» на одной линии. */
+/* Inactive tab (section not implemented yet): muted, no hover underline, default cursor.
+   inline-flex keeps the text and the "Soon" badge on one line. */
 .app-tab--soon {
   display: inline-flex;
   align-items: center;
@@ -95,7 +94,7 @@
   box-shadow: 0 0 0 4px rgb(var(--sun-rgb) / 0.22);
 }
 
-/* ---- Ссылки первичной навигации в мобильном Drawer (бургер-меню) -------- */
+/* ---- Primary navigation links in the mobile Drawer (burger menu) -------- */
 .app-drawer-link {
   display: block;
   padding: 14px 10px;
@@ -118,7 +117,7 @@
   font-weight: 600;
 }
 
-/* Неактивный пункт в мобильном Drawer: приглушён, без hover-фона, с бейджем «Soon». */
+/* Inactive item in the mobile Drawer: muted, no hover background, with a "Soon" badge. */
 .app-drawer-link--soon {
   display: flex;
   align-items: center;
@@ -131,9 +130,9 @@
   background: none;
 }
 
-/* ---- Узкие экраны (<md): tabs уезжают в бургер, шапка сжимается ----------
-   Граница 61.99em совпадает с Mantine `hiddenFrom="md"` у бургера (min-width:62em),
-   чтобы на стыке не пропадали разом и tabs, и бургер. */
+/* ---- Narrow screens (<md): tabs move into the burger, the header tightens ----------
+   The 61.99em boundary matches Mantine `hiddenFrom="md"` on the burger (min-width:62em), so at the
+   seam the tabs and the burger do not both vanish at once. */
 @media (max-width: 61.99em) {
   .app-header {
     padding: 14px 18px;

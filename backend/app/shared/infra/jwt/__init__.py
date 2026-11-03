@@ -1,7 +1,10 @@
-from app.shared.infra.jwt.service import JWTDecodeError, JWTService, get_jwt_service
+from app.shared.infra.jwt.exceptions import InvalidAccessTokenError
+from app.shared.infra.jwt.ports import AccessTokenIssuerPort
+from app.shared.infra.jwt.service import JWTDecodeError, get_jwt_service
 
 __all__ = [
+    "AccessTokenIssuerPort",
+    "InvalidAccessTokenError",
     "JWTDecodeError",
-    "JWTService",
     "get_jwt_service",
 ]

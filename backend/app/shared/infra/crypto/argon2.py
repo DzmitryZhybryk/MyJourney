@@ -29,7 +29,7 @@ class Argon2SaltedHasher:
         """
         return self._hasher.hash(secret)
 
-    def verify(self, secret: str, hashed: str) -> bool:
+    def verify(self, *, secret: str, hashed: str) -> bool:
         """
         Проверяет соответствие секрета хешу.
 
@@ -56,5 +56,8 @@ def get_argon2_salted_hasher() -> Argon2SaltedHasher:
     Hasher stateless и thread-safe, пересоздавать на каждый запрос
     бессмысленно. Тестируемость сохраняется через ``app.dependency_overrides``
     на presentation-обёртке.
+
+    Scenarios:
+        - домен, который хранит пароли
     """
     return Argon2SaltedHasher()

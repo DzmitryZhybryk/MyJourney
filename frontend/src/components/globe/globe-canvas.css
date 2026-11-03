@@ -1,5 +1,5 @@
-/* Общий контейнер декоративного глобуса. Заполняет родителя; тёплая тонировка
-   canvas — единый токен --globe-tint (index.css). HTML-слой меток не тонируем. */
+/* Shared container of the decorative globe. Fills its parent; the warm canvas tint is the single
+   token --globe-tint (index.css). The HTML label layer is not tinted. */
 
 .globe-canvas {
   position: relative;

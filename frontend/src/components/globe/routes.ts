@@ -1,24 +1,23 @@
 /*
- * Канон-данные глобуса: кураторские наборы городов и маршруты между ними. Дуги рисуются
- * между `from`/`to`, подписываются ТОЛЬКО города-концы (`ROUTE_CITIES`).
+ * Canonical globe data: curated city sets and the routes between them. Arcs are drawn between
+ * `from`/`to`; ONLY the end cities are labelled (`ROUTE_CITIES`).
  *
- * Правило рисунка: по 2 города на континент, и дуга НИКОГДА не соединяет два города
- * одного континента. Отсюда любой перелёт межконтинентальный, дуги перекрывают друг
- * друга и рисунок читается как живой хаос, а не как аккуратный обход по периметру.
+ * Drawing rule: 2 cities per continent, and an arc NEVER joins two cities of the same continent.
+ * So every flight is intercontinental, arcs overlap, and the picture reads as lively chaos
+ * rather than a tidy walk around the perimeter.
  *
- * Каркас набора — ОТКРЫТЫЕ цепи, не замкнутые кольца: у поездки есть начало и конец.
- * Замыкание дало бы всем степень 2, а граф со степенью 2 в каждой вершине — это всегда
- * цикл, который и читается кольцевым обходом.
+ * The backbone is OPEN chains, not closed rings: a trip has a start and an end. Closing them
+ * would give every city degree 2, and a graph with degree 2 everywhere is always a cycle, which
+ * reads as a ring walk.
  *
- * Континент-инвариант каркаса обеспечен КОНСТРУКЦИЕЙ, а не дисциплиной: каждая цепь
- * берёт ровно по одному городу с каждого континента, поэтому соседи заведомо с разных
- * континентов. Поверх каркаса добавлены ручные ПЕРЕМЫЧКИ между цепями — они дают
- * города-хабы (степень 3) и сшивают две ленты так, что глаз больше не раскладывает
- * рисунок на две отдельные нитки. Итоговая степень города — от 1 (конец цепи) до 3.
+ * The continent invariant holds BY CONSTRUCTION: each chain takes exactly one city per continent,
+ * so neighbours are always on different continents. Hand-written BRIDGES between chains add
+ * hub cities (degree 3) and stitch the two strands so the eye no longer splits the picture into
+ * two threads. City degree ranges from 1 (chain end) to 3.
  *
- * Набор выбирается случайно ОДИН раз за загрузку модуля, поэтому он стабилен при
- * навигации (персистентный глобус живёт между роутами) и меняется только на обновлении
- * страницы. Подряд один и тот же набор не выпадает.
+ * A set is picked at random ONCE per module load, so it is stable across navigation (the
+ * persistent globe lives between routes) and changes only on page refresh. The same set never
+ * comes up twice in a row.
  */
 
 import { CITIES, type City } from "./cities";
@@ -30,7 +29,7 @@ export interface RouteArc {
   startLng: number;
   endLat: number;
   endLng: number;
-  /** Начальная фаза бегущего пунктира, [0,1). Общая у синхронной группы дуг. */
+  /** Initial phase of the running dash, [0,1). Shared by a synchronized group of arcs. */
   dashInitialGap: number;
 }
 
@@ -40,21 +39,20 @@ interface Route {
 }
 
 export interface RouteSet {
-  /** Каркас: цепи по одному городу с каждого континента. Порядок и есть рисунок. */
+  /** Backbone: chains with one city per continent. The order is the picture. */
   readonly chains: readonly (readonly City[])[];
   /**
-   * Ручные дуги поверх каркаса. Гарантия конструкции на них НЕ распространяется, поэтому
-   * континенты пары выписаны в комментарии — проверяется глазами по строке. Все идут
-   * МЕЖДУ цепями: перемычка внутри одной цепи замкнула бы соседей в треугольник.
+   * Hand-written arcs over the backbone. The construction guarantee does NOT cover them, so each
+   * pair's continents are written in a comment and checked by eye. All go BETWEEN chains: a bridge
+   * inside one chain would close neighbours into a triangle.
    */
   readonly bridges: readonly Route[];
 }
 
 /*
- * Наборы подобраны вручную по одним и тем же правилам. При подборе порядка в цепи важно
- * держать дуги короче ~110° по центральному углу: длиннее — дуга раздувается по высоте и
- * уходит за сферу. Третью дугу не заводить в один город, если две другие уже сходятся
- * рядом: такой пучок читается кляксой.
+ * Sets are hand-picked by the same rules. When ordering a chain keep arcs under ~110° of central
+ * angle: longer arcs balloon in height and leave the sphere. Do not add a third arc into a city
+ * if two others already converge nearby: such a bundle reads as a blot.
  */
 export const ROUTE_SETS: readonly RouteSet[] = [
   {
@@ -63,9 +61,9 @@ export const ROUTE_SETS: readonly RouteSet[] = [
       [CITIES.tokyo, CITIES.honolulu, CITIES.vancouver, CITIES.rio, CITIES.marrakesh, CITIES.istanbul],
     ],
     bridges: [
-      { from: CITIES.tokyo, to: CITIES.sydney }, // Азия → Океания, западная Пацифика
-      { from: CITIES.newYork, to: CITIES.marrakesh }, // С. Америка → Африка, через Атлантику
-      { from: CITIES.istanbul, to: CITIES.delhi }, // Европа → Азия
+      { from: CITIES.tokyo, to: CITIES.sydney }, // Asia -> Oceania, western Pacific
+      { from: CITIES.newYork, to: CITIES.marrakesh }, // N. America -> Africa, across the Atlantic
+      { from: CITIES.istanbul, to: CITIES.delhi }, // Europe -> Asia
     ],
   },
   {
@@ -74,9 +72,9 @@ export const ROUTE_SETS: readonly RouteSet[] = [
       [CITIES.sanFrancisco, CITIES.papeete, CITIES.bogota, CITIES.lisbon, CITIES.nairobi, CITIES.dubai],
     ],
     bridges: [
-      { from: CITIES.dubai, to: CITIES.cairo }, // Азия → Африка
-      { from: CITIES.mexicoCity, to: CITIES.lisbon }, // С. Америка → Европа, через Атлантику
-      { from: CITIES.shanghai, to: CITIES.sanFrancisco }, // Азия → С. Америка, северная Пацифика
+      { from: CITIES.dubai, to: CITIES.cairo }, // Asia -> Africa
+      { from: CITIES.mexicoCity, to: CITIES.lisbon }, // N. America -> Europe, across the Atlantic
+      { from: CITIES.shanghai, to: CITIES.sanFrancisco }, // Asia -> N. America, northern Pacific
     ],
   },
   {
@@ -85,9 +83,9 @@ export const ROUTE_SETS: readonly RouteSet[] = [
       [CITIES.rome, CITIES.zanzibar, CITIES.singapore, CITIES.suva, CITIES.santiago, CITIES.havana],
     ],
     bridges: [
-      { from: CITIES.rome, to: CITIES.chicago }, // Европа → С. Америка
-      { from: CITIES.singapore, to: CITIES.perth }, // Азия → Океания
-      { from: CITIES.havana, to: CITIES.dakar }, // С. Америка → Африка, через Атлантику
+      { from: CITIES.rome, to: CITIES.chicago }, // Europe -> N. America
+      { from: CITIES.singapore, to: CITIES.perth }, // Asia -> Oceania
+      { from: CITIES.havana, to: CITIES.dakar }, // N. America -> Africa, across the Atlantic
     ],
   },
   {
@@ -96,9 +94,9 @@ export const ROUTE_SETS: readonly RouteSet[] = [
       [CITIES.samarkand, CITIES.athens, CITIES.antananarivo, CITIES.wellington, CITIES.ushuaia, CITIES.losAngeles],
     ],
     bridges: [
-      { from: CITIES.seoul, to: CITIES.losAngeles }, // Азия → С. Америка, северная Пацифика
-      { from: CITIES.athens, to: CITIES.lagos }, // Европа → Африка
-      { from: CITIES.saoPaulo, to: CITIES.antananarivo }, // Ю. Америка → Африка, южная Атлантика
+      { from: CITIES.seoul, to: CITIES.losAngeles }, // Asia -> N. America, northern Pacific
+      { from: CITIES.athens, to: CITIES.lagos }, // Europe -> Africa
+      { from: CITIES.saoPaulo, to: CITIES.antananarivo }, // S. America -> Africa, southern Atlantic
     ],
   },
   {
@@ -107,14 +105,14 @@ export const ROUTE_SETS: readonly RouteSet[] = [
       [CITIES.vladivostok, CITIES.apia, CITIES.miami, CITIES.rio, CITIES.maputo, CITIES.barcelona],
     ],
     bridges: [
-      { from: CITIES.barcelona, to: CITIES.bangkok }, // Европа → Азия
-      { from: CITIES.anchorage, to: CITIES.vladivostok }, // С. Америка → Азия, северная Пацифика
-      { from: CITIES.helsinki, to: CITIES.miami }, // Европа → С. Америка, через Атлантику
+      { from: CITIES.barcelona, to: CITIES.bangkok }, // Europe -> Asia
+      { from: CITIES.anchorage, to: CITIES.vladivostok }, // N. America -> Asia, northern Pacific
+      { from: CITIES.helsinki, to: CITIES.miami }, // Europe -> N. America, across the Atlantic
     ],
   },
 ];
 
-/** Дуги набора: цепи (город i → город i+1, без замыкания) плюс перемычки. */
+/** Arcs of a set: chains (city i -> city i+1, not closed) plus bridges. */
 export function routesOf(routeSet: RouteSet): readonly Route[] {
   return [
     ...routeSet.chains.flatMap((chain) =>
@@ -125,15 +123,15 @@ export function routesOf(routeSet: RouteSet): readonly Route[] {
 }
 
 /*
- * Фаза бегущего пунктира принадлежит не дуге, а ГРУППЕ синхронных дуг. В одну группу
- * попадают дуги с общим городом отправления (вылетают вместе) и дуги с общим городом
- * прибытия (приходят вместе) — у равных фаз пунктир идёт по нормализованной длине
- * одинаково, поэтому одно и то же равенство даёт и синхронный вылет, и синхронный приход.
+ * The running-dash phase belongs not to an arc but to a GROUP of synchronized arcs. Arcs sharing
+ * a departure city (leave together) and arcs sharing an arrival city (arrive together) join one
+ * group: equal phases make the dash move identically along the normalized length, so the same
+ * equality gives both a synchronized departure and a synchronized arrival.
  *
- * Равенство транзитивно, так что группы — классы эквивалентности, и считает их union-find,
- * а не ручной список: дуга вроде `NY→Marrakesh` сшивает вылеты из Нью-Йорка с приходами в
- * Марракеш в один класс. Добавишь дугу — группы пересоберутся сами. Между группами фазы
- * разнесены равномерно, иначе глобус пульсировал бы в такт.
+ * Equality is transitive, so groups are equivalence classes computed by union-find, not a manual
+ * list: an arc like `NY->Marrakesh` joins departures from New York with arrivals in Marrakesh into
+ * one class. Add an arc and the groups rebuild themselves. Phases are spread evenly between
+ * groups, otherwise the globe would pulse in unison.
  */
 function synchronizedPhases(routes: readonly Route[]): number[] {
   const parent = routes.map((_, index) => index);
@@ -184,7 +182,7 @@ function readLastPickedIndex(): number | null {
     const raw = window.sessionStorage.getItem(LAST_SET_STORAGE_KEY);
     return raw === null ? null : Number.parseInt(raw, 10);
   } catch {
-    // Приватный режим Safari запрещает доступ к storage — тогда просто не помним прошлый.
+    // Safari private mode blocks storage access: just do not remember the previous set.
     return null;
   }
 }
@@ -195,15 +193,14 @@ function rememberPickedIndex(index: number): void {
   try {
     window.sessionStorage.setItem(LAST_SET_STORAGE_KEY, String(index));
   } catch {
-    // Запись недоступна — единственное следствие: набор может повториться подряд.
+    // Write unavailable: the only consequence is that a set may repeat back to back.
     return;
   }
 }
 
 /**
- * Случайный набор, отличный от показанного в прошлую загрузку. Прошлый индекс лежит в
- * sessionStorage: он живёт ровно столько, сколько вкладка, что и совпадает с ощущением
- * «обновил страницу — увидел другой мир».
+ * A random set different from the one shown on the previous load. The previous index lives in
+ * sessionStorage, which lasts as long as the tab: "refresh the page, see a different world".
  */
 function pickRouteSet(): RouteSet {
   const previous = readLastPickedIndex();
@@ -219,8 +216,8 @@ function pickRouteSet(): RouteSet {
 const ROUTES: readonly Route[] = routesOf(pickRouteSet());
 const DASH_PHASES: readonly number[] = synchronizedPhases(ROUTES);
 
-/** Дуги для `arcsData` globe.gl. */
-export const ROUTE_ARCS: RouteArc[] = ROUTES.map((route, index) => ({
+/** Arcs for globe.gl `arcsData`. */
+export const ROUTE_ARCS: readonly RouteArc[] = ROUTES.map((route, index) => ({
   startLat: route.from.lat,
   startLng: route.from.lng,
   endLat: route.to.lat,
@@ -228,12 +225,12 @@ export const ROUTE_ARCS: RouteArc[] = ROUTES.map((route, index) => ({
   dashInitialGap: DASH_PHASES[index],
 }));
 
-/** Уникальные города-концы маршрутов — их подписываем на глобусе. */
-export const ROUTE_CITIES: City[] = Array.from(
+/** Unique route end cities; these are labelled on the globe. */
+export const ROUTE_CITIES: readonly City[] = Array.from(
   new Map(
     ROUTES.flatMap((route) => [
-      [route.from.name, route.from],
-      [route.to.name, route.to],
+      [route.from.id, route.from],
+      [route.to.id, route.to],
     ]),
   ).values(),
 );

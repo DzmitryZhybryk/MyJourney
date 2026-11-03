@@ -1,6 +1,6 @@
 # MyJourney — frontend
 
-SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо MindTrace; оркестрация
+SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо MyJourney; оркестрация
 всего стека — из корня (`make run`), см. корневой `CLAUDE.md`.
 
 ## Требования
@@ -24,7 +24,8 @@ make test             # vitest: unit + component, один прогон
 make test-unit        # только *.test.ts   — чистая логика
 make test-component   # только *.test.tsx  — рендер React
 make coverage         # то же + покрытие; порог 90%
-make check            # lint + typecheck + audit + test — ровно то, что гоняет CI
+make mantine-styles   # src/mantineStyles.ts = ровно те стили Mantine, что нужны используемым компонентам
+make check            # lint + typecheck + mantine-styles + audit + test — ровно то, что гоняет CI
 ```
 
 E2E — единственное, что запускается **из корня**, а не отсюда:
@@ -68,4 +69,13 @@ e2e/                # Playwright-спеки по флоу
   должен блокировать первую отрисовку. Проверять по графу СТАТИЧЕСКИХ импортов собранных
   чанков: динамический `import()` попадает в манифест предзагрузки и легко читается как
   статическая зависимость.
-- Порог покрытия 90% форсится pre-push хуком (`make hooks` из корня, разово), а не CI.
+- Порог покрытия 90% форсится pre-commit хуком (`make hooks` из корня, разово), а не CI.
+- **`node_modules` в дев-контейнере — отдельный docker-том**, он затеняет то, что лежит в образе.
+  Контейнер на старте сам делает `npm install`, поэтому после правки `package.json` достаточно
+  перезапустить фронт (из корня):
+  `docker compose --project-directory . -f ops/docker-compose.base.yaml -f ops/docker-compose.yaml restart frontend`.
+  Тот же перезапуск лечит «Что-то пошло не так» после `PARSE_ERROR` посреди правок — Vite продолжает
+  отдавать сломанный модуль, и перезагрузка вкладки не помогает. Полный сброс тома —
+  `... rm -sf frontend && docker volume rm myjourney_frontend_node_modules && make run`; не
+  `down -v`: он снесёт и данные Postgres/Loki/Grafana.
+- **`Cannot find module` из `node_modules/.bin/*`** — несвежая установка, лечится `npm ci`.

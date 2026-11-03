@@ -5,15 +5,14 @@ import { useLocation } from "react-router";
 const BRAND = "MyJourney";
 
 /**
- * Заголовок вкладки по текущему маршруту.
+ * Tab title for the current route.
  *
- * До него `<title>` из `index.html` стоял неизменным на всех девяти маршрутах: вкладки
- * не различались, история браузера состояла из одинаковых записей, а скринридер после
- * SPA-перехода не сообщал, куда пользователь попал (смена маршрута — не перезагрузка,
- * поэтому единственный сигнал «страница другая» — как раз заголовок).
+ * Without it the `<title>` from `index.html` is the same on every route: tabs and history
+ * entries look identical and a screen reader does not announce where an SPA navigation led
+ * (a route change is not a reload, so the title is the only "page changed" signal).
  *
- * Ключи берутся из уже существующего копирайта разделов, чтобы заголовок вкладки и
- * заголовок на экране не разъезжались. Возвращает `null` — это эффект, а не разметка.
+ * Keys reuse the existing section copy so the tab title and the on-screen heading do not drift.
+ * Renders `null`: it is an effect, not markup.
  */
 export function DocumentTitle() {
   const { pathname } = useLocation();
@@ -21,16 +20,16 @@ export function DocumentTitle() {
 
   useEffect(() => {
     const title = resolveTitle(pathname, t);
-    // Лендинг несёт полный заголовок с оффером, внутренние экраны — «Раздел · Бренд».
+    // The landing carries a full title with the pitch, inner screens use "Section · Brand".
     document.title = title === null ? `${BRAND} — ${t("pageTitle.landing")}` : `${title} · ${BRAND}`;
-    // i18n.language в зависимостях: при смене языка `t` тот же самый, а заголовок должен
-    // перевестись — без этого во вкладке остаётся прежний язык до следующей навигации.
+    // i18n.language is a dependency: on a language switch `t` is the same function but the title
+    // must be retranslated, otherwise the tab keeps the old language until the next navigation.
   }, [pathname, t, i18n.language]);
 
   return null;
 }
 
-/** Заголовок раздела или `null` для лендинга (у него свой полный заголовок). */
+/** Section title, or `null` for the landing (it has its own full title). */
 function resolveTitle(pathname: string, t: (key: string) => string): string | null {
   if (pathname.startsWith("/login")) return t("auth:login.title");
   if (pathname.startsWith("/signup")) return t("auth:signup.title");

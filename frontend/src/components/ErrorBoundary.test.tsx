@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../test/render";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-/** Компонент, падающий в рендере — для проверки перехвата boundary'ем. */
+/** A component that throws in render, to check the boundary catches it. */
 function Boom(): never {
   throw new Error("render boom");
 }
@@ -21,7 +21,7 @@ describe("ErrorBoundary", () => {
   });
 
   it("показывает fallback, когда ребёнок падает в рендере", () => {
-    // React печатает пойманную ошибку в console.error — глушим, чтобы не зашумлять вывод.
+    // React prints the caught error to console.error; silence it to keep the output clean.
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     renderWithProviders(

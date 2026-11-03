@@ -3,11 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { getAccessToken } from "./tokenStore";
 import { VerifyEmailDialog } from "./VerifyEmailDialog";
+import { i18n } from "../i18n";
+import ruErrors from "../locales/ru/errors.json";
 import { makeAccessToken, server } from "../test/handlers";
-import { renderWithProviders, screen } from "../test/render";
+import { act, renderWithProviders, screen } from "../test/render";
 import type { UserEvent } from "@testing-library/user-event";
 
-/** Монтирует диалог открытым со спайами onClose/onVerified. */
+/** Mounts the dialog open with onClose/onVerified spies. */
 function renderDialog() {
   const onClose = vi.fn();
   const onVerified = vi.fn();
@@ -18,13 +20,13 @@ function renderDialog() {
   return { ...view, onClose, onVerified };
 }
 
-/** Переводит диалог со стадии intro на стадию ввода кода (Send code → 202). */
+/** Moves the dialog from the intro stage to code entry (Send code -> 202). */
 async function gotoCodeStage(user: UserEvent) {
   await user.click(screen.getByRole("button", { name: "Send code" }));
   await screen.findByRole("button", { name: "Verify" });
 }
 
-/** Вводит код по одной цифре в каждый input PinInput. */
+/** Types the code one digit into each PinInput input. */
 async function typeCode(user: UserEvent, code: string) {
   const inputs = screen.getAllByRole("textbox");
   for (let index = 0; index < code.length; index += 1) {
@@ -73,7 +75,7 @@ describe("VerifyEmailDialog", () => {
     await user.click(screen.getByRole("button", { name: "Send code" }));
 
     expect(
-      await screen.findByText("Please wait before requesting a new code"),
+      await screen.findByText("Please wait before resending the code"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send code" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Verify" })).not.toBeInTheDocument();
@@ -143,6 +145,82 @@ describe("VerifyEmailDialog", () => {
       await screen.findByText("The code has expired. Request a new one"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send code" })).toBeInTheDocument();
+  });
+
+  it("исчерпанные попытки (429) показывают минуты до нового кода и откатывают на intro", async () => {
+    server.use(
+      http.post("/v1/auth/email/verify/", () =>
+        HttpResponse.json(
+          {
+            code: "auth.challenge_attempts_exceeded",
+            message: "ru",
+            details: { retry_after_seconds: 481 },
+          },
+          { status: 429 },
+        ),
+      ),
+    );
+    const { user } = renderDialog();
+    await gotoCodeStage(user);
+
+    await typeCode(user, "123456");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    expect(
+      await screen.findByText("Too many attempts. You can request a new code in 9 min"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send code" })).toBeInTheDocument();
+  });
+
+  it("исчерпанные попытки (429) без числа показывают общий текст, а не плейсхолдер", async () => {
+    server.use(
+      http.post("/v1/auth/email/send-verification/", () =>
+        HttpResponse.json(
+          { code: "auth.challenge_attempts_exceeded", message: "ru" },
+          { status: 429 },
+        ),
+      ),
+    );
+    const { user } = renderDialog();
+
+    await user.click(screen.getByRole("button", { name: "Send code" }));
+
+    expect(
+      await screen.findByText("Too many attempts. You can request a new code later"),
+    ).toBeInTheDocument();
+  });
+
+  it("минуты в ошибке переживают смену языка", async () => {
+    i18n.addResourceBundle("ru", "errors", ruErrors, true, true);
+    server.use(
+      http.post("/v1/auth/email/send-verification/", () =>
+        HttpResponse.json(
+          {
+            code: "auth.challenge_attempts_exceeded",
+            message: "ru",
+            details: { retry_after_seconds: 120 },
+          },
+          { status: 429 },
+        ),
+      ),
+    );
+    const { user } = renderDialog();
+    await user.click(screen.getByRole("button", { name: "Send code" }));
+    await screen.findByText("Too many attempts. You can request a new code in 2 min");
+
+    try {
+      await act(async () => {
+        await i18n.changeLanguage("ru");
+      });
+
+      expect(
+        screen.getByText("Слишком много попыток. Новый код можно запросить через 2 мин"),
+      ).toBeInTheDocument();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+    }
   });
 
   it("верный код (204) синкает токен, зовёт onVerified и закрывает диалог", async () => {

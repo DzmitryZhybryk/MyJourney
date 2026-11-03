@@ -27,6 +27,13 @@ _.json_schema_extra
 
 # Pydantic-поля схем: используются при сериализации в JSON-ответах.
 _.token_type
+# Курсор страницы: заполняется конструктором, наружу уходит сериализацией ответа.
+_.next_cursor
+# Карта перемещений: годы шкалы заполняются конструктором, наружу уходят сериализацией ответа.
+_.first_year
+_.last_year
+# MovePlacement: значение приходит из тела запроса, сервис ветвится по AFTER, BEFORE — ветка else.
+_.BEFORE
 
 # AsyncContextManager (BaseUnitOfWork.__aexit__):
 # имена параметров -- часть протокола, фреймворк передаёт их позиционно.
@@ -50,21 +57,21 @@ _.ADMIN
 # (vulture не всегда отслеживает self.* через цепочку вызовов).
 _._model
 
-# SQLAlchemy ORM mapped-колонки journeys/geo: маппер читает их при INSERT/SELECT, но прямого
-# чтения model.<col> в app-коде пока нет (read-models journeys вне скоупа, geo.kind пишется
-# офлайн-загрузкой). Это persisted-схема, не мёртвый код.
+# geo_dataset_loads, geo_places: загрузчик работает с таблицами сырым SQL, ORM-модели нужны только метадате.
+_.GeoDatasetLoad
+_.loaded_at
 _.kind
-_.origin_name
-_.origin_country_code
-_.origin_latitude
-_.origin_longitude
-_.destination_name
-_.destination_country_code
-_.destination_latitude
-_.destination_longitude
-_.traveled_on_precision
+_.country_codes
+_.notability
 
 # TransportType: варианты выбираются из значений тела запроса/БД во время выполнения.
 _.LAND
 _.AIR
 _.WATER
+
+# DTO карты путешествий: поле читает pydantic через from_attributes при сборке ответа.
+_.cities
+
+# ВРЕМЕННО, не false positive: порт хранилища media появился раньше потока загрузки, который его вызывает.
+# Удалить вместе с появлением вызывающего.
+_.sign_upload
