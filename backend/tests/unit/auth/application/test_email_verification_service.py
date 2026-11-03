@@ -1,4 +1,5 @@
 import datetime as dt
+import math
 from uuid import uuid4
 
 import pytest
@@ -211,7 +212,11 @@ async def test_request_raises_attempts_exceeded_when_live_code_exhausted(
     with pytest.raises(ChallengeAttemptsExceededError) as exc_info:
         await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
 
-    assert exc_info.value.details == {"retry_after_seconds": 300}
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    details = exc_info.value.details
+    assert details is not None
+    assert details.keys() == {"retry_after_seconds"}
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= details["retry_after_seconds"] <= 300
     assert previous.expires_at == expires_at
     assert fake_task_bus.bound.deferred == []
     fake_uow.commit_mock.assert_not_awaited()
@@ -355,12 +360,13 @@ async def test_verify_raises_when_attempts_exhausted(
     """verify: лимит исчерпан → 429 с секундами до нового кода ещё до сверки кода, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420)
     challenge_entity = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
         attempts=5,
         code_ciphertext=secret_cipher.encrypt(secret="123456"),
-        expires_at=dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420),
+        expires_at=expires_at,
     )
     await fake_challenge_repository.insert_challenge(challenge_entity=challenge_entity)
 
@@ -370,7 +376,11 @@ async def test_verify_raises_when_attempts_exhausted(
             command=VerifyEmailCommand(code=SecretStr("123456")),
         )
 
-    assert exc_info.value.details == {"retry_after_seconds": 420}
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    details = exc_info.value.details
+    assert details is not None
+    assert details.keys() == {"retry_after_seconds"}
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= details["retry_after_seconds"] <= 420
     fake_uow.commit_mock.assert_not_awaited()
 
 

@@ -1,4 +1,5 @@
 import datetime as dt
+import math
 from uuid import uuid4
 
 import pytest
@@ -63,9 +64,13 @@ def test_is_expired_false_before_and_true_after_expires_at() -> None:
 
 def test_seconds_until_expiry_rounds_up() -> None:
     """Остаток до истечения — целые секунды вверх: 90 с без долей не превращаются в 89."""
-    challenge_entity = make_challenge(expires_at=dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=90))
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=90)
+    challenge_entity = make_challenge(expires_at=expires_at)
 
-    assert challenge_entity.seconds_until_expiry() == 90
+    seconds = challenge_entity.seconds_until_expiry()
+
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= seconds <= 90
 
 
 def test_seconds_until_expiry_is_zero_when_expired() -> None:
@@ -96,15 +101,17 @@ def test_ensure_resend_cooldown_passed_ok_after_cooldown() -> None:
 
 def test_ensure_not_exhausted_raises_with_seconds_until_expiry() -> None:
     """Исчерпанные попытки → 429 с секундами до истечения кода в `details`."""
-    challenge_entity = make_challenge(
-        attempts=5,
-        expires_at=dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=540),
-    )
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=540)
+    challenge_entity = make_challenge(attempts=5, expires_at=expires_at)
 
     with pytest.raises(ChallengeAttemptsExceededError) as exc_info:
         challenge_entity.ensure_not_exhausted(max_attempts=5)
 
-    assert exc_info.value.details == {"retry_after_seconds": 540}
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    details = exc_info.value.details
+    assert details is not None
+    assert details.keys() == {"retry_after_seconds"}
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= details["retry_after_seconds"] <= 540
 
 
 def test_ensure_not_exhausted_ok_with_attempts_left() -> None:

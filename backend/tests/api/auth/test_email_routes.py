@@ -8,6 +8,7 @@ api-тесты email-роутов (send-verification / verify) через ASGI �
 """
 
 import datetime as dt
+import math
 from collections.abc import Callable
 from uuid import uuid4
 
@@ -121,11 +122,12 @@ async def test_send_verification_exhausted_live_code_returns_429_with_retry_afte
     """send-verification при исчерпанном живом коде → 429 auth.challenge_attempts_exceeded с секундами в details."""
     user_credentials_entity = make_user_credentials()
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=300)
     fake_challenge_repository.challenges.append(
         make_challenge(
             user_id=user_credentials_entity.user_id,
             attempts=email_verification_config.max_attempts,
-            expires_at=dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=300),
+            expires_at=expires_at,
         )
     )
     token = mint_access_token(user_id=user_credentials_entity.user_id)
@@ -135,7 +137,10 @@ async def test_send_verification_exhausted_live_code_returns_429_with_retry_afte
     assert response.status_code == 429
     body = response.json()
     assert body["code"] == "auth.challenge_attempts_exceeded"
-    assert body["details"] == {"retry_after_seconds": 300}
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    assert body["details"].keys() == {"retry_after_seconds"}
+    seconds = body["details"]["retry_after_seconds"]
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= seconds <= 300
 
 
 # --- verify ------------------------------------------------------------------
@@ -300,11 +305,12 @@ async def test_verify_attempts_exceeded_returns_429(
     """verify при выбранном лимите попыток → 429 auth.challenge_attempts_exceeded с секундами в details."""
     code = "123456"
     user_credentials_entity = make_user_credentials()
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420)
     challenge = make_challenge(
         user_id=user_credentials_entity.user_id,
         code_ciphertext=secret_cipher.encrypt(secret=code),
         attempts=email_verification_config.max_attempts,
-        expires_at=dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420),
+        expires_at=expires_at,
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
@@ -319,7 +325,10 @@ async def test_verify_attempts_exceeded_returns_429(
     assert response.status_code == 429
     body = response.json()
     assert body["code"] == "auth.challenge_attempts_exceeded"
-    assert body["details"] == {"retry_after_seconds": 420}
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    assert body["details"].keys() == {"retry_after_seconds"}
+    seconds = body["details"]["retry_after_seconds"]
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= seconds <= 420
 
 
 async def test_verify_malformed_code_returns_422(

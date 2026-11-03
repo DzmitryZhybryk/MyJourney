@@ -19,7 +19,8 @@ it — `imports.md`.
   `EmailTransportPort`, `SaltedHasherPort`), not in a domain's `application/ports/` — the one
   exception to `layers.md`.
 - Hashing: passwords — `SaltedHasherPort`; a value looked up by index (refresh tokens) —
-  `DeterministicHasherPort`.
+  `DeterministicHasherPort`. A secret that must be read back (one-time codes sent again) is
+  encrypted with `SecretCipherPort`, not hashed.
 - Keyset pagination: an endpoint's `*Request` / `*Response` extend `CursorPaginationFields` /
   `CursorPageFields[ItemT]`; the use case takes `PageQuery` and returns `CursorPage[ItemT]`;
   repositories use `decode_cursor` / `split_page`.
