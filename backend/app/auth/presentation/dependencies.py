@@ -16,7 +16,9 @@ from app.auth.presentation.cookies import read_refresh_token_cookie
 from app.shared.infra.crypto import (
     DeterministicHasherPort,
     SaltedHasherPort,
+    SecretCipherPort,
     get_argon2_salted_hasher,
+    get_fernet_secret_cipher,
     get_sha256_deterministic_hasher,
 )
 from app.shared.infra.jwt.dependency import jwt_service_dependency
@@ -64,16 +66,27 @@ def task_bus_dependency(request: Request) -> TaskBusPort:
 
 def salted_hasher_dependency() -> SaltedHasherPort:
     """
-    Возвращает salt-устойчивый hasher для паролей и OTP-кодов.
+    Возвращает salt-устойчивый hasher для паролей.
 
     Stateless singleton на процесс (см. ``get_argon2_salted_hasher``).
     Через override этой dependency тесты подменяют реализацию.
 
     Scenarios:
         - регистрация и вход: пароль
-        - отправка и ввод кода в диалоге «Подтвердите email»
     """
     return get_argon2_salted_hasher()
+
+
+def secret_cipher_dependency() -> SecretCipherPort:
+    """
+    Возвращает шифратор одноразовых кодов.
+
+    Stateless singleton на процесс (см. ``get_fernet_secret_cipher``).
+
+    Scenarios:
+        - отправка и ввод кода в диалоге «Подтвердите email»
+    """
+    return get_fernet_secret_cipher()
 
 
 def deterministic_hasher_dependency() -> DeterministicHasherPort:
@@ -125,13 +138,13 @@ def required_refresh_secret_dependency(request: Request) -> str:
 def email_verification_service_dependency(
     *,
     uow: Annotated[AuthUnitOfWork, Depends(auth_uow_dependency)],
-    salted_hasher: Annotated[SaltedHasherPort, Depends(salted_hasher_dependency)],
+    secret_cipher: Annotated[SecretCipherPort, Depends(secret_cipher_dependency)],
     task_bus: Annotated[TaskBusPort, Depends(task_bus_dependency)],
     config: Annotated[EmailVerificationConfig, Depends(email_verification_config_dependency)],
 ) -> EmailVerificationService:
     return EmailVerificationService(
         uow=uow,
-        salted_hasher=salted_hasher,
+        secret_cipher=secret_cipher,
         task_bus=task_bus,
         config=config,
     )

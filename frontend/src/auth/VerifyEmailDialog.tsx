@@ -2,11 +2,13 @@ import { Button, Group, Modal, PinInput, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError, errorCodeToken, resolveErrorToken } from "../api/errors";
+import { ApiError, type ErrorParams, errorCodeToken, resolveErrorToken } from "../api/errors";
 import { refresh, sendEmailVerification, verifyEmail } from "../api/sdk";
 import { setAccessToken } from "./tokenStore";
 
 type Stage = "intro" | "code";
+
+type DialogError = Readonly<{ token: string; params?: ErrorParams }>;
 
 interface VerifyEmailDialogProps {
   opened: boolean;
@@ -15,13 +17,15 @@ interface VerifyEmailDialogProps {
 }
 
 const CODE_LENGTH = 6;
+const ATTEMPTS_EXCEEDED_CODE = "auth.challenge_attempts_exceeded";
+const SECONDS_PER_MINUTE = 60;
 
 export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDialogProps) {
   const { t } = useTranslation(["auth", "errors"]);
   const [stage, setStage] = useState<Stage>("intro");
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DialogError | null>(null);
 
   // Reset in the close handler (not an effect on `opened`) so the next open starts at "intro".
   const handleClose = () => {
@@ -48,9 +52,9 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
           return;
         }
 
-        setError(errorCodeToken(err.code));
+        setError(toDialogError(err));
       } else {
-        setError(errorCodeToken("network"));
+        setError({ token: errorCodeToken("network") });
       }
     } finally {
       setSubmitting(false);
@@ -59,7 +63,7 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
 
   const handleVerify = async () => {
     if (code.length !== CODE_LENGTH) {
-      setError("auth:verifyEmail.codeIncomplete");
+      setError({ token: "auth:verifyEmail.codeIncomplete" });
       return;
     }
 
@@ -83,13 +87,13 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
         // 410 (expired), 404 (not found), 429 (attempts exceeded): back to "intro" so the user
         // can request a new code.
         const shouldResetToIntro = err.status === 410 || err.status === 404 || err.status === 429;
-        setError(errorCodeToken(err.code));
+        setError(toDialogError(err));
         if (shouldResetToIntro) {
           setStage("intro");
           setCode("");
         }
       } else {
-        setError(errorCodeToken("network"));
+        setError({ token: errorCodeToken("network") });
       }
     } finally {
       setSubmitting(false);
@@ -118,7 +122,7 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
             </Text>
             {error && (
               <Text size="sm" fw={500} c="var(--text-error)" role="alert">
-                {resolveErrorToken(error)}
+                {resolveErrorToken(error.token, error.params)}
               </Text>
             )}
             <Group justify="flex-end">
@@ -153,7 +157,7 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
 
             {error && (
               <Text size="sm" fw={500} ta="center" c="var(--text-error)" role="alert">
-                {resolveErrorToken(error)}
+                {resolveErrorToken(error.token, error.params)}
               </Text>
             )}
 
@@ -170,6 +174,21 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
       </Stack>
     </Modal>
   );
+}
+
+/**
+ * Maps an API error to the dialog's error. Exhausted attempts carry the wait until a new code in
+ * `details.retry_after_seconds`; without a usable number the generic text is shown, never a raw
+ * `{{minutes}}` placeholder.
+ */
+function toDialogError(err: ApiError): DialogError {
+  const retryAfterSeconds = err.details?.retry_after_seconds;
+  if (err.code !== ATTEMPTS_EXCEEDED_CODE || typeof retryAfterSeconds !== "number" || retryAfterSeconds < 0) {
+    return { token: errorCodeToken(err.code) };
+  }
+
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / SECONDS_PER_MINUTE));
+  return { token: errorCodeToken(`${ATTEMPTS_EXCEEDED_CODE}_retry`), params: { minutes } };
 }
 
 /**

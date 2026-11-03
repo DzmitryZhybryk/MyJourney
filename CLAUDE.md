@@ -56,9 +56,7 @@ uv run pytest -k "test_name"                   # один тест по имен
 ```
 
 Frontend — из `frontend/`: `npm install`, `npm run dev`, `make lint | typecheck | test | coverage | check | budget | mantine-styles`.
-Полный список таргетов — `make help` в соответствующем каталоге. Миграции, дев-база, `geo-load` —
-skill `dev-database`. Контракт API (`openapi.json` → сгенерированный SDK) — правило
-`.claude/rules/common/codegen-contract.md`.
+Полный список таргетов — `make help` в соответствующем каталоге.
 
 ## Git
 

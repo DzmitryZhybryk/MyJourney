@@ -27,6 +27,7 @@ _TEST_ENV_DEFAULTS = {
     "PORT": "8000",
     "ENVIRONMENT": "local",
     "JWT_SECRET_KEY": "test-secret-key-at-least-32-bytes-long",
+    "CHALLENGE_CODE_ENCRYPTION_KEY": "oh_PRYy2ap1CNNTxWoeJY-mNqAOYdnFYPEB7df0H63k=",
     "RESEND_API_KEY": "test-resend-key",
     "RESEND_FROM_EMAIL": "test@example.com",
     "MEDIA_S3_ENDPOINT_URL": "http://s3.localhost:9050",
@@ -41,6 +42,8 @@ for _key, _value in _TEST_ENV_DEFAULTS.items():
 # Импорты app/tests.fakes — строго ПОСЛЕ env-bootstrap: ``app`` на импорте строит
 # синглтон ``settings``, которому нужны заполненные env-поля (E402 осознанно).
 from app.auth.application.config import EmailVerificationConfig  # noqa: E402
+from app.shared.infra.crypto import get_fernet_secret_cipher  # noqa: E402
+from app.shared.infra.crypto.fernet import FernetSecretCipher  # noqa: E402
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher  # noqa: E402
 from tests.builders import LONDON_CITY_ID, make_city_location_response  # noqa: E402
 from tests.fakes import (  # noqa: E402
@@ -173,6 +176,12 @@ def fake_user_uow(fake_user_repository: FakeUserRepository) -> FakeUserUnitOfWor
 @pytest.fixture
 def fake_salted_hasher() -> FakeSaltedHasher:
     return FakeSaltedHasher()
+
+
+@pytest.fixture
+def secret_cipher() -> FernetSecretCipher:
+    # Ключ из settings, а не литерал: в api-тестах код шифрует сам тест, а расшифровывает приложение.
+    return get_fernet_secret_cipher()
 
 
 @pytest.fixture

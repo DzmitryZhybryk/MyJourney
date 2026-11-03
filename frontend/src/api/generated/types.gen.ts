@@ -745,7 +745,7 @@ export type SendEmailVerificationErrors = {
    */
   409: ErrorResponse;
   /**
-   * Cooldown повторной отправки кода ещё не истёк
+   * Cooldown повторной отправки ещё не истёк или попытки ввода живого кода исчерпаны
    */
   429: ErrorResponse;
   /**

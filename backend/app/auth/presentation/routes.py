@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
+from pydantic import SecretStr
 
 from app.auth.application.schemas.commands import LoginCommand, RegistrationCommand, VerifyEmailCommand
 from app.auth.application.schemas.metadata import ClientMetadata
@@ -156,4 +157,6 @@ async def verify_email(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     email_verification_service: Annotated[EmailVerificationService, Depends(email_verification_service_dependency)],
 ) -> None:
-    await email_verification_service.verify_email(user_id=user_id, command=VerifyEmailCommand(code=body.code))
+    await email_verification_service.verify_email(
+        user_id=user_id, command=VerifyEmailCommand(code=SecretStr(body.code))
+    )

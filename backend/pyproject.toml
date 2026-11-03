@@ -1,6 +1,6 @@
 [project]
 name = "MyJourney"
-version = "7.2.0"
+version = "7.3.0"
 description = "Personal travel atlas: journeys, cities and routes on a globe"
 authors = [
     { name = "Dzmitry Zhybryk", email = "mr.zhybryk@gmail.com" }
@@ -26,6 +26,7 @@ dependencies = [
     "opentelemetry-api>=1.45.1",
     "opentelemetry-sdk>=1.45.1",
     "opentelemetry-semantic-conventions>=0.66b1",
+    "cryptography>=50.0.2",
 ]
 
 [dependency-groups]

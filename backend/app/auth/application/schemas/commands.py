@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from pydantic import BaseModel, ConfigDict, SecretStr
 
 __all__ = [
@@ -25,8 +23,9 @@ class LoginCommand(BaseModel):
     password: SecretStr
 
 
-@dataclass(frozen=True, slots=True)
-class VerifyEmailCommand:
+class VerifyEmailCommand(BaseModel):
     """Одноразовый код, который пользователь ввёл для подтверждения email."""
 
-    code: str
+    model_config = ConfigDict(frozen=True)
+
+    code: SecretStr

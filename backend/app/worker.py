@@ -5,8 +5,8 @@ Worker entrypoint для procrastinate-задач.
 ``ResendComponent`` (даёт ``EmailTransportPort``), ``MediaStorageComponent``
 (хранилища бакетов media) и ``ProcrastinateComponent``
 (App + подключённые blueprint'ы доменов). ``SqlAlchemyComponent`` намеренно
-отсутствует — текущая task ``send_verification_email`` БД не трогает,
-рендерит письмо и зовёт provider.
+отсутствует — текущая task ``send_verification_email`` БД не трогает:
+расшифровывает код ключом из настроек, рендерит письмо и зовёт provider.
 
 Таски получают зависимости из реестра компонентов: он целиком лежит в
 ``additional_context`` под ``WORKER_REGISTRY_KEY``.

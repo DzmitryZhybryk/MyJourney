@@ -414,16 +414,32 @@
             }
           },
           "429": {
-            "description": "Cooldown повторной отправки кода ещё не истёк",
+            "description": "Cooldown повторной отправки ещё не истёк или попытки ввода живого кода исчерпаны",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 },
-                "example": {
-                  "code": "auth.challenge_resend_cooldown",
-                  "message": "Слишком частая отправка кода, повторите попытку позже",
-                  "timestamp": "2024-01-01T12:00:00Z"
+                "examples": {
+                  "auth.challenge_resend_cooldown": {
+                    "summary": "Cooldown повторной отправки кода ещё не истёк",
+                    "value": {
+                      "code": "auth.challenge_resend_cooldown",
+                      "message": "Слишком частая отправка кода, повторите попытку позже",
+                      "timestamp": "2024-01-01T12:00:00Z"
+                    }
+                  },
+                  "auth.challenge_attempts_exceeded": {
+                    "summary": "Попытки исчерпаны; новый код — через retry_after_seconds",
+                    "value": {
+                      "code": "auth.challenge_attempts_exceeded",
+                      "message": "Превышено количество попыток ввода кода",
+                      "details": {
+                        "retry_after_seconds": 540
+                      },
+                      "timestamp": "2024-01-01T12:00:00Z"
+                    }
+                  }
                 }
               }
             }
@@ -573,6 +589,9 @@
                 "example": {
                   "code": "auth.challenge_attempts_exceeded",
                   "message": "Превышено количество попыток ввода кода",
+                  "details": {
+                    "retry_after_seconds": 540
+                  },
                   "timestamp": "2024-01-01T12:00:00Z"
                 }
               }

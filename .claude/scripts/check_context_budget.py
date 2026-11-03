@@ -19,6 +19,12 @@ AREAS: dict[str, tuple[str | None, int]] = {
     "frontend src": ("frontend/src/pages/journeys/JourneyForm.tsx", 31_000),
     "frontend tests": ("frontend/src/pages/journeys/JourneyForm.test.tsx", 42_000),
 }
+CANON_DIR = Path.home() / ".claude" / "optional"
+OVER_BUDGET_STEPS = """Over budget. In this order:
+  1. Read every unmarked file listed above, largest first, including files this change did not
+     touch. Remove text that repeats another loaded file or that the code already states.
+  2. Only if step 1 found nothing to remove, raise the budget in AREAS, and say in the commit
+     which files were searched."""
 FRONTMATTER_PATHS = re.compile(r'\A---\npaths:\n((?:  - "[^"]+"\n)+)---\n')
 SKILL_DESCRIPTION = re.compile(r"^description:.*$", re.MULTILINE)
 
@@ -51,6 +57,11 @@ def session_start_files(*, root: Path, rules: tuple[Rule, ...]) -> dict[str, int
     return {"CLAUDE.md": (root / "CLAUDE.md").stat().st_size} | always_on_rules | descriptions
 
 
+def is_canon_copy(name: str) -> bool:
+    relative = PurePosixPath(name).relative_to(".claude") if name.startswith(".claude/") else None
+    return relative is not None and (CANON_DIR / relative).is_file()
+
+
 def matching_rules(*, sample: str, rules: tuple[Rule, ...]) -> dict[str, int]:
     path = PurePosixPath(sample)
     return {rule.name: rule.size for rule in rules if any(path.full_match(glob) for glob in rule.globs)}
@@ -78,11 +89,13 @@ def main() -> int:
         report(f"  {area:<15} {total:>7,} / {budget:,} B")
         if total > budget:
             is_failed = True
+            report(f"      over by {total - budget:,} B")
             for name, size in sorted(files.items(), key=lambda item: -item[1]):
-                report(f"      {size:>7,}  {name}")
+                marker = "  [canon copy: trim in ~/.claude/optional, not here]" if is_canon_copy(name) else ""
+                report(f"      {size:>7,}  {name}{marker}")
 
     if is_failed:
-        report("Over budget: trim the largest files above, or raise the budget in AREAS if the growth is deliberate.")
+        report(OVER_BUDGET_STEPS)
 
     return 1 if is_failed else 0
 

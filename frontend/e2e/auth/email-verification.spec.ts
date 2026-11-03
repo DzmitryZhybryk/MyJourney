@@ -11,7 +11,7 @@ import { WEBKIT_SECURE_COOKIE_REASON } from "../helpers/session";
  * visible in a new tab).
  *
  * Successful verification (enter code -> 204 -> banner disappears, F6/G3) is deliberately NOT in
- * e2e: the code is stored as an Argon2 hash (unreachable) and the flow is covered by
+ * e2e: the code is stored encrypted with a backend-only key (unreachable) and the flow is covered by
  * `VerifyEmailDialog.test.tsx`. For the same reason (resend cooldown from the registration
  * auto-challenge) there is no "Send code -> stage 2" here.
  */

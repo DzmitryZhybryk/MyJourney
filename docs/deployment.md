@@ -88,6 +88,7 @@ cp .env.example .env
 ```bash
 # сгенерировать секреты
 openssl rand -hex 32      # -> JWT_SECRET_KEY
+openssl rand -base64 32 | tr '+/' '-_'   # -> CHALLENGE_CODE_ENCRYPTION_KEY
 openssl rand -base64 32   # -> POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD
 ```
 
