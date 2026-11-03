@@ -14,7 +14,7 @@ from pathlib import Path, PurePosixPath
 AREAS: dict[str, tuple[str | None, int]] = {
     "session start": (None, 20_500),
     "backend app": ("backend/app/journeys/application/services/journey.py", 56_500),
-    "backend shared": ("backend/app/shared/infra/di/registry.py", 59_000),
+    "backend shared": ("backend/app/shared/infra/di/registry.py", 59_200),
     "backend tests": ("backend/tests/unit/journeys/application/test_journey_service.py", 33_000),
     "frontend src": ("frontend/src/pages/journeys/JourneyForm.tsx", 31_000),
     "frontend tests": ("frontend/src/pages/journeys/JourneyForm.test.tsx", 42_000),

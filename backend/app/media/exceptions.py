@@ -1,28 +1,21 @@
-from app.shared.exceptions import InternalError
+from app.shared.exceptions import AppError, InternalError, TemporaryError
 
 
-class ObjectStorageError(InternalError):
+class ObjectStorageError(AppError):
     """
-    Объектное хранилище не ответило или отказало в операции.
+    Маркер семьи сбоев объектного хранилища: не ответило или отказало в операции.
 
-    Сам не бросается: сбой всегда классифицирован одним из наследников, а этот класс — для того,
-    кому классификация не важна.
+    Сам не бросается и категории не задаёт: её даёт вторая база листа — `TemporaryError` или
+    `InternalError`. Ловят его те, кому классификация сбоя не важна.
     """
 
-    code = "media.object_storage_error"
-    message = "Ошибка хранилища файлов"
+
+class ObjectStorageTemporaryError(ObjectStorageError, TemporaryError):
+    """Сбой, который может пройти сам: сеть, таймаут, обрыв тела, перегрузка или внутренняя ошибка хранилища."""
 
 
-class ObjectStorageTemporaryError(ObjectStorageError):
-    """Сбой, который может пройти сам: сеть, таймаут, перегрузка или внутренняя ошибка хранилища."""
-
-    code = "media.object_storage_temporary_error"
-
-
-class ObjectStoragePersistentError(ObjectStorageError):
+class ObjectStoragePersistentError(ObjectStorageError, InternalError):
     """Сбой, который повтор не исправит: нет прав, неверные ключи или подпись, нет бакета, ошибка запроса."""
-
-    code = "media.object_storage_persistent_error"
 
 
 class ObjectNotFoundError(InternalError):

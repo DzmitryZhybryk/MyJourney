@@ -23,7 +23,21 @@ class ErrorCategoryEnum(Enum):
     GONE = "gone"
     UNPROCESSABLE = "unprocessable"
     RATE_LIMITED = "rate_limited"
+    TEMPORARY = "temporary"
     INTERNAL = "internal"
+
+    @property
+    def is_server_fault(self) -> bool:
+        """
+        Сбой на нашей стороне, а не ошибка в запросе клиента.
+
+        Scenarios:
+            - ответ на ошибку через любой транспорт: у серверного сбоя наружу не уходят детали
+
+        Returns:
+            True для временного сбоя зависимости и внутренней ошибки
+        """
+        return self in {ErrorCategoryEnum.TEMPORARY, ErrorCategoryEnum.INTERNAL}
 
 
 class AppError(Exception):
@@ -133,6 +147,19 @@ class RateLimitedError(AppError):
     category = ErrorCategoryEnum.RATE_LIMITED
     code = "rate_limited"
     message = "Превышен лимит запросов"
+
+
+class TemporaryError(AppError):
+    """
+    Базовое исключение для временного сбоя зависимости: повтор той же операции позже может пройти.
+
+    От него наследуется временный сбой любого внешнего вызова, постоянный — от `InternalError`.
+    Фоновые задачи повторяются по этому классу, не перечисляя провайдеров.
+    """
+
+    category = ErrorCategoryEnum.TEMPORARY
+    code = "temporary"
+    message = "Не удалось выполнить запрос, повторите попытку позже"
 
 
 class InternalError(AppError):

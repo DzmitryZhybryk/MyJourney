@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from structlog.typing import Processor
 
-from app.shared.exceptions import InternalError, NotFoundError
+from app.shared.exceptions import InternalError, NotFoundError, TemporaryError
 from app.shared.exceptions.handlers import register_exception_handlers
 from app.shared.infra.jwt.dependency import current_user_id_dependency
 from app.shared.infra.telemetry import get_api_telemetry_config
@@ -67,6 +67,10 @@ def middleware_app() -> BFastAPI:
     @app.get("/internal-error")
     async def _internal_error() -> JSONResponse:
         raise InternalError(message="storage exploded")
+
+    @app.get("/temporary-error")
+    async def _temporary_error() -> JSONResponse:
+        raise TemporaryError(details={"key": "u1/f1/original.jpg", "s3_error_code": "SlowDown"})
 
     @app.post("/validated")
     async def _validated(body: _CredentialsRequest) -> dict[str, int]:

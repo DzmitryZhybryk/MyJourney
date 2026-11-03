@@ -13,6 +13,7 @@ from opentelemetry.semconv.attributes.http_attributes import HTTP_ROUTE
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.shared.exceptions import AppError
 from app.shared.logging.classify import get_log_level_for_exception, get_log_level_for_status
 from app.shared.logging.config import get_logger
 from app.shared.types import DictStrAny
@@ -137,6 +138,9 @@ def _log_request(*, scope: Scope, status_code: int, error: _RequestError | None,
     # pydantic хранит в ошибке валидации сырой ввод клиента, пароль в том числе, — её текст в лог не идёт.
     if not isinstance(error.exc, RequestValidationError):
         fields["error_message"] = str(error.exc)
+
+    if isinstance(error.exc, AppError) and error.exc.details:
+        fields["error_details"] = error.exc.details
 
     level = get_log_level_for_exception(error.exc)
     logger.log(level, _REQUEST_EVENT, exc_info=error.exc if level == logging.ERROR else None, **fields)

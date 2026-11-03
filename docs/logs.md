@@ -38,11 +38,12 @@
 
 **Строка запроса** (`event="http.request"`, одна на каждый HTTP-запрос): `method`, `path`, `route` (шаблон пути,
 например `/v1/journeys/{journey_id}/`), `status_code`, `process_time` (секунды), `client_ip`, `query_params`. Если
-запрос закончился ошибкой — ещё `error_type`, `error_code` (код, ушедший клиенту) и `error_message`; у ошибки
-уровня `error` есть `exception` с трейсбеком. Текст ошибки валидации (422) не пишется: в нём сырой ввод клиента.
+запрос закончился ошибкой — ещё `error_type`, `error_code` (код, ушедший клиенту), `error_message` и
+`error_details` (детали ошибки; у сбоя хранилища — ключ, код и статус S3 или тип ошибки SDK); у ошибки уровня
+`error` есть `exception` с трейсбеком. Текст ошибки валидации (422) не пишется: в нём сырой ввод клиента.
 
-Уровень строки запроса: наш сбой (500, необработанное исключение) — `error` с трейсбеком; ошибка клиента (4xx) —
-`warning`; остальное — `info`.
+Уровень строки запроса: наш сбой (500, необработанное исключение) — `error` с трейсбеком; временный сбой внешнего
+сервиса (503 `temporary`) и ошибка клиента (4xx) — `warning` без трейсбека; остальное — `info`.
 
 **Имена событий** — `<домен или вертикаль>.<что случилось>`: `geo.city_ids_unknown`, `http_client.timeout`,
 `component.startup_failed`, `api.started`. Строки библиотек сохраняют собственный текст в `event`, кроме
@@ -61,6 +62,9 @@ procrastinate: у него событие — `procrastinate.<действие>`
 
 # Запросы с ошибкой сервера и их тип
 {container="myjourney_app"} | json | event="http.request" and status_code >= 500
+
+# Временные сбои внешних сервисов (в «Ошибки бэкенда» не попадают — у них уровень warning)
+{container="myjourney_app"} | json | error_code="temporary"
 
 # Медленные запросы
 {container="myjourney_app"} | json | event="http.request" and process_time > 1

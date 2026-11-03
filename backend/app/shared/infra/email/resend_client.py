@@ -37,8 +37,8 @@ class ResendClient(BaseHTTPClient):
             message: Готовое сообщение с отрендеренным телом.
 
         Raises:
-            ExternalAPITemporaryError: 502/503/504, таймаут, сетевая ошибка — кандидат на retry.
-            ExternalAPIPersistentError: 4xx/500 — без retry.
+            ExternalAPITemporaryError: временный сбой Resend — кандидат на retry.
+            ExternalAPIPersistentError: постоянный сбой — без retry.
         """
         await self.post(
             endpoint="/emails",

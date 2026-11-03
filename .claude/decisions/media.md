@@ -45,6 +45,16 @@
 - Revisit when: production buckets get declarative configuration (OpenTofu/Terraform).
 - Source: plan media-storage-adapter (#27), 2026-10-30
 
+## A missing object is any 404, for HEAD and GET alike
+- `head_object` answers `None` and `get_object` raises `ObjectNotFoundError` on a 404, whatever its error code.
+- Why: a HEAD response has no body, so a missing bucket and a missing object look the same there; GET follows the
+  same rule so that "no object" means one thing across the port. A missing bucket is a configuration fault, not a
+  case a use case branches on. Nothing catches it yet: the bootstrap runs only against emulators and the app never
+  checks its buckets; the HEAD that confirms an upload meets it before any GET does.
+- Rejected: telling `NoSuchBucket` from `NoSuchKey` on GET (until 2026-11-02) — protects nothing while HEAD answers
+  `None` to a missing bucket.
+- Source: external failure classification (#33), 2026-11-02
+
 ## The S3 adapter is unit-tested through `AioStubber`, its storage semantics against RustFS
 - Unit tests drive the real aiobotocore client with `aiobotocore.stub.AioStubber` in place of the transport;
   integration tests cover what only a real store shows (signature enforcement, 412 on overwrite, anonymous read).

@@ -16,6 +16,7 @@ from app.shared.exceptions.base import (
     NotFoundError,
     PermissionDeniedError,
     RateLimitedError,
+    TemporaryError,
     UnauthenticatedError,
     UnprocessableError,
 )
@@ -30,13 +31,14 @@ _LEVEL_BY_CATEGORY: tuple[tuple[AppError, int], ...] = (
     (GoneError(), logging.WARNING),
     (UnprocessableError(), logging.WARNING),
     (RateLimitedError(), logging.WARNING),
+    (TemporaryError(), logging.WARNING),
     (InternalError(), logging.ERROR),
 )
 
 
 @pytest.mark.parametrize(("error", "expected_level"), _LEVEL_BY_CATEGORY)
 def test_get_log_level_for_exception_maps_each_category(error: AppError, expected_level: int) -> None:
-    """INTERNAL — наш сбой → ERROR; остальные категории — ошибка клиента → WARNING."""
+    """INTERNAL — наш баг → ERROR; ошибка клиента и временный сбой зависимости (TEMPORARY) → WARNING."""
     assert get_log_level_for_exception(error) == expected_level
 
 

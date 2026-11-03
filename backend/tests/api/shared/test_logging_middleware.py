@@ -91,6 +91,25 @@ async def test_internal_error_logs_one_error_line_with_type_code_and_traceback(
     assert isinstance(line["exc_info"], InternalError)
 
 
+async def test_temporary_error_logs_details_hidden_from_response_without_traceback(
+    middleware_app: BFastAPI,
+    make_async_client: MakeAsyncClient,
+    request_log_processors: tuple[Processor, ...],
+) -> None:
+    """Временный сбой (503): детали, скрытые из ответа, — в строке WARNING; трейсбека нет."""
+    with capture_logs(processors=request_log_processors) as logs:
+        async with make_async_client(middleware_app) as client:
+            response = await client.get("/temporary-error")
+
+    assert response.status_code == 503
+    assert response.json()["details"] is None
+    (line,) = [entry for entry in logs if entry["event"] == _REQUEST_EVENT]
+    assert line["log_level"] == "warning"
+    assert line["error_code"] == "temporary"
+    assert line["error_details"] == {"key": "u1/f1/original.jpg", "s3_error_code": "SlowDown"}
+    assert line["exc_info"] is None
+
+
 async def test_client_category_error_logs_warning_with_code_without_traceback(
     middleware_app: BFastAPI,
     make_async_client: MakeAsyncClient,
