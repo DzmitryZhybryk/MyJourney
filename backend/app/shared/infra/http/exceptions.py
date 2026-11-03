@@ -5,6 +5,8 @@
 (500). Статус ответа провайдера в наш ответ не попадает — 404 от внешнего API не становится нашим 404.
 """
 
+from datetime import timedelta
+
 from app.shared.exceptions import AppError, InternalError, TemporaryError
 
 
@@ -34,7 +36,25 @@ class ExternalAPIError(AppError):
 
 
 class ExternalAPITemporaryError(ExternalAPIError, TemporaryError):
-    """Временная ошибка внешнего API: любой 5xx, 429, 408, таймаут, сетевая ошибка — повтор позже может пройти."""
+    """
+    Временная ошибка внешнего API: любой 5xx, 429, 408, таймаут, сетевая ошибка — повтор позже может пройти.
+
+    `retry_after` — срок из заголовка `Retry-After` ответа провайдера, `None`, если заголовка нет.
+    """
+
+    def __init__(
+        self,
+        *,
+        method: str,
+        url: str,
+        status: int | None,
+        message: str,
+        body: object | None = None,
+        retry_after: timedelta | None = None,
+    ) -> None:
+        super().__init__(method=method, url=url, status=status, message=message, body=body)
+        # Конструктор ExternalAPIError передаёт по MRO в TemporaryError только message, поэтому срок ставится здесь.
+        self.retry_after = retry_after
 
 
 class ExternalAPIPersistentError(ExternalAPIError, InternalError):

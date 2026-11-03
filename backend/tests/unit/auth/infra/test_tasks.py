@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from procrastinate import JobContext
 from structlog.testing import capture_logs
@@ -71,6 +73,23 @@ def test_send_verification_email_retries_any_temporary_error(
     decision = retry_strategy.get_retry_decision(exception=error, job=job_context.job)
 
     assert (decision is not None) is is_retried
+
+
+def test_send_verification_email_retries_after_provider_delay(job_context: JobContext) -> None:
+    """Провайдер назвал срок — повтор не раньше него, а не по своей короткой паузе."""
+    retry_strategy = send_verification_email.retry_strategy
+    assert retry_strategy is not None
+    error = ExternalAPITemporaryError(
+        method="POST", url="u", status=429, message="m", retry_after=timedelta(seconds=60)
+    )
+
+    before = datetime.now(tz=UTC)
+    decision = retry_strategy.get_retry_decision(exception=error, job=job_context.job)
+    after = datetime.now(tz=UTC)
+
+    assert decision is not None
+    assert decision.retry_at is not None
+    assert before + timedelta(seconds=60) <= decision.retry_at <= after + timedelta(seconds=60)
 
 
 async def test_send_verification_email_propagates_persistent_error(

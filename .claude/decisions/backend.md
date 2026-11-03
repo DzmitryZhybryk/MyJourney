@@ -83,12 +83,18 @@
 - Rejected: `AssertionError` as the base — accurate in meaning, misleading in a traceback.
 - Source: exception hierarchy review, 2026-10-31
 
-## An external call's adapter classifies a failure as temporary or persistent; the caller decides the retry
+## An external call's adapter classifies a failure and passes on the dependency's retry delay; the caller decides the retry
 - `TemporaryError` (category `TEMPORARY`: 503, WARNING) is the base of every transient failure of a dependency; a
   persistent one is an `InternalError`. Background tasks retry by `retry_exceptions={TemporaryError}`.
 - Temporary: any 5xx, 408, 429, timeout, network failure, a broken response body, and the S3 retry codes
   `RequestTimeout`, `SlowDown`, `InternalError`, `ServiceUnavailable`; every other 4xx is persistent. A provider that
   signals "retry" with another 4xx overrides `BaseHTTPClient._TEMPORARY_CLIENT_ERROR_STATUSES`.
+- A delay the dependency named travels as `TemporaryError.retry_after` (`None` when it named none).
+  `BaseHTTPClient._retry_after` reads the standard `Retry-After`; a provider that names it elsewhere (its own header,
+  the body) overrides that method.
+- A task calling such a provider retries with `RetryAfterStrategy`, a subclass of procrastinate's `RetryStrategy`:
+  procrastinate still decides whether to retry and with what backoff, a named delay only replaces the time. A delay
+  over `_MAX_RETRY_AFTER` (5 min) means a long outage — the task gives up. Other tasks keep the plain `RetryStrategy`.
 - Why: the adapter knows what failed, only the caller knows what to do — a task retries in minutes, a request answers
   now. One base keeps every task's retry list from growing per provider, and the category gives the request path an
   honest 503 and a WARNING instead of a 500 that reads as our bug.
@@ -98,8 +104,14 @@
 - Rejected: 500 and 429 persistent (until 2026-11-02) — "429 needs `Retry-After` and backoff" is weak while
   procrastinate backs off; S3 documents 500 and `SlowDown` as retryable.
 - Rejected: botocore's full transient code list — most of its codes belong to DynamoDB, EC2 and Lambda.
-- Revisit when: a provider's `Retry-After` must be honoured.
-- Source: external failure classification (#33), 2026-10-31
+- Rejected: retries inside the client (tenacity on provider methods, as in an earlier project) — the adapter would
+  decide the retry, a request would wait tens of seconds, the worker sleeps, and a 60 s `Retry-After` outlasts the
+  retries. A connect-only retry (nothing sent yet) is a separate question.
+- Rejected: an own strategy instead of `RetryStrategy` — re-implements procrastinate's attempt and backoff rules.
+- Rejected: the task sleeping for `retry_after` — holds a worker and makes the task its own retry loop.
+- Rejected: the larger of the named delay and the own backoff — `max_attempts` already bounds a `Retry-After: 0`.
+- Rejected: waiting exactly the ceiling for a longer delay — a retry before the named time meets the same 429.
+- Source: external failure classification (#33), 2026-10-31; retry delay (#40), 2026-11-03
 
 ## A server-fault response carries only the `code` and the class message
 - For a category with `ErrorCategoryEnum.is_server_fault` (`TEMPORARY`, `INTERNAL`) the envelope drops `details` and
@@ -110,6 +122,12 @@
   own terms.
 - Rejected: instance message and `details` on every error (until 2026-11-02) — leaked internals through a 500.
 - Source: external failure classification (#33), 2026-11-02
+
+## A 503 carries `Retry-After` only when the dependency named a delay
+- The HTTP handler turns `TemporaryError.retry_after` into the header, whole seconds rounded up; the body is unchanged.
+- Why: the only honest source of "when to come back" is the dependency that is down.
+- Rejected: a default value when no delay is known — an invented number is worse than none.
+- Source: retry delay (#40), 2026-11-03
 
 ## Log lines of one request are joined by the OpenTelemetry trace context, not an own request id
 - The API gives FastAPI's native telemetry a `TracerProvider` without an exporter (`app.shared.infra.telemetry`); a
