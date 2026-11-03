@@ -9,13 +9,13 @@
 
 import pytest
 from procrastinate import App, JobContext
-from procrastinate.jobs import Job
 from procrastinate.testing import InMemoryConnector
 
 from app.auth.application.ports.tasks import SEND_VERIFICATION_EMAIL_TASK
 from app.shared.infra.di.registry import ComponentRegistry
 from app.shared.infra.email import EmailTransportPort
 from app.shared.infra.procrastinate.component import WORKER_REGISTRY_KEY
+from tests.builders import make_job
 from tests.fakes import FakeEmailTransport
 
 
@@ -29,16 +29,9 @@ def job_context(fake_email_transport: FakeEmailTransport) -> JobContext:
     registry = ComponentRegistry()
     registry.set(key=EmailTransportPort, value=fake_email_transport)
     app = App(connector=InMemoryConnector())
-    job = Job(
-        queue="default",
-        lock=None,
-        queueing_lock=None,
-        task_name=SEND_VERIFICATION_EMAIL_TASK,
-        task_kwargs={},
-    )
     return JobContext(
         app=app,
-        job=job,
+        job=make_job(task_name=SEND_VERIFICATION_EMAIL_TASK),
         start_timestamp=0.0,
         abort_reason=lambda: None,
         additional_context={WORKER_REGISTRY_KEY: registry},

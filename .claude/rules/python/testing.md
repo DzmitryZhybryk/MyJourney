@@ -69,6 +69,8 @@ Read only the matching definitions, then reuse by name.
 ## Conventions
 
 - Flat functions, **no test classes**. Group by naming (`test_login_*`) and subset with `-k login`.
+- A helper class one test needs (a provider subclass, a stub type) is declared inside that test, as
+  part of its arrange step; one the whole file shares goes right after the imports. Never between tests.
 - `asyncio_mode = "auto"`: write `async def test_...` with no decorator.
 - Name: `test_<unit>_<condition>_<expected>`, plus a **one-line Russian docstring** stating what is asserted.
 - Variants through `@pytest.mark.parametrize`; `pytest.raises(SomeError, match=...)` where the

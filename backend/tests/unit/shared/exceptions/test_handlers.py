@@ -4,10 +4,11 @@
 Боевой путь (AppError → свой handler → envelope; исключение вне AppError → 500) и передача ошибки в строку лога
 запроса покрыты api-тестами. Здесь — две защитные ветки, до которых через приложение не дойти: handler вызван
 напрямую с «не тем» типом исключения. Нарушение инварианта: его данные не уходят клиенту. И тело ответа на
-серверный сбой: сообщение и детали экземпляра остаются в логе.
+серверный сбой: сообщение и детали экземпляра остаются в логе. И заголовок ``Retry-After`` временного сбоя.
 """
 
 import json
+from datetime import timedelta
 
 import pytest
 from starlette.requests import Request
@@ -43,6 +44,22 @@ def test_app_error_handler_server_fault_hides_instance_message_and_details(
     body = json.loads(bytes(response.body))
     assert response.status_code == expected_status
     assert (body["code"], body["message"], body["details"]) == (expected_code, expected_message, None)
+
+
+def test_app_error_handler_temporary_error_with_retry_after_sets_header(bare_request: Request) -> None:
+    """Временный сбой со сроком зависимости → ``Retry-After`` в целых секундах, округлённых вверх."""
+    response = app_error_handler(bare_request, TemporaryError(retry_after=timedelta(seconds=59.2)))
+
+    assert response.status_code == 503
+    assert response.headers["Retry-After"] == "60"
+
+
+@pytest.mark.parametrize("error", [TemporaryError(), InternalError(), NotFoundError()])
+def test_app_error_handler_without_retry_after_omits_header(bare_request: Request, error: AppError) -> None:
+    """Срок неизвестен или ошибка не временная — заголовка ``Retry-After`` нет."""
+    response = app_error_handler(bare_request, error)
+
+    assert "Retry-After" not in response.headers
 
 
 def test_app_error_handler_client_error_keeps_instance_message_and_details(bare_request: Request) -> None:

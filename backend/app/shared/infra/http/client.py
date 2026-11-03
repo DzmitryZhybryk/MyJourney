@@ -10,7 +10,8 @@
 обёртке поверх BaseComponent — здесь её намеренно нет, чтобы не смешивать роли.
 """
 
-import logging
+from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
 from http import HTTPMethod, HTTPStatus
 from typing import Any, ClassVar
 
@@ -34,6 +35,8 @@ class BaseHTTPClient:
     Закрытие сетевых ресурсов — через aclose(); вызывает её *Component-обёртка в shutdown.
     Провайдер, у которого «повторите» означает ещё какой-то 4xx, переопределяет
     `_TEMPORARY_CLIENT_ERROR_STATUSES`; любой 5xx временный всегда.
+    Срок повтора берётся из стандартного заголовка `Retry-After`; провайдер, который сообщает его иначе
+    (другой заголовок, тело ответа), переопределяет `_retry_after`.
     """
 
     _TEMPORARY_CLIENT_ERROR_STATUSES: ClassVar[frozenset[HTTPStatus]] = frozenset(
@@ -88,22 +91,40 @@ class BaseHTTPClient:
 
         body = self._safe_parse_body(response)
         message = self._extract_error_message(body) or f"HTTP {response.status_code}"
-        exc_class = (
-            ExternalAPITemporaryError if self._is_temporary_status(response.status_code) else ExternalAPIPersistentError
-        )
-        bound_log.log(
-            logging.WARNING if exc_class is ExternalAPITemporaryError else logging.ERROR,
-            "http_client.error_response",
-            status=response.status_code,
-            error_message=message,
-        )
-        raise exc_class(
+        if self._is_temporary_status(response.status_code):
+            bound_log.warning("http_client.error_response", status=response.status_code, error_message=message)
+            raise ExternalAPITemporaryError(
+                method=method.value,
+                url=str(response.request.url),
+                status=response.status_code,
+                message=message,
+                body=body,
+                retry_after=self._retry_after(response),
+            )
+
+        bound_log.error("http_client.error_response", status=response.status_code, error_message=message)
+        raise ExternalAPIPersistentError(
             method=method.value,
             url=str(response.request.url),
             status=response.status_code,
             message=message,
             body=body,
         )
+
+    def _retry_after(self, response: httpx.Response) -> timedelta | None:
+        """
+        Достаёт из ответа с временной ошибкой срок, через который провайдер просит повторить.
+
+        Scenarios:
+            - временный сбой внешнего API, в ответе которого провайдер сказал, когда повторить
+
+        Args:
+            response: Ответ провайдера с временной ошибкой
+
+        Returns:
+            Срок до повтора или `None`, если провайдер его не сообщил
+        """
+        return self._parse_retry_after(value=response.headers.get("Retry-After"), now=datetime.now(tz=UTC))
 
     @classmethod
     def _is_temporary_status(cls, status_code: int) -> bool:
@@ -128,3 +149,42 @@ class BaseHTTPClient:
                 return value
 
         return None
+
+    @staticmethod
+    def _parse_retry_after(*, value: str | None, now: datetime) -> timedelta | None:
+        """
+        Разбирает значение в формате `Retry-After`: число секунд или HTTP-дата.
+
+        Нечитаемое значение — то же, что отсутствие заголовка: подсказка провайдера не должна ломать обработку его
+        ошибки. Дата в прошлом даёт нулевой срок.
+
+        Scenarios:
+            - временный сбой внешнего API, в ответе которого провайдер сказал, когда повторить
+            - провайдер, который шлёт срок в этом формате, но в своём заголовке
+
+        Args:
+            value: Значение заголовка или `None`, если его нет
+            now: Текущий момент, от которого отсчитывается срок до HTTP-даты
+
+        Returns:
+            Срок до повтора или `None`, если значения нет или его не разобрать
+        """
+        if value is None:
+            return None
+
+        value = value.strip()
+        if value.isascii() and value.isdigit():
+            try:
+                return timedelta(seconds=int(value))
+            except OverflowError, ValueError:
+                return None
+
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except TypeError, ValueError:
+            return None
+
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=UTC)
+
+        return max(retry_at - now, timedelta(0))

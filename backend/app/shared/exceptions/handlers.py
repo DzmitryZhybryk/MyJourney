@@ -5,6 +5,7 @@
 presentation фреймворку (FastAPI, gRPC и т.д.).
 """
 
+import math
 from collections.abc import Callable
 from typing import Any
 
@@ -12,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.shared.exceptions import AppError
+from app.shared.exceptions import AppError, TemporaryError
 from app.shared.exceptions.mappings import resolve_http_status
 from app.shared.exceptions.schemas import ErrorResponse
 from app.shared.logging.middleware import remember_handled_error
@@ -29,7 +30,8 @@ def _create_error_response(exc: AppError) -> JSONResponse:
     Создает HTTP ответ для исключения приложения используя типизированную схему.
 
     Серверный сбой отдаёт только `code` и сообщение своего класса: детали и сообщение экземпляра
-    описывают наше устройство и остаются в логе.
+    описывают наше устройство и остаются в логе. Временный сбой, у которого зависимость назвала срок,
+    передаёт его в заголовке `Retry-After` (целые секунды).
 
     Scenarios:
         - любой запрос, завершившийся ошибкой приложения
@@ -39,9 +41,14 @@ def _create_error_response(exc: AppError) -> JSONResponse:
     else:
         error_response = ErrorResponse(code=exc.code, message=exc.message, details=exc.details)
 
+    headers = None
+    if isinstance(exc, TemporaryError) and exc.retry_after is not None:
+        headers = {"Retry-After": str(math.ceil(exc.retry_after.total_seconds()))}
+
     return JSONResponse(
         status_code=resolve_http_status(exc),
         content=error_response.model_dump(mode="json"),
+        headers=headers,
     )
 
 

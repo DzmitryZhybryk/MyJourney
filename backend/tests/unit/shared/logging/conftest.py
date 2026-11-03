@@ -18,6 +18,7 @@ import structlog
 from procrastinate.jobs import Job
 
 from app.shared.types import DictStrAny
+from tests.builders import make_job
 
 _UVICORN_LOGGER_NAMES = ("uvicorn", "uvicorn.error", "uvicorn.access")
 
@@ -76,11 +77,9 @@ def json_log_lines(capsys: pytest.CaptureFixture[str]) -> Callable[[], tuple[Dic
 @pytest.fixture
 def verification_job() -> Job:
     """Задача письма подтверждения: в аргументах email и одноразовый код, как их передаёт сервис."""
-    return Job(
-        id=42,
-        queue="default",
-        lock="email_verification:user:user-1",
-        queueing_lock=None,
+    return make_job(
+        job_id=42,
         task_name="send_verification_email",
+        lock="email_verification:user:user-1",
         task_kwargs={"user_id": "user-1", "email": "ann@example.org", "code": "483921"},
     )

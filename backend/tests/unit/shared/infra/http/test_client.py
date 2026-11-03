@@ -4,7 +4,8 @@ Unit-тесты ``BaseHTTPClient`` через ``httpx.MockTransport`` (без с
 Покрывают маппинг ответов внешнего API в ``ExternalAPI*Error``: успех проходит,
 таймаут, сетевая ошибка, любой 5xx, 408 и 429 → temporary (кандидат на retry), остальные
 4xx → persistent; набор временных 4xx переопределяется подклассом; уровень лога следует
-классу ошибки; плюс извлечение сообщения об ошибке из тела.
+классу ошибки; срок повтора из ``Retry-After`` (и его источник переопределяется подклассом);
+плюс извлечение сообщения об ошибке из тела.
 
 Клиент создаётся фабрикой ``make_http_client`` (conftest) — она же закрывает его в
 teardown. ``install_mock_transport`` вызывается ДО создания клиента: он патчит
@@ -12,6 +13,8 @@ teardown. ``install_mock_transport`` вызывается ДО создания 
 """
 
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
 from http import HTTPStatus
 
 import httpx
@@ -111,10 +114,6 @@ async def test_other_client_error_status_raises_persistent_error(
         await client.get("/ping")
 
 
-class _ConflictRetryingClient(BaseHTTPClient):
-    _TEMPORARY_CLIENT_ERROR_STATUSES = frozenset({HTTPStatus.CONFLICT})
-
-
 @pytest.mark.parametrize(
     ("status", "error_class"),
     [
@@ -130,11 +129,86 @@ async def test_provider_subclass_overrides_temporary_client_error_statuses(
     error_class: type[Exception],
 ) -> None:
     """Подкласс провайдера заменяет набор временных 4xx; любой 5xx остаётся временным."""
+
+    class ConflictRetryingClient(BaseHTTPClient):
+        _TEMPORARY_CLIENT_ERROR_STATUSES = frozenset({HTTPStatus.CONFLICT})
+
     install_mock_transport(lambda request: httpx.Response(status))
-    client = make_http_client(client_class=_ConflictRetryingClient)
+    client = make_http_client(client_class=ConflictRetryingClient)
 
     with pytest.raises(error_class):
         await client.get("/ping")
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected_retry_after"),
+    [
+        ({"Retry-After": "120"}, timedelta(seconds=120)),
+        ({"Retry-After": " 60 "}, timedelta(seconds=60)),
+        ({"Retry-After": "0"}, timedelta(0)),
+        ({"Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT"}, timedelta(0)),
+        ({"Retry-After": "Wed, 21 Oct 2015 07:28:00 -0000"}, timedelta(0)),
+        ({"Retry-After": "soon"}, None),
+        ({"Retry-After": "-5"}, None),
+        ({"Retry-After": ""}, None),
+        ({"Retry-After": "1" * 20}, None),
+        ({"Retry-After": "1" * 5000}, None),
+        ({b"Retry-After": "٣٠".encode()}, None),
+        ({}, None),
+    ],
+)
+async def test_temporary_error_carries_retry_after_from_header(
+    install_mock_transport: _InstallTransport,
+    make_http_client: _MakeClient,
+    headers: dict[str, str] | dict[bytes, bytes],
+    expected_retry_after: timedelta | None,
+) -> None:
+    """Срок из ``Retry-After``: секунды как есть, прошедшая дата — ноль, нечитаемое или отсутствующее — ``None``."""
+    install_mock_transport(lambda request: httpx.Response(429, headers=headers))
+    client = make_http_client()
+
+    with pytest.raises(ExternalAPITemporaryError) as exc_info:
+        await client.get("/ping")
+
+    assert exc_info.value.retry_after == expected_retry_after
+
+
+async def test_temporary_error_retry_after_counts_down_to_http_date(
+    install_mock_transport: _InstallTransport,
+    make_http_client: _MakeClient,
+) -> None:
+    """``Retry-After`` датой в будущем → срок до неё от текущего момента."""
+    retry_at = datetime.now(tz=UTC) + timedelta(seconds=120)
+    install_mock_transport(
+        lambda request: httpx.Response(503, headers={"Retry-After": format_datetime(retry_at, usegmt=True)})
+    )
+    client = make_http_client()
+
+    with pytest.raises(ExternalAPITemporaryError) as exc_info:
+        await client.get("/ping")
+
+    retry_after = exc_info.value.retry_after
+    assert retry_after is not None
+    assert timedelta(seconds=110) < retry_after <= timedelta(seconds=120)
+
+
+async def test_provider_subclass_overrides_retry_after_source(
+    install_mock_transport: _InstallTransport,
+    make_http_client: _MakeClient,
+) -> None:
+    """Подкласс провайдера берёт срок из своего места в ответе — здесь из тела."""
+
+    class BodyRetryAfterClient(BaseHTTPClient):
+        def _retry_after(self, response: httpx.Response) -> timedelta | None:
+            return timedelta(seconds=response.json()["retry_in"])
+
+    install_mock_transport(lambda request: httpx.Response(429, json={"retry_in": 30}))
+    client = make_http_client(client_class=BodyRetryAfterClient)
+
+    with pytest.raises(ExternalAPITemporaryError) as exc_info:
+        await client.get("/ping")
+
+    assert exc_info.value.retry_after == timedelta(seconds=30)
 
 
 @pytest.mark.parametrize(("status", "expected_level"), [(503, "warning"), (400, "error")])

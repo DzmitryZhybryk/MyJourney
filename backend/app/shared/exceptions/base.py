@@ -1,5 +1,6 @@
 """Базовые исключения приложения."""
 
+from datetime import timedelta
 from enum import Enum
 from typing import ClassVar
 
@@ -155,11 +156,23 @@ class TemporaryError(AppError):
 
     От него наследуется временный сбой любого внешнего вызова, постоянный — от `InternalError`.
     Фоновые задачи повторяются по этому классу, не перечисляя провайдеров.
+    Поле `retry_after` — через сколько зависимость просит повторить; `None`, если она этого не сказала.
     """
 
     category = ErrorCategoryEnum.TEMPORARY
     code = "temporary"
     message = "Не удалось выполнить запрос, повторите попытку позже"
+
+    def __init__(
+        self,
+        *,
+        message: str | None = None,
+        code: str | None = None,
+        details: OptionalDict = None,
+        retry_after: timedelta | None = None,
+    ) -> None:
+        super().__init__(message=message, code=code, details=details)
+        self.retry_after = retry_after
 
 
 class InternalError(AppError):

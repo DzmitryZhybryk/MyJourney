@@ -11,7 +11,7 @@ blueprint'ы всех доменов и передаёт их в ``Procrastinate
 синглтоны: воркер и API-процесс собирают registry по-разному.
 """
 
-from procrastinate import Blueprint, JobContext, RetryStrategy
+from procrastinate import Blueprint, JobContext
 
 from app.auth.application.ports.tasks import SEND_VERIFICATION_EMAIL_TASK
 from app.auth.infra.email_renderer import render_verification_email
@@ -19,6 +19,7 @@ from app.shared.exceptions import TemporaryError
 from app.shared.infra.di.registry import ComponentRegistry
 from app.shared.infra.email import EmailTransportPort
 from app.shared.infra.procrastinate.component import WORKER_REGISTRY_KEY
+from app.shared.infra.procrastinate.retry import RetryAfterStrategy
 from app.shared.logging import get_logger
 
 auth_blueprint = Blueprint()
@@ -29,7 +30,7 @@ logger = get_logger(__name__)
 @auth_blueprint.task(
     name=SEND_VERIFICATION_EMAIL_TASK,
     pass_context=True,
-    retry=RetryStrategy(
+    retry=RetryAfterStrategy(
         max_attempts=3,
         wait=10,
         exponential_wait=2,
@@ -46,8 +47,8 @@ async def send_verification_email(
     """
     Отправляет письмо с одноразовым кодом подтверждения email.
 
-    Временный сбой провайдера (``TemporaryError``) повторяется: 3 попытки, экспоненциальный backoff
-    от 10 сек. Постоянный падает сразу.
+    Временный сбой провайдера (``TemporaryError``) повторяется: до 3 повторов, экспоненциальный backoff
+    от 10 сек; если провайдер назвал срок (до 5 мин) — через него. Постоянный падает сразу.
 
     Scenarios:
         - фоновая отправка письма с кодом: после регистрации и по кнопке в диалоге «Подтвердите email»
