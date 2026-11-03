@@ -15,10 +15,6 @@ class _ComponentA:
     """Ключ-тип компонента для тестов registry."""
 
 
-class _ComponentB:
-    """Второй ключ-тип компонента для тестов registry."""
-
-
 def test_get_returns_registered_value() -> None:
     """``get`` возвращает ровно тот инстанс, что положили под ключом-классом."""
     registry = ComponentRegistry()
@@ -49,6 +45,10 @@ def test_set_overwrites_existing_value() -> None:
 
 def test_contains_reflects_registration() -> None:
     """``in`` отражает наличие ключа в registry."""
+
+    class _ComponentB:
+        """Второй ключ-тип компонента: в registry не кладётся."""
+
     registry = ComponentRegistry()
     registry.set(key=_ComponentA, value=_ComponentA())
 

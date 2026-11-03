@@ -173,8 +173,11 @@ class BaseHTTPClient:
             return None
 
         value = value.strip()
-        if value.isdigit():
-            return timedelta(seconds=int(value))
+        if value.isascii() and value.isdigit():
+            try:
+                return timedelta(seconds=int(value))
+            except OverflowError, ValueError:
+                return None
 
         try:
             retry_at = parsedate_to_datetime(value)

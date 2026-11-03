@@ -10,6 +10,8 @@ import datetime as dt
 import hashlib
 from uuid import UUID, uuid4
 
+from procrastinate.jobs import Job
+
 from app.auth.domain.entities import ChallengeEntity, RefreshTokenEntity, UserCredentialsEntity
 from app.auth.domain.enums import ChallengeTypeEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
@@ -20,6 +22,7 @@ from app.journeys.application.ports.cities_client import CityLocationResponse
 from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.domain.value_objects import GeoPoint
+from app.shared.types import DictStrAny
 from app.users.domain.entities import UserEntity
 
 # Опорные координаты для детерминированных journeys/geo тестов (Москва→Лондон ≈ 2500 км).
@@ -212,4 +215,21 @@ def make_dataset_spec(
         version=version,
         url=url,
         sha256=hashlib.sha256(content).hexdigest(),
+    )
+
+
+def make_job(
+    *,
+    job_id: int | None = None,
+    task_name: str = "some_task",
+    lock: str | None = None,
+    task_kwargs: DictStrAny | None = None,
+) -> Job:
+    return Job(
+        id=job_id,
+        queue="default",
+        lock=lock,
+        queueing_lock=None,
+        task_name=task_name,
+        task_kwargs=task_kwargs or {},
     )

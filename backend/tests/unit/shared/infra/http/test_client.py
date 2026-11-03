@@ -151,13 +151,16 @@ async def test_provider_subclass_overrides_temporary_client_error_statuses(
         ({"Retry-After": "soon"}, None),
         ({"Retry-After": "-5"}, None),
         ({"Retry-After": ""}, None),
+        ({"Retry-After": "1" * 20}, None),
+        ({"Retry-After": "1" * 5000}, None),
+        ({b"Retry-After": "٣٠".encode()}, None),
         ({}, None),
     ],
 )
 async def test_temporary_error_carries_retry_after_from_header(
     install_mock_transport: _InstallTransport,
     make_http_client: _MakeClient,
-    headers: dict[str, str],
+    headers: dict[str, str] | dict[bytes, bytes],
     expected_retry_after: timedelta | None,
 ) -> None:
     """Срок из ``Retry-After``: секунды как есть, прошедшая дата — ноль, нечитаемое или отсутствующее — ``None``."""
