@@ -157,10 +157,15 @@ def _is_not_found(error: Exception) -> bool:
 
 
 def _to_storage_error(*, error: Exception, details: DictStrAny) -> ObjectStorageError:
-    if _is_temporary(error):
-        return ObjectStorageTemporaryError(details=details)
+    error_class = ObjectStorageTemporaryError if _is_temporary(error) else ObjectStoragePersistentError
+    return error_class(details={**details, **_describe_cause(error)})
 
-    return ObjectStoragePersistentError(details=details)
+
+def _describe_cause(error: Exception) -> DictStrAny:
+    if isinstance(error, ClientError):
+        return {"s3_error_code": error.response.get("Error", {}).get("Code"), "s3_status": _status_of(error)}
+
+    return {"sdk_error": type(error).__name__}
 
 
 def _is_temporary(error: Exception) -> bool:

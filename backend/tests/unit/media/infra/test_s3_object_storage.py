@@ -10,6 +10,7 @@ from aiohttp import ClientPayloadError
 from app.media.application.ports.private_storage import ObjectInfo
 from app.media.exceptions import (
     ObjectNotFoundError,
+    ObjectStorageError,
     ObjectStoragePersistentError,
     ObjectStorageTemporaryError,
     ObjectTooLargeError,
@@ -249,13 +250,17 @@ async def test_storage_call_classifies_error_response(
     call: Callable[[S3ObjectStorage], Awaitable[object]],
     error_code: str,
     status: int,
-    error_class: type[Exception],
+    error_class: type[ObjectStorageError],
 ) -> None:
-    """Ответ 5xx, 408, 429 или с временным кодом S3 — временный сбой, остальные отказы — постоянный."""
+    """Ответ 5xx, 408, 429 или с временным кодом S3 — временный сбой, иначе постоянный; код и статус S3 в деталях."""
     s3_stubber.add_client_error(method=operation, service_error_code=error_code, http_status_code=status)
 
-    with pytest.raises(error_class):
+    with pytest.raises(error_class) as error_info:
         await call(storage)
+
+    assert error_info.value.details is not None
+    assert error_info.value.details["s3_error_code"] == error_code
+    assert error_info.value.details["s3_status"] == status
 
 
 @pytest.mark.parametrize(
@@ -287,6 +292,9 @@ async def test_storage_call_unreachable_storage_raises_temporary_error(
     unreachable_storage: S3ObjectStorage,
     call: Callable[[S3ObjectStorage], Awaitable[object]],
 ) -> None:
-    """Хранилище, до которого не достучаться, — временный сбой."""
-    with pytest.raises(ObjectStorageTemporaryError):
+    """Хранилище, до которого не достучаться, — временный сбой; тип ошибки SDK в деталях."""
+    with pytest.raises(ObjectStorageTemporaryError) as error_info:
         await call(unreachable_storage)
+
+    assert error_info.value.details is not None
+    assert error_info.value.details["sdk_error"] == "EndpointConnectionError"

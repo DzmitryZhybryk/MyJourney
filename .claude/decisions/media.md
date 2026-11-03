@@ -48,8 +48,9 @@
 ## A missing object is any 404, for HEAD and GET alike
 - `head_object` answers `None` and `get_object` raises `ObjectNotFoundError` on a 404, whatever its error code.
 - Why: a HEAD response has no body, so a missing bucket and a missing object look the same there; GET follows the
-  same rule so that "no object" means one thing across the port. A missing bucket is a configuration fault the bucket
-  bootstrap catches, not a case a use case branches on.
+  same rule so that "no object" means one thing across the port. A missing bucket is a configuration fault, not a
+  case a use case branches on. Nothing catches it yet: the bootstrap runs only against emulators and the app never
+  checks its buckets; the HEAD that confirms an upload meets it before any GET does.
 - Rejected: telling `NoSuchBucket` from `NoSuchKey` on GET (until 2026-11-02) — protects nothing while HEAD answers
   `None` to a missing bucket.
 - Source: external failure classification (#33), 2026-11-02

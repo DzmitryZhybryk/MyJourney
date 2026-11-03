@@ -123,18 +123,22 @@
 
 ## A handled error reaches the request log line through the request scope; only the logging middleware writes it
 - An exception handler answers the client and hands the exception and its `code` to `remember_handled_error`; the
-  pure-ASGI `HTTPLoggingMiddleware` writes one line per request — type, code and, at ERROR, the traceback. An
-  unhandled exception is logged by the middleware and re-raised.
+  pure-ASGI `HTTPLoggingMiddleware` writes one line per request — type, code, the `details` of an `AppError` and, at
+  ERROR, the traceback. An unhandled exception is logged by the middleware and re-raised.
+- The cause of an external failure reaches the line through `details`, filled by the adapter that classified it
+  (S3 error code and status, or the SDK error type).
 - Why: the handler answers before the request returns to the middleware; without the hand-over the line knew only
   the status, and an INTERNAL error was logged as a bare 500. One writer keeps one line per request with its context.
 - Rejected: logging in the handler — two lines per error, and the handler's line has no request fields.
+- Rejected: a traceback on a TEMPORARY line to carry the chained cause — the failure is not our bug, our stack says
+  nothing about it, and the adapter already knows the cause.
 - Rejected: re-raising INTERNAL from the handler — the next reader "fixes" a handler that raises instead of answering;
   the error would go through `ServerErrorMiddleware`, which re-raises to the server after answering.
 - Rejected: FastAPI's native telemetry logs instead of the middleware — they record only unhandled exceptions and
   validation failures, never a handled `AppError`, write no line per request, and need an OTLP log pipeline.
 - Rejected: `BaseHTTPMiddleware` as the base — it runs the app in a separate task, so context bound deeper in the
   request (`user_id`) never reaches the line.
-- Source: logging audit, 2026-11-02
+- Source: logging audit, 2026-11-02; `details` in the line — PR #197, 2026-11-03
 
 ## An incoming `traceparent` is accepted at the edge
 - `ops/Caddyfile` passes `traceparent`/`tracestate` to the API, so a request's trace may start in the client.
