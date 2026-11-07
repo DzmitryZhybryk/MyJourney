@@ -94,6 +94,31 @@
   box-shadow: 0 0 0 4px rgb(var(--sun-rgb) / 0.22);
 }
 
+/* Profile menu label: who is signed in. Long names and emails are cut, not wrapped. */
+.app-menu-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.app-menu-identity__name,
+.app-menu-identity__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-menu-identity__name {
+  font: 600 var(--fs-15)/1.25 var(--font-display);
+  color: var(--text);
+}
+
+.app-menu-identity__email {
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
 /* ---- Primary navigation links in the mobile Drawer (burger menu) -------- */
 .app-drawer-link {
   display: block;

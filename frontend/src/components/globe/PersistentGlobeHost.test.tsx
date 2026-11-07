@@ -109,15 +109,18 @@ describe("PersistentGlobeHost — грань по маршруту", () => {
     expect(screenAttr(container, "data-visible")).toBe("true");
   });
 
-  it("на /journeys прячет глобус (data-visible=false, грань остаётся home)", () => {
-    const { container } = renderWithProviders(<PersistentGlobeHost />, {
-      route: "/journeys",
-      authValue: authedValue("user-1"),
-    });
+  it.each(["/journeys", "/profile"])(
+    "на %s прячет глобус (data-visible=false, грань остаётся home)",
+    (route) => {
+      const { container } = renderWithProviders(<PersistentGlobeHost />, {
+        route,
+        authValue: authedValue("user-1"),
+      });
 
-    expect(screenAttr(container, "data-screen")).toBe("home");
-    expect(screenAttr(container, "data-visible")).toBe("false");
-  });
+      expect(screenAttr(container, "data-screen")).toBe("home");
+      expect(screenAttr(container, "data-visible")).toBe("false");
+    },
+  );
 
   it.each([
     { route: "/home", interactive: "true" },

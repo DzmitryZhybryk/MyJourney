@@ -16,7 +16,7 @@ const BRAND = "MyJourney";
  */
 export function DocumentTitle() {
   const { pathname } = useLocation();
-  const { t, i18n } = useTranslation(["common", "auth", "journeys"]);
+  const { t, i18n } = useTranslation(["common", "auth", "journeys", "profile"]);
 
   useEffect(() => {
     const title = resolveTitle(pathname, t);
@@ -36,6 +36,7 @@ function resolveTitle(pathname: string, t: (key: string) => string): string | nu
   if (pathname.startsWith("/home")) return t("pageTitle.home");
   if (pathname.startsWith("/journeys/add")) return t("journeys:addJourney.title");
   if (pathname.startsWith("/journeys")) return t("journeys:title");
+  if (pathname.startsWith("/profile")) return t("profile:title");
 
   return null;
 }

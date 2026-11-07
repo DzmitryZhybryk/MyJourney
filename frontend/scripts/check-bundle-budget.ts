@@ -49,6 +49,7 @@ const PAGES: readonly Page[] = [
   { name: "/login", budget: "app", modules: ["src/pages/PublicLayout.tsx", "src/pages/LoginPage.tsx"] },
   { name: "/signup", budget: "app", modules: ["src/pages/PublicLayout.tsx", "src/pages/SignUpPage.tsx"] },
   { name: "/home", budget: "app", modules: ["src/pages/HomePage.tsx"] },
+  { name: "/profile", budget: "app", modules: ["src/pages/profile/ProfilePage.tsx"] },
   // The shared map (country borders) loads lazily from the layout on every tab that shows it, so it
   // is counted there explicitly; /journeys/add never loads it.
   {

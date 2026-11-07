@@ -14,7 +14,7 @@ import { initReactI18next } from "react-i18next";
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGE_CODES } from "./languages";
 
 /** Translation namespaces. A locale file name is the namespace (`<code>/<ns>.json`). */
-export const I18N_NAMESPACES = ["common", "auth", "errors", "journeys", "landing"] as const;
+export const I18N_NAMESPACES = ["common", "auth", "errors", "journeys", "landing", "profile"] as const;
 
 /** localStorage key holding the chosen language. */
 export const LANGUAGE_STORAGE_KEY = "myjourney.language";

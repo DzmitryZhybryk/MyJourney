@@ -1,0 +1,42 @@
+/*
+ * Editable value: dashed underline at rest (solid underlines are links), a soft backing on hover,
+ * the accent outline on keyboard focus. Read-only values next to it carry none of these.
+ */
+.editable-value {
+  margin: -3px -6px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dashed;
+  text-decoration-color: rgb(var(--muted-on-dark-rgb) / 0.55);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: background var(--dur-fast) ease, text-decoration-color var(--dur-fast) ease;
+}
+
+/* A decoration does not propagate into atomic inline boxes (an inline-flex icon + label), so
+   descendants take it over explicitly. */
+.editable-value * {
+  text-decoration: inherit;
+}
+
+.editable-value:hover:not([aria-disabled="true"]) {
+  background: rgb(var(--ink-on-dark-rgb) / 0.08);
+  text-decoration-color: var(--text-muted);
+}
+
+.editable-value:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.editable-value[aria-disabled="true"] {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editable-value {
+    transition: none;
+  }
+}

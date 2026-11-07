@@ -38,12 +38,39 @@ class UserEntity(TimestampedEntityMixin):
             marketing_emails_consent=marketing_emails_consent,
         )
 
+    def update_profile(
+        self,
+        *,
+        display_name: str | None = None,
+        marketing_emails_consent: bool | None = None,
+    ) -> None:
+        """
+        Меняет переданные поля профиля; ``None`` — поле не меняется.
+
+        Scenarios:
+            - правка имени на странице профиля
+            - отказ от рассылки или подписка на неё на странице профиля
+
+        Args:
+            display_name: Новое имя, уже обрезанное по краям
+            marketing_emails_consent: Согласие на маркетинговые письма
+        """
+        if display_name is not None:
+            self.display_name = display_name
+
+        if marketing_emails_consent is not None:
+            self.marketing_emails_consent = marketing_emails_consent
+
+        self._mark_updated()
+
     def ensure_not_deleted(self) -> None:
         """
         Гарантирует, что пользователь не удалён.
 
         Scenarios:
-            - приветствие на главной и имя в меню профиля: удалённый пользователь разлогинивается по 410
+            - чтение профиля (приветствие на главной, страница профиля, меню в шапке): удалённый
+              пользователь разлогинивается по 410
+            - правка профиля на странице профиля
 
         Raises:
             UserDeletedError: Если пользователь удалён (soft-delete).

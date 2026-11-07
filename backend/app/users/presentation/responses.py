@@ -7,7 +7,7 @@ from app.shared.infra.jwt import InvalidAccessTokenError
 from app.shared.types import DictStrAny
 from app.users.exceptions import UserDeletedError, UserNotFoundError
 
-GET_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -45,3 +45,7 @@ GET_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
         },
     },
 }
+
+GET_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {**_CURRENT_USER_RESPONSES}
+
+UPDATE_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {**_CURRENT_USER_RESPONSES}
