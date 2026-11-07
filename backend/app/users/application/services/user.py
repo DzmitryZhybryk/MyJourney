@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from app.users.application.ports.unit_of_work import UserUnitOfWorkPort
-from app.users.application.schemas.commands import CreateUserCommand
+from app.users.application.schemas.commands import CreateUserCommand, UpdateCurrentUserCommand
 from app.users.application.schemas.results import CurrentUserResult
 from app.users.domain.entities import UserEntity
 from app.users.exceptions import UserNotFoundError
@@ -46,7 +46,7 @@ class UserService:
         ничего не откатывает.
 
         Scenarios:
-            - приветствие на главной и имя в меню профиля в шапке
+            - чтение профиля: приветствие на главной, страница профиля, меню в шапке
 
         Args:
             user_id: Идентификатор пользователя из access-токена.
@@ -65,4 +65,44 @@ class UserService:
 
             user_entity.ensure_not_deleted()
 
-        return CurrentUserResult(display_name=user_entity.display_name)
+        return CurrentUserResult(
+            display_name=user_entity.display_name,
+            marketing_emails_consent=user_entity.marketing_emails_consent,
+        )
+
+    async def update_current_user(self, *, user_id: UUID, command: UpdateCurrentUserCommand) -> CurrentUserResult:
+        """
+        Меняет переданные поля профиля текущего пользователя.
+
+        Scenarios:
+            - правка имени на странице профиля
+            - отказ от рассылки или подписка на неё на странице профиля
+
+        Args:
+            user_id: Идентификатор пользователя из access-токена.
+            command: Новые значения полей; ``None`` — поле не меняется.
+
+        Returns:
+            Обновлённый профиль.
+
+        Raises:
+            UserNotFoundError: Если пользователь не найден.
+            UserDeletedError: Если пользователь удалён (soft-delete).
+        """
+        async with self._uow.transaction():
+            user_entity = await self._uow.user_repository.find_user_by_id_for_update(user_id=user_id)
+            if user_entity is None:
+                raise UserNotFoundError()
+
+            user_entity.ensure_not_deleted()
+            user_entity.update_profile(
+                display_name=command.display_name,
+                marketing_emails_consent=command.marketing_emails_consent,
+            )
+            await self._uow.user_repository.update_user_by_id(user_entity=user_entity)
+            await self._uow.commit()
+
+        return CurrentUserResult(
+            display_name=user_entity.display_name,
+            marketing_emails_consent=user_entity.marketing_emails_consent,
+        )

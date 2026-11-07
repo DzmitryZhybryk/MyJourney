@@ -463,29 +463,6 @@
   outline-offset: 2px;
 }
 
-/* A value edited in place reads as text; a soft backing on hover shows it can be changed. */
-.journey-card__value {
-  margin: -3px -6px;
-  padding: 3px 6px;
-  border-radius: 8px;
-  color: inherit;
-  font: inherit;
-  transition: background var(--dur-fast) ease;
-}
-
-.journey-card__value:hover:not([aria-disabled="true"]) {
-  background: rgb(var(--ink-on-dark-rgb) / 0.08);
-}
-
-.journey-card__value:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.journey-card__value[aria-disabled="true"] {
-  cursor: default;
-}
-
 .journey-card__route {
   display: flex;
   align-items: center;
@@ -642,7 +619,6 @@
   .year-header,
   .journey-feed--sorting .year-header,
   .journey-card__back,
-  .journey-card__value,
   .journey-card__swap,
   .journey-card__distance {
     transition: none;

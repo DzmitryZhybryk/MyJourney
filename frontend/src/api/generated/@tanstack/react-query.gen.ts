@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createJourney, deleteJourney, estimateJourneyDistance, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMovementsMap, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateJourney, verifyEmail } from '../sdk.gen';
-import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
+import { createJourney, deleteJourney, estimateJourneyDistance, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMovementsMap, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, verifyEmail } from '../sdk.gen';
+import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
   Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -411,3 +411,17 @@ export const getCurrentUserOptions = (options?: Options<GetCurrentUserData>) => 
   }),
   queryKey: getCurrentUserQueryKey(options)
 });
+
+/**
+ * Update Current User
+ */
+export const updateCurrentUserMutation = (options?: Partial<Options<UpdateCurrentUserData>>): UseMutationOptions<UpdateCurrentUserResponse, UpdateCurrentUserError, Options<UpdateCurrentUserData>> => {
+  const mutationOptions: UseMutationOptions<UpdateCurrentUserResponse, UpdateCurrentUserError, Options<UpdateCurrentUserData>> = {
+    mutationFn: async (fnOptions) => await updateCurrentUser({
+      ...options,
+      ...fnOptions,
+      throwOnError: true
+    })
+  };
+  return mutationOptions;
+};

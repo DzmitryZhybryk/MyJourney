@@ -1,6 +1,8 @@
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { makeAuthValue, renderWithProviders, screen } from "../test/render";
+import { server, TEST_CURRENT_ACCOUNT, TEST_CURRENT_USER } from "../test/handlers";
+import { findMenuItem, makeAuthValue, renderRoutes, renderWithProviders, screen } from "../test/render";
 import { AppHeader } from "./AppHeader";
 
 describe("AppHeader", () => {
@@ -46,12 +48,39 @@ describe("AppHeader", () => {
     expect(drawerLink).toHaveAttribute("aria-current", "page");
   });
 
-  it("после загрузки профиля аватар показывает инициалы displayName", async () => {
-    renderWithProviders(<AppHeader />, {
+  it("меню профиля подписано именем и email текущего пользователя", async () => {
+    const { user } = renderWithProviders(<AppHeader />, {
       authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
     });
 
-    // Mantine Avatar renders the first two letters of a single-word name: "traveler" -> "TR".
-    expect(await screen.findByText("TR")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open profile menu" }));
+
+    expect(await screen.findByText(TEST_CURRENT_USER.displayName)).toBeInTheDocument();
+    expect(await screen.findByText(TEST_CURRENT_ACCOUNT.email)).toBeInTheDocument();
+  });
+
+  it("пока профиль не загрузился, меню подписано «Account»", async () => {
+    server.use(http.get("/v1/users/me/", () => HttpResponse.json({ code: "temporary", message: "" }, { status: 503 })));
+    const { user } = renderWithProviders(<AppHeader />, {
+      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open profile menu" }));
+
+    expect(await screen.findByText("Account")).toBeInTheDocument();
+  });
+
+  it("пункт «Profile» ведёт на страницу профиля", async () => {
+    const { user } = renderRoutes({
+      element: <AppHeader />,
+      path: "/home",
+      landings: [{ path: "/profile", label: "profile-landing" }],
+      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open profile menu" }));
+    await user.click(await findMenuItem("Profile"));
+
+    expect(await screen.findByText("profile-landing")).toBeInTheDocument();
   });
 });

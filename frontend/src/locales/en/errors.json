@@ -15,6 +15,10 @@
     "invalid_refresh_token": "Your session has expired. Please sign in again",
     "account_not_found": "Your session has expired. Please sign in again"
   },
+  "users": {
+    "user_not_found": "Account not found. Sign in again",
+    "user_deleted": "This account has been deleted"
+  },
   "journeys": {
     "same_origin_destination": "Departure and destination must be different",
     "date_in_future": "The travel year can't be in the future",

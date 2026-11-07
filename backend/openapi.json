@@ -1894,6 +1894,110 @@
             "HTTPBearer": []
           }
         ]
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update Current User",
+        "operationId": "update_current_user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCurrentUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Невалидный или истёкший access-токен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "auth.invalid_access_token",
+                  "message": "Невалидный или истёкший access-токен",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "users.user_not_found",
+                  "message": "Пользователь не найден",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Пользователь удалён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "users.user_deleted",
+                  "message": "Пользователь удалён",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     }
   },
@@ -2043,11 +2147,16 @@
           "displayName": {
             "type": "string",
             "title": "Displayname"
+          },
+          "marketingEmailsConsent": {
+            "type": "boolean",
+            "title": "Marketingemailsconsent"
           }
         },
         "type": "object",
         "required": [
-          "displayName"
+          "displayName",
+          "marketingEmailsConsent"
         ],
         "title": "CurrentUserResponse"
       },
@@ -2604,6 +2713,23 @@
         ],
         "title": "TransportTypeEnum",
         "description": "Среда передвижения в поездке (а не конкретный вид транспорта).\n\nКатегория среды, не средство: пешком/машина/поезд = ``LAND``, самолёт = ``AIR``,\nпаром/корабль = ``WATER``. Зеркалит string-literal union на фронте."
+      },
+      "UpdateCurrentUserRequest": {
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Displayname"
+          },
+          "marketingEmailsConsent": {
+            "type": "boolean",
+            "title": "Marketingemailsconsent"
+          }
+        },
+        "type": "object",
+        "title": "UpdateCurrentUserRequest",
+        "description": "Поля профиля, которые меняются. Отсутствующее поле не меняется; ``null`` — 422."
       },
       "UpdateJourneyRequest": {
         "properties": {

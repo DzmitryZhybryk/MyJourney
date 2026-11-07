@@ -1,0 +1,187 @@
+/*
+ * Profile: one glass card on the night surface (the globe is hidden on this route). Three groups
+ * split by hairlines: how the user is shown, what they sign in with, what they receive.
+ */
+
+.profile-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--content-offset-top) var(--header-inset) 48px;
+}
+
+.profile-card {
+  --profile-input-bg: rgb(var(--ink-deep-rgb) / 0.5);
+  --profile-input-bd: rgb(var(--ink-on-dark-rgb) / 0.18);
+
+  width: min(100%, 560px);
+  padding: 32px;
+  border-radius: 22px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-card);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 30px 70px rgb(var(--shadow-rgb) / 0.55);
+  color: var(--text);
+}
+
+.profile-card__loader {
+  display: block;
+  margin: 24px auto;
+}
+
+/* ---- Identity: avatar + the name as the page heading ---- */
+
+.profile-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.profile-identity__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.profile-name {
+  margin: 0;
+}
+
+.profile-name__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: 600 var(--fs-30)/1.15 var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* The field keeps the heading's type, so editing reads as the same name becoming writable. */
+.profile-card .profile-name__input {
+  height: auto;
+  padding: 4px 10px;
+  font: 600 var(--fs-30)/1.15 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--text);
+  background-color: var(--profile-input-bg);
+  border-color: var(--profile-input-bd);
+}
+
+.profile-card .profile-name__input:focus {
+  border-color: var(--accent);
+}
+
+.profile-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-14);
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* ---- Sections under the identity ---- */
+
+.profile-section {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+}
+
+.profile-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 14px 24px;
+  margin: 0;
+}
+
+.profile-fact {
+  display: contents;
+}
+
+.profile-fact__term {
+  padding-top: 4px;
+  font: var(--fs-11) / 1 var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-stamp);
+}
+
+.profile-fact__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-15);
+}
+
+.profile-fact__email {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-unverified {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The same yellow dot as on the header avatar: one sign for "email not verified". */
+.profile-unverified__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+}
+
+.profile-unverified__mark::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mantine-color-yellow-filled);
+}
+
+/* ---- Marketing emails ---- */
+
+.profile-consent__body {
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.profile-consent__label {
+  font-size: var(--fs-15);
+  color: var(--text);
+}
+
+.profile-consent__description {
+  margin-top: 4px;
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+}
+
+/* Narrow screens: the avatar goes above the name, facts stack under their stamps. */
+@media (max-width: 36em) {
+  .profile-card {
+    padding: 24px 20px;
+  }
+
+  .profile-identity {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .profile-facts {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .profile-fact + .profile-fact .profile-fact__term {
+    margin-top: 10px;
+  }
+}

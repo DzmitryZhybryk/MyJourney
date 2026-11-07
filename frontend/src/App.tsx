@@ -37,6 +37,9 @@ const MovementsMapView = lazy(() =>
 const AllJourneysView = lazy(() =>
   import("./pages/journeys/all/AllJourneysView").then((m) => ({ default: m.AllJourneysView })),
 );
+const ProfilePage = lazy(() =>
+  import("./pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("./pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 
@@ -123,6 +126,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <HomePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
                 />

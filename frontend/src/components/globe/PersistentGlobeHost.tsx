@@ -25,7 +25,7 @@ const GlobeCanvas = lazy(() => import("./GlobeCanvas").then((m) => ({ default: m
 /**
  * A globe "screen": a camera face plus sphere framing (`data-screen`). Public faces
  * (landing/signup/login), authenticated `home`, and `journeyAdd` (the journey form column, framed
- * by the slot the page publishes). Other `/journeys*` routes have no face: the globe hides there
+ * by the slot the page publishes). Other `/journeys*` routes and `/profile` have no face: the globe hides there
  * (`visible=false`), staying on the last one.
  */
 type Screen = "landing" | "signup" | "login" | "home" | "journeyAdd";
@@ -78,7 +78,7 @@ function viewForPath(pathname: string, hasSlot: boolean, hasRouteCity: boolean):
     };
   }
 
-  if (pathname.startsWith("/journeys")) {
+  if (pathname.startsWith("/journeys") || pathname.startsWith("/profile")) {
     // Hidden and paused: no rotation needed (a guard in case the pause has not landed yet).
     return { screen: "home", pov: SCREEN_POV.home, autoRotate: false, interactive: false, visible: false };
   }

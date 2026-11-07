@@ -113,6 +113,10 @@ export type CurrentUserResponse = {
    * Displayname
    */
   displayName: string;
+  /**
+   * Marketingemailsconsent
+   */
+  marketingEmailsConsent: boolean;
 };
 
 /**
@@ -489,6 +493,22 @@ export type TokenResponse = {
  * паром/корабль = ``WATER``. Зеркалит string-literal union на фронте.
  */
 export type TransportTypeEnum = 'land' | 'air' | 'water';
+
+/**
+ * UpdateCurrentUserRequest
+ *
+ * Поля профиля, которые меняются. Отсутствующее поле не меняется; ``null`` — 422.
+ */
+export type UpdateCurrentUserRequest = {
+  /**
+   * Displayname
+   */
+  displayName?: string;
+  /**
+   * Marketingemailsconsent
+   */
+  marketingEmailsConsent?: boolean;
+};
 
 /**
  * UpdateJourneyRequest
@@ -1333,3 +1353,44 @@ export type GetCurrentUserResponses = {
 };
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
+
+export type UpdateCurrentUserData = {
+  body: UpdateCurrentUserRequest;
+  path?: never;
+  query?: never;
+  url: '/v1/users/me/';
+};
+
+export type UpdateCurrentUserErrors = {
+  /**
+   * Невалидный или истёкший access-токен
+   */
+  401: ErrorResponse;
+  /**
+   * Пользователь не найден
+   */
+  404: ErrorResponse;
+  /**
+   * Пользователь удалён
+   */
+  410: ErrorResponse;
+  /**
+   * Ошибка валидации запроса
+   */
+  422: ErrorResponse;
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type UpdateCurrentUserError = UpdateCurrentUserErrors[keyof UpdateCurrentUserErrors];
+
+export type UpdateCurrentUserResponses = {
+  /**
+   * Successful Response
+   */
+  200: CurrentUserResponse;
+};
+
+export type UpdateCurrentUserResponse = UpdateCurrentUserResponses[keyof UpdateCurrentUserResponses];

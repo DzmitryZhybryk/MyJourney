@@ -1,11 +1,13 @@
-import { Avatar, Burger, Drawer, Group, Indicator, Menu, Stack, UnstyledButton } from "@mantine/core";
+import { Burger, Drawer, Group, Indicator, Menu, Stack, UnstyledButton } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 
-import { logout } from "../api/sdk";
+import { getCurrentAccountOptions, logout } from "../api/sdk";
 import { useAuth } from "../auth/useAuth";
 import { useCurrentUser } from "../user/useCurrentUser";
+import { AvatarSilhouette } from "./AvatarSilhouette";
 import { BrandMark } from "./BrandMark";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -31,11 +33,11 @@ export function AppHeader() {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { emailVerified, clearSession, openVerifyDialog } = useAuth();
+  const { isAuthenticated, emailVerified, clearSession, openVerifyDialog } = useAuth();
   const currentUser = useCurrentUser();
+  const { data: account } = useQuery({ ...getCurrentAccountOptions(), enabled: isAuthenticated });
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
 
-  // Until the profile loads, name is undefined and Mantine Avatar shows a generic icon.
   const profileName = currentUser.status === "ready" ? currentUser.user.displayName : undefined;
 
   const handleLogout = async () => {
@@ -87,7 +89,7 @@ export function AppHeader() {
         <div className="app-header__user">
           <Group gap="xs" align="center" wrap="nowrap">
             <LanguageSwitcher />
-            <Menu position="bottom-end" withArrow shadow="md" radius="md" width={200}>
+            <Menu position="bottom-end" withArrow shadow="md" radius="md" width={240}>
               <Menu.Target>
                 <UnstyledButton aria-label={t("profile.menuButton")} className="app-avatar-button">
                   <Indicator
@@ -97,13 +99,20 @@ export function AppHeader() {
                     offset={4}
                     withBorder
                   >
-                    <Avatar radius="xl" size="md" color="slate" name={profileName} />
+                    <AvatarSilhouette size={38} />
                   </Indicator>
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>{t("profile.account")}</Menu.Label>
-                <Menu.Item>{t("profile.profile")}</Menu.Item>
+                <Menu.Label className="app-menu-identity">
+                  <span className="app-menu-identity__name">{profileName ?? t("profile.account")}</span>
+                  {account !== undefined && (
+                    <span className="app-menu-identity__email">{account.email}</span>
+                  )}
+                </Menu.Label>
+                <Menu.Item component={Link} to="/profile">
+                  {t("profile.profile")}
+                </Menu.Item>
                 {!emailVerified && (
                   <Menu.Item onClick={openVerifyDialog}>{t("profile.verifyEmail")}</Menu.Item>
                 )}
