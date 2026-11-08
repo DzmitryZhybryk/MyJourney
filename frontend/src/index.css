@@ -216,6 +216,7 @@
   --text-muted: var(--muted-on-dark);
   /* Mono "stamps" (section labels, coordinates, dates) in the sunset glow. */
   --text-stamp: var(--glow);
+  --text-link: var(--glow);
   --hairline: var(--line-dark);
   --accent: var(--sun);
   --accent-deep: var(--sun-deep);

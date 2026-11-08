@@ -210,7 +210,7 @@ export function JourneyCard({ journey, nameOf }: JourneyCardProps) {
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Item
-              color="red"
+              color="var(--text-error)"
               onClick={() => {
                 setIsDeleteLoaded(true);
                 setIsDeleteOpen(true);

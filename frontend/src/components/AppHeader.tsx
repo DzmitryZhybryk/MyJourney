@@ -117,7 +117,7 @@ export function AppHeader() {
                   <Menu.Item onClick={openVerifyDialog}>{t("profile.verifyEmail")}</Menu.Item>
                 )}
                 <Menu.Divider />
-                <Menu.Item color="red" onClick={handleLogout}>
+                <Menu.Item color="var(--text-error)"onClick={handleLogout}>
                   {t("profile.logout")}
                 </Menu.Item>
               </Menu.Dropdown>
