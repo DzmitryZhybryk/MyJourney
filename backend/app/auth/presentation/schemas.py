@@ -7,7 +7,10 @@ from app.shared.schemas.base import CamelModel
 
 
 class RegisterRequest(CamelModel):
-    username: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=50)]
+    username: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_.-]+$"),
+    ]
     email: Annotated[EmailStr, Field(max_length=254)]
     password: Annotated[SecretStr, Field(min_length=8, max_length=50)]
     terms_accepted: bool
@@ -49,7 +52,10 @@ class LoginRequest(CamelModel):
     # они непустые и в пределах max. Иначе юзер со «старым» коротким паролем
     # залочится на входе; неверные креды и так дадут 401, а не 422.
     # Пробелы по краям срезаются, как у username на регистрации: иначе « neo» не найдёт «neo».
-    login: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=254)]
+    login: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=254, pattern=r"^[^\x00-\x1F\x7F-\x9F]*$"),
+    ]
     password: Annotated[SecretStr, Field(min_length=1, max_length=50)]
 
 
