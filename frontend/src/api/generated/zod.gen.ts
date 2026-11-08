@@ -318,7 +318,7 @@ export const zJourneysFeedResponse = z.object({
  * Поля профиля, которые меняются. Отсутствующее поле не меняется; ``null`` — 422.
  */
 export const zUpdateCurrentUserRequest = z.object({
-  displayName: z.optional(z.string().check(z.minLength(1), z.maxLength(50))),
+  displayName: z.optional(z.string().check(z.minLength(1), z.maxLength(50), z.regex(/^[^\x00-\x1F\x7F-\x9F]*$/))),
   marketingEmailsConsent: z.optional(z.boolean())
 });
 

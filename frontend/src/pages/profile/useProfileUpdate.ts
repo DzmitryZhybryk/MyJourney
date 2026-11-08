@@ -26,6 +26,10 @@ export function useProfileUpdate(): ProfileUpdate {
 
   return useMutation({
     ...updateCurrentUserMutation(),
+    // Name and consent save through separate instances of this hook. A shared scope runs their
+    // PATCHes one after another, so responses arrive in server order and the last one written to
+    // the cache is the newest profile; in parallel an older response could land last.
+    scope: { id: "profile-update" },
     onSuccess: (profile) => {
       queryClient.setQueryData(getCurrentUserQueryKey(), profile);
     },

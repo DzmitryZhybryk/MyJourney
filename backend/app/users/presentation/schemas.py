@@ -18,7 +18,11 @@ class UpdateCurrentUserRequest(CamelModel):
     Поля профиля, которые меняются. Отсутствующее поле не меняется; ``null`` — 422.
     """
 
-    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)] | MISSING = (
-        MISSING
-    )
+    display_name: (
+        Annotated[
+            str,
+            StringConstraints(strip_whitespace=True, min_length=1, max_length=50, pattern=r"^[^\x00-\x1F\x7F-\x9F]*$"),
+        ]
+        | MISSING
+    ) = MISSING
     marketing_emails_consent: bool | MISSING = MISSING

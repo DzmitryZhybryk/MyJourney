@@ -43,6 +43,7 @@ describe("ProfilePage — данные и имя", () => {
     await user.type(input, "  Alice D.  {Enter}");
 
     expect(await screen.findByRole("heading", { name: "Alice D." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Alice D." })).toHaveFocus();
     expect(sentBody).toEqual({ displayName: "Alice D." });
     expect(queryClient.getQueryData(getCurrentUserQueryKey())).toEqual({
       ...TEST_CURRENT_USER,
@@ -75,7 +76,73 @@ describe("ProfilePage — данные и имя", () => {
 
     expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
     expect(screen.getByRole("heading", { name: TEST_CURRENT_USER.displayName })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: TEST_CURRENT_USER.displayName })).toHaveFocus();
     expect(patchCount).toBe(0);
+  });
+
+  it("Escape во время сохранения не закрывает поле, и ошибка сохранения видна", async () => {
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let patchCount = 0;
+    server.use(
+      http.patch("/v1/users/me/", async () => {
+        patchCount += 1;
+        await released;
+        return HttpResponse.json({ code: "temporary", message: "" }, { status: 503 });
+      }),
+    );
+    const { user } = renderProfile();
+
+    await user.click(await screen.findByRole("button", { name: TEST_CURRENT_USER.displayName }));
+    const input = screen.getByRole("textbox", { name: "Name" });
+    await user.type(input, "x{Enter}");
+    await waitFor(() => expect(patchCount).toBe(1));
+    await user.type(input, "{Escape}");
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+    release();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn't complete the request. Please try again a bit later.",
+    );
+  });
+
+  it("имя и согласие сохраняются по очереди, и в кэше остаётся профиль с обеими правками", async () => {
+    let releaseName!: () => void;
+    const nameReleased = new Promise<void>((resolve) => {
+      releaseName = resolve;
+    });
+    let serverProfile = { ...TEST_CURRENT_USER };
+    const sentBodies: unknown[] = [];
+    server.use(
+      http.patch("/v1/users/me/", async ({ request }) => {
+        const body = (await request.json()) as Partial<typeof TEST_CURRENT_USER>;
+        sentBodies.push(body);
+        serverProfile = { ...serverProfile, ...body };
+        const snapshot = serverProfile;
+        if ("displayName" in body) await nameReleased;
+        return HttpResponse.json(snapshot);
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    const { user } = renderProfile({ authValue: VERIFIED, queryClient });
+
+    await user.click(await screen.findByRole("button", { name: TEST_CURRENT_USER.displayName }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "x{Enter}");
+    await waitFor(() => expect(sentBodies).toHaveLength(1));
+    await user.click(screen.getByRole("switch", { name: /^Product updates and news by email/u }));
+
+    expect(sentBodies).toHaveLength(1);
+    releaseName();
+    await waitFor(() => expect(sentBodies).toHaveLength(2));
+    await waitFor(() =>
+      expect(queryClient.getQueryData(getCurrentUserQueryKey())).toEqual({
+        ...TEST_CURRENT_USER,
+        displayName: `${TEST_CURRENT_USER.displayName}x`,
+        marketingEmailsConsent: true,
+      }),
+    );
   });
 
   it("неизменённое имя закрывает поле без запроса", async () => {

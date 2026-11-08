@@ -26,15 +26,23 @@ export function ProfileName({ displayName }: ProfileNameProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const update = useProfileUpdate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const valueRef = useRef<HTMLButtonElement>(null);
+  const hasEditedRef = useRef(false);
   const form = useForm<NameFormValues>({
     mode: "controlled",
     initialValues: { displayName },
     validate: { displayName: validateDisplayName },
   });
 
-  // The field replaces the button the user just pressed, so focus has to follow it there.
+  // The field and the value replace each other, so focus has to follow whichever one is shown;
+  // otherwise closing the field drops focus to <body>. The first render must not steal focus.
   useEffect(() => {
-    if (isEditing) inputRef.current?.focus();
+    if (isEditing) {
+      hasEditedRef.current = true;
+      inputRef.current?.focus();
+    } else if (hasEditedRef.current) {
+      valueRef.current?.focus();
+    }
   }, [isEditing]);
 
   const startEditing = () => {
@@ -67,7 +75,7 @@ export function ProfileName({ displayName }: ProfileNameProps) {
   if (!isEditing) {
     return (
       <h1 className="profile-name profile-name__text">
-        <EditableValue onClick={startEditing}>{displayName}</EditableValue>
+        <EditableValue ref={valueRef} onClick={startEditing}>{displayName}</EditableValue>
       </h1>
     );
   }
@@ -82,7 +90,8 @@ export function ProfileName({ displayName }: ProfileNameProps) {
         {...withLocalizedError(form.getInputProps("displayName"))}
         ref={inputRef}
         onKeyDown={(event) => {
-          if (event.key === "Escape") cancel();
+          // A request in flight keeps the form: closing it would hide the error of a failed save.
+          if (event.key === "Escape" && !update.isPending) cancel();
         }}
         aria-label={t("name.label")}
         classNames={{ input: "profile-name__input" }}

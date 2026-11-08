@@ -16,8 +16,9 @@
 }
 
 /* A decoration does not propagate into atomic inline boxes (an inline-flex icon + label), so
-   descendants take it over explicitly. */
-.editable-value * {
+   direct children take it over explicitly. Only direct ones: a nested element would inherit the
+   child's decoration and draw a second line over the first. */
+.editable-value > * {
   text-decoration: inherit;
 }
 

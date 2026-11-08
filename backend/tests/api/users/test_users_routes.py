@@ -130,10 +130,13 @@ async def test_update_current_user_absent_field_is_unchanged(
         {"displayName": ""},
         {"displayName": "   "},
         {"displayName": "a" * 51},
+        {"displayName": "a\u0000b"},
+        {"displayName": "a\nb"},
+        {"displayName": "a\u0085b"},
         {"displayName": None},
         {"marketingEmailsConsent": None},
     ],
-    ids=["empty", "whitespace-only", "51-chars", "null-name", "null-consent"],
+    ids=["empty", "whitespace-only", "51-chars", "nul-char", "newline", "c1-control", "null-name", "null-consent"],
 )
 async def test_update_current_user_invalid_body_returns_422_and_changes_nothing(
     client: AsyncClient,
@@ -141,7 +144,7 @@ async def test_update_current_user_invalid_body_returns_422_and_changes_nothing(
     mint_access_token: Callable[..., str],
     body: dict[str, Any],
 ) -> None:
-    """422 validation_error: пустое/пробельное/длинное имя и явный null; профиль не тронут."""
+    """422 validation_error: неверное имя или явный null; профиль не тронут."""
     user_entity = make_user_entity(display_name="alice", marketing_emails_consent=True)
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
