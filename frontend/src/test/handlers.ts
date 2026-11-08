@@ -12,7 +12,13 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
-import type { CitySearchItem, CurrentUserResponse, JourneyFeedEntry, MovementsMapResponse } from "../api/sdk";
+import type {
+  CitySearchItem,
+  CurrentAccountResponse,
+  CurrentUserResponse,
+  JourneyFeedEntry,
+  MovementsMapResponse,
+} from "../api/sdk";
 
 /**
  * Minimal gazetteer for autocomplete component tests (`/v1/geo/cities/search/`). Names are already
@@ -87,6 +93,14 @@ export const TEST_ACCESS_TOKEN = makeAccessToken();
  */
 export const TEST_CURRENT_USER: CurrentUserResponse = {
   displayName: "traveler",
+  marketingEmailsConsent: false,
+};
+
+/** Current account (`/v1/auth/me/`): login data shown in the header menu and on the profile page. */
+export const TEST_CURRENT_ACCOUNT: CurrentAccountResponse = {
+  email: "traveler@example.com",
+  username: "traveler_42",
+  emailVerified: true,
 };
 
 const successTokenBody = { accessToken: TEST_ACCESS_TOKEN, tokenType: "bearer" };
@@ -226,6 +240,12 @@ export const handlers = [
   http.post("/v1/journeys/:journeyId/move/", () => HttpResponse.json({ traveledYear: 2021 })),
   // Current user profile: feeds CurrentUserProvider on any logged-in render.
   http.get("/v1/users/me/", () => HttpResponse.json(TEST_CURRENT_USER)),
+  // Profile edit, like the backend: fields absent from the body keep their value.
+  http.patch("/v1/users/me/", async ({ request }) => {
+    const body = (await request.json()) as Partial<CurrentUserResponse>;
+    return HttpResponse.json({ ...TEST_CURRENT_USER, ...body });
+  }),
+  http.get("/v1/auth/me/", () => HttpResponse.json(TEST_CURRENT_ACCOUNT)),
 ];
 
 export const server = setupServer(...handlers);

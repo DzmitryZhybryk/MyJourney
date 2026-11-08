@@ -48,7 +48,8 @@ export const zCurrentAccountResponse = z.object({
  * CurrentUserResponse
  */
 export const zCurrentUserResponse = z.object({
-  displayName: z.string()
+  displayName: z.string(),
+  marketingEmailsConsent: z.boolean()
 });
 
 /**
@@ -312,6 +313,16 @@ export const zJourneysFeedResponse = z.object({
 });
 
 /**
+ * UpdateCurrentUserRequest
+ *
+ * Поля профиля, которые меняются. Отсутствующее поле не меняется; ``null`` — 422.
+ */
+export const zUpdateCurrentUserRequest = z.object({
+  displayName: z.optional(z.string().check(z.minLength(1), z.maxLength(50), z.regex(/^[^\x00-\x1F\x7F-\x9F]*$/))),
+  marketingEmailsConsent: z.optional(z.boolean())
+});
+
+/**
  * UpdateJourneyRequest
  *
  * Тело запроса правки поездки: новые значения всех полей.
@@ -487,3 +498,10 @@ export const zGetMovementsMapResponse = zMovementsMapResponse;
  * Successful Response
  */
 export const zGetCurrentUserResponse = zCurrentUserResponse;
+
+export const zUpdateCurrentUserBody = zUpdateCurrentUserRequest;
+
+/**
+ * Successful Response
+ */
+export const zUpdateCurrentUserResponse = zCurrentUserResponse;

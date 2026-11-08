@@ -4,8 +4,8 @@ import * as z from 'zod/mini';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateJourneyData, CreateJourneyErrors, CreateJourneyResponses, DeleteJourneyData, DeleteJourneyErrors, DeleteJourneyResponses, EstimateJourneyDistanceData, EstimateJourneyDistanceErrors, EstimateJourneyDistanceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetJourneysGlobeData, GetJourneysGlobeErrors, GetJourneysGlobeResponses, GetJourneysMapData, GetJourneysMapErrors, GetJourneysMapResponses, GetJourneyYearsData, GetJourneyYearsErrors, GetJourneyYearsResponses, GetMovementsMapData, GetMovementsMapErrors, GetMovementsMapResponses, HealthzData, HealthzResponses, ListJourneysData, ListJourneysErrors, ListJourneysResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MoveJourneyData, MoveJourneyErrors, MoveJourneyResponses, RefreshData, RefreshErrors, RefreshResponses, RegisterData, RegisterErrors, RegisterResponses, ResolveCitiesData, ResolveCitiesErrors, ResolveCitiesResponses, SearchCitiesData, SearchCitiesErrors, SearchCitiesResponses, SendEmailVerificationData, SendEmailVerificationErrors, SendEmailVerificationResponses, UpdateJourneyData, UpdateJourneyErrors, UpdateJourneyResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
-import { zCreateJourneyBody, zDeleteJourneyPath, zDeleteJourneyResponse, zEstimateJourneyDistanceQuery, zEstimateJourneyDistanceResponse, zGetCurrentAccountResponse, zGetCurrentUserResponse, zGetJourneysGlobeResponse, zGetJourneysMapResponse, zGetJourneyYearsResponse, zGetMovementsMapQuery, zGetMovementsMapResponse, zListJourneysQuery, zListJourneysResponse, zLoginBody, zLoginResponse, zLogoutResponse, zMoveJourneyBody, zMoveJourneyPath, zMoveJourneyResponse2, zRefreshResponse, zRegisterBody, zRegisterResponse, zResolveCitiesBody, zResolveCitiesResponse2, zSearchCitiesQuery, zSearchCitiesResponse, zUpdateJourneyBody, zUpdateJourneyPath, zUpdateJourneyResponse, zVerifyEmailBody, zVerifyEmailResponse } from './zod.gen';
+import type { CreateJourneyData, CreateJourneyErrors, CreateJourneyResponses, DeleteJourneyData, DeleteJourneyErrors, DeleteJourneyResponses, EstimateJourneyDistanceData, EstimateJourneyDistanceErrors, EstimateJourneyDistanceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetJourneysGlobeData, GetJourneysGlobeErrors, GetJourneysGlobeResponses, GetJourneysMapData, GetJourneysMapErrors, GetJourneysMapResponses, GetJourneyYearsData, GetJourneyYearsErrors, GetJourneyYearsResponses, GetMovementsMapData, GetMovementsMapErrors, GetMovementsMapResponses, HealthzData, HealthzResponses, ListJourneysData, ListJourneysErrors, ListJourneysResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MoveJourneyData, MoveJourneyErrors, MoveJourneyResponses, RefreshData, RefreshErrors, RefreshResponses, RegisterData, RegisterErrors, RegisterResponses, ResolveCitiesData, ResolveCitiesErrors, ResolveCitiesResponses, SearchCitiesData, SearchCitiesErrors, SearchCitiesResponses, SendEmailVerificationData, SendEmailVerificationErrors, SendEmailVerificationResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateJourneyData, UpdateJourneyErrors, UpdateJourneyResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
+import { zCreateJourneyBody, zDeleteJourneyPath, zDeleteJourneyResponse, zEstimateJourneyDistanceQuery, zEstimateJourneyDistanceResponse, zGetCurrentAccountResponse, zGetCurrentUserResponse, zGetJourneysGlobeResponse, zGetJourneysMapResponse, zGetJourneyYearsResponse, zGetMovementsMapQuery, zGetMovementsMapResponse, zListJourneysQuery, zListJourneysResponse, zLoginBody, zLoginResponse, zLogoutResponse, zMoveJourneyBody, zMoveJourneyPath, zMoveJourneyResponse2, zRefreshResponse, zRegisterBody, zRegisterResponse, zResolveCitiesBody, zResolveCitiesResponse2, zSearchCitiesQuery, zSearchCitiesResponse, zUpdateCurrentUserBody, zUpdateCurrentUserResponse, zUpdateJourneyBody, zUpdateJourneyPath, zUpdateJourneyResponse, zVerifyEmailBody, zVerifyEmailResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
   /**
@@ -386,4 +386,24 @@ export const getCurrentUser = <ThrowOnError extends boolean = false>(options?: O
   security: [{ scheme: 'bearer', type: 'http' }],
   url: '/v1/users/me/',
   ...options
+});
+
+/**
+ * Update Current User
+ */
+export const updateCurrentUser = <ThrowOnError extends boolean = false>(options: Options<UpdateCurrentUserData, ThrowOnError>): RequestResult<UpdateCurrentUserResponses, UpdateCurrentUserErrors, ThrowOnError, 'data'> => (options.client ?? client).patch<UpdateCurrentUserResponses, UpdateCurrentUserErrors, ThrowOnError, 'data'>({
+  requestValidator: async (data) => await z.object({
+    body: zUpdateCurrentUserBody,
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+  }).parseAsync(data),
+  responseValidator: async (data) => await zUpdateCurrentUserResponse.parseAsync(data),
+  responseStyle: 'data',
+  security: [{ scheme: 'bearer', type: 'http' }],
+  url: '/v1/users/me/',
+  ...options,
+  headers: {
+    'Content-Type': 'application/json',
+    ...options.headers
+  }
 });

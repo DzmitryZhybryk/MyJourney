@@ -1,18 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 
-import { ApiError } from "../api/errors";
 import { getCurrentUserOptions, type CurrentUserResponse } from "../api/sdk";
 import { useAuth } from "../auth/useAuth";
+import { isSessionInvalid } from "./sessionInvalid";
 import { CurrentUserContext, type CurrentUserState } from "./useCurrentUser";
-
-// Codes meaning there is no live user: retrying is pointless and the session must be logged out.
-// Branch on `code` (the stable API contract), not the HTTP status (a transport detail).
-const SESSION_INVALID_CODES: ReadonlySet<string> = new Set(["users.user_deleted", "users.user_not_found"]);
-
-function isSessionInvalid(error: unknown): boolean {
-  return error instanceof ApiError && SESSION_INVALID_CODES.has(error.code);
-}
 
 interface CurrentUserProviderProps {
   children: ReactNode;

@@ -7,6 +7,7 @@ import { cityLabel, type CityNameLookup } from "../../../api/cityNames";
 import { resolveErrorToken } from "../../../api/errors";
 import { zTransportTypeEnum, type CitySearchItem, type JourneyCity, type JourneyFeedEntry } from "../../../api/sdk";
 import { CityAutocomplete } from "../../../components/CityAutocomplete";
+import { EditableValue } from "../../../components/EditableValue";
 import { SoonBadge } from "../../../components/SoonBadge";
 import { SwapVerticalIcon } from "../../../components/SwapVerticalIcon";
 import { TransportLabel } from "../../../components/TransportLabel";
@@ -143,8 +144,8 @@ export function JourneyCard({ journey, nameOf }: JourneyCardProps) {
     void undo();
   };
 
-  const valueButton = (field: EditedField, label: string, className = "journey-card__value") => (
-    <UnstyledButton
+  const valueButton = (field: EditedField, label: string, className?: string) => (
+    <EditableValue
       ref={(element) => {
         valueRefs.current[field] = element;
       }}
@@ -153,7 +154,7 @@ export function JourneyCard({ journey, nameOf }: JourneyCardProps) {
       aria-disabled={isSaving}
     >
       {label}
-    </UnstyledButton>
+    </EditableValue>
   );
 
   const cityValue = (field: CityField) =>
@@ -168,7 +169,7 @@ export function JourneyCard({ journey, nameOf }: JourneyCardProps) {
         />
       </InlineField>
     ) : (
-      valueButton(field, labelOf(values[field]), "journey-card__value journey-card__city")
+      valueButton(field, labelOf(values[field]), "journey-card__city")
     );
 
   const route = (
@@ -268,9 +269,9 @@ export function JourneyCard({ journey, nameOf }: JourneyCardProps) {
           <dd>
             <Menu position="bottom-start" shadow="md" radius="md" disabled={isSaving}>
               <Menu.Target>
-                <UnstyledButton className="journey-card__value" aria-disabled={isSaving}>
+                <EditableValue aria-disabled={isSaving}>
                   {values.transport && <TransportLabel type={values.transport} />}
-                </UnstyledButton>
+                </EditableValue>
               </Menu.Target>
               <Menu.Dropdown>
                 {zTransportTypeEnum.options.map((type) => (

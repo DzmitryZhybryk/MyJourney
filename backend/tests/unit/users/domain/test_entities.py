@@ -7,6 +7,8 @@ from app.users.domain.entities import UserEntity
 from app.users.exceptions import UserDeletedError
 from tests.builders import make_user_entity
 
+_OLD_UPDATED_AT = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
+
 
 def test_user_entity_create_sets_fields_and_defaults() -> None:
     """Фабрика `create` проставляет переданные поля; deleted_at — None."""
@@ -60,3 +62,46 @@ def test_user_entity_ensure_not_deleted_raises_for_soft_deleted_user() -> None:
     assert user_entity.is_deleted is True
     with pytest.raises(UserDeletedError):
         user_entity.ensure_not_deleted()
+
+
+def test_user_entity_update_profile_changes_only_display_name() -> None:
+    """`update_profile` с одним именем меняет имя, согласие не трогает, updated_at сдвигается."""
+    user_entity = make_user_entity(display_name="alice", marketing_emails_consent=True, updated_at=_OLD_UPDATED_AT)
+
+    user_entity.update_profile(display_name="Alice D.")
+
+    assert user_entity.display_name == "Alice D."
+    assert user_entity.marketing_emails_consent is True
+    assert user_entity.updated_at != _OLD_UPDATED_AT
+
+
+@pytest.mark.parametrize("consent", [True, False])
+def test_user_entity_update_profile_changes_only_consent(consent: bool) -> None:
+    """`update_profile` с одним согласием выставляет его в обе стороны, имя не трогает."""
+    user_entity = make_user_entity(display_name="alice", marketing_emails_consent=not consent)
+
+    user_entity.update_profile(marketing_emails_consent=consent)
+
+    assert user_entity.marketing_emails_consent is consent
+    assert user_entity.display_name == "alice"
+
+
+def test_user_entity_update_profile_changes_both_fields() -> None:
+    """`update_profile` с обоими полями меняет оба."""
+    user_entity = make_user_entity(display_name="alice", marketing_emails_consent=False)
+
+    user_entity.update_profile(display_name="Alice D.", marketing_emails_consent=True)
+
+    assert user_entity.display_name == "Alice D."
+    assert user_entity.marketing_emails_consent is True
+
+
+def test_user_entity_update_profile_without_fields_touches_only_updated_at() -> None:
+    """`update_profile()` без полей ничего не меняет, кроме updated_at."""
+    user_entity = make_user_entity(display_name="alice", marketing_emails_consent=True, updated_at=_OLD_UPDATED_AT)
+
+    user_entity.update_profile()
+
+    assert user_entity.display_name == "alice"
+    assert user_entity.marketing_emails_consent is True
+    assert user_entity.updated_at != _OLD_UPDATED_AT

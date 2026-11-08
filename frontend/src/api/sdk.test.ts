@@ -39,7 +39,9 @@ afterEach(() => {
 describe("sdk", () => {
   it("шлёт запрос через транспорт приложения: Bearer, credentials, абсолютный URL", async () => {
     setAccessToken("my-token");
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, { displayName: "traveler" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { displayName: "traveler", marketingEmailsConsent: false }),
+    );
 
     await getCurrentUser({ throwOnError: true });
 

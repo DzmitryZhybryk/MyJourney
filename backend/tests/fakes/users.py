@@ -22,12 +22,22 @@ class FakeUserRepository(UserRepositoryPort):
 
     def __init__(self) -> None:
         self.by_user_id: dict[UUID, UserEntity] = {}
+        # Entities are stored by reference, so a change is visible in the dict even when nothing
+        # was written; this list is what shows the write itself.
+        self.updated_user_ids: list[UUID] = []
 
     async def insert_user(self, user_entity: UserEntity) -> None:
         self.by_user_id[user_entity.user_id] = user_entity
 
     async def find_user_by_id(self, user_id: UUID) -> UserEntity | None:
         return self.by_user_id.get(user_id)
+
+    async def find_user_by_id_for_update(self, user_id: UUID) -> UserEntity | None:
+        return self.by_user_id.get(user_id)
+
+    async def update_user_by_id(self, user_entity: UserEntity) -> None:
+        self.by_user_id[user_entity.user_id] = user_entity
+        self.updated_user_ids.append(user_entity.user_id)
 
 
 class FakeUserUnitOfWork(UserUnitOfWorkPort):

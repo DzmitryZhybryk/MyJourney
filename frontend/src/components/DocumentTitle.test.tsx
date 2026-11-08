@@ -38,6 +38,10 @@ describe("DocumentTitle", () => {
     expect(await titleAt("/journeys/add")).toBe("New journey · MyJourney");
   });
 
+  it("на /profile ставит «раздел · бренд»", async () => {
+    expect(await titleAt("/profile")).toBe("Profile · MyJourney");
+  });
+
   it("на неизвестном пути откатывается к заголовку лендинга", async () => {
     expect(await titleAt("/nope")).toMatch(/^MyJourney — /u);
   });
