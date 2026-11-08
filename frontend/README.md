@@ -1,7 +1,8 @@
 # MyJourney — frontend
 
 SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо MyJourney; оркестрация
-всего стека — из корня (`make run`), см. корневой `CLAUDE.md`.
+бэкенда — из корня (`make run`), сам фронт в деве запускается на хосте (`make fe-dev`),
+см. корневой `CLAUDE.md`.
 
 ## Требования
 
@@ -15,7 +16,8 @@ SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо
 
 ```bash
 npm ci                # установка строго по lock-файлу (не npm install)
-npm run dev           # Vite dev-сервер на :5173, /v1 проксируется на backend
+make dev              # Vite dev-сервер на :5173 (из корня — make fe-dev); /v1 → backend
+                      # дев-стека на 127.0.0.1:8050, поэтому сначала `make run` из корня
 
 make lint             # oxlint. ESLint в проекте НЕТ — мигрировали, конфига нет
 make lint-fix         # oxlint --fix. Форматтера/prettier тоже нет

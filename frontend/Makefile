@@ -1,4 +1,4 @@
-.PHONY: help typecheck lint lint-fix audit test test-unit test-component coverage check test-e2e generate-api generate-world budget mantine-styles
+.PHONY: help dev typecheck lint lint-fix audit test test-unit test-component coverage check test-e2e generate-api generate-world budget mantine-styles
 
 # Colors for output
 ifeq ($(OS),Windows_NT)
@@ -17,6 +17,10 @@ endif
 help: ## Show this help message
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  ${AZURE}%-15s${RESET} %s\n", $$1, $$2}'
+
+dev: ## Run the Vite dev server on :5173 (needs the backend from the root `make run`)
+	@echo "${GREEN}INFO :  ${AZURE}Run '${PURPLE}vite${AZURE}' dev server${RESET}"
+	@npm run dev
 
 typecheck: ## Type-check sources with tsc
 	@echo "${GREEN}INFO :  ${AZURE}Run '${PURPLE}tsc${AZURE}' typecheck${RESET}"

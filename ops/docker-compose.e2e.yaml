@@ -114,7 +114,6 @@ services:
       target: dev
     environment:
       API_PROXY_TARGET: "http://app:8000"
-      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5273:5173"
     volumes:
