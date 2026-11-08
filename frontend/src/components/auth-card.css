@@ -15,15 +15,14 @@
   --auth-input-bg-solid: #080b16;
   --auth-input-bd: var(--card-input-bd);
   --auth-input-placeholder: rgb(var(--muted-on-dark-rgb) / 0.6);
-  --auth-on-sun: var(--on-sun);
 
   padding: 34px 32px 30px;
   border-radius: var(--card-radius);
-  border: 1px solid var(--line-dark);
+  border: 1px solid var(--hairline);
   background: var(--surface-card);
   backdrop-filter: blur(var(--card-blur));
   box-shadow: var(--card-shadow);
-  color: var(--ink-on-dark);
+  color: var(--text);
 }
 
 .auth-card__title {
@@ -39,7 +38,7 @@
   margin: 10px 0 22px;
   font-size: var(--fs-15);
   line-height: 1.5;
-  color: var(--muted-on-dark);
+  color: var(--text-muted);
 }
 
 /* --- Mantine fields on dark glass (hooked via own Styles API classes) --- */
@@ -47,13 +46,13 @@
 .auth-card .auth-input {
   background-color: var(--auth-input-bg);
   border-color: var(--auth-input-bd);
-  color: var(--ink-on-dark);
+  color: var(--text);
 }
 
 /* In PasswordInput the real input is nested inside the "input" wrapper. */
 .auth-card .auth-input__inner {
   background: transparent;
-  color: var(--ink-on-dark);
+  color: var(--text);
 }
 
 .auth-card .auth-input::placeholder,
@@ -63,12 +62,12 @@
 
 /* The eye button that reveals the password. */
 .auth-card .auth-input__section {
-  color: var(--muted-on-dark);
+  color: var(--text-muted);
 }
 
 .auth-card .auth-input:focus,
 .auth-card .auth-input:focus-within {
-  border-color: var(--sun);
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgb(var(--sun-rgb) / 0.22);
 }
 
@@ -84,16 +83,16 @@
  */
 .auth-card .auth-input:-webkit-autofill,
 .auth-card .auth-input__inner:-webkit-autofill {
-  -webkit-text-fill-color: var(--ink-on-dark);
+  -webkit-text-fill-color: var(--text);
   -webkit-box-shadow: 0 0 0 100px var(--auth-input-bg-solid) inset;
-  caret-color: var(--ink-on-dark);
+  caret-color: var(--text);
 }
 
 .auth-card .auth-input:autofill,
 .auth-card .auth-input__inner:autofill {
-  -webkit-text-fill-color: var(--ink-on-dark);
+  -webkit-text-fill-color: var(--text);
   box-shadow: 0 0 0 100px var(--auth-input-bg-solid) inset;
-  caret-color: var(--ink-on-dark);
+  caret-color: var(--text);
 }
 
 /* Focus on an autofilled field: the fill eats the focus ring, so restore it with a second shadow.
@@ -112,7 +111,7 @@
 }
 
 .auth-card .auth-label {
-  color: var(--muted-on-dark);
+  color: var(--text-muted);
   font-weight: 600;
   font-size: var(--fs-12);
   letter-spacing: 0.02em;
@@ -127,7 +126,7 @@
  */
 [data-mantine-color-scheme] .auth-card .mantine-Input-wrapper[data-error] .auth-input,
 [data-mantine-color-scheme] .auth-card .mantine-Input-wrapper[data-error] .auth-input__inner {
-  color: var(--ink-on-dark);
+  color: var(--text);
 }
 
 [data-mantine-color-scheme]
@@ -166,21 +165,21 @@
  */
 .auth-card .auth-submit:disabled,
 .auth-card .auth-submit[data-disabled] {
-  background: var(--sun);
+  background: var(--accent);
   opacity: 0.5;
 }
 
 /* The "Forgot password?" hint: muted but readable on dark. A plain `<span>` (the password
    recovery flow is not implemented). */
 .auth-card .auth-card__hint {
-  color: var(--muted-on-dark);
+  color: var(--text-muted);
   font-size: var(--fs-12);
 }
 
 /* Checkboxes (terms, newsletter): light text on glass. The size is not set: `<Checkbox size="sm">`
    already gives the label 14px, exactly the `--fs-14` step. */
 .auth-card .auth-label--checkbox {
-  color: var(--muted-on-dark);
+  color: var(--text-muted);
   line-height: 1.45;
 }
 
@@ -202,11 +201,11 @@
 /* The tick uses the sunset accent, matching the active button: on the dark box it is the only
    state indicator (8:1 against the field background). */
 .auth-card .auth-checkbox__icon {
-  color: var(--sun);
+  color: var(--accent);
 }
 
 .auth-card a {
-  color: var(--glow);
+  color: var(--text-link);
 }
 
 /* --- Link switching between login and signup under the form --- */
@@ -215,11 +214,11 @@
   margin: 18px 0 0;
   font-size: var(--fs-14);
   text-align: center;
-  color: var(--muted-on-dark);
+  color: var(--text-muted);
 }
 
 .auth-card__switch a {
-  color: var(--glow);
+  color: var(--text-link);
   font-weight: 600;
   text-decoration: none;
 }
