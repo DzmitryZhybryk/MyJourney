@@ -94,7 +94,7 @@ export function AppHeader() {
                 <UnstyledButton aria-label={t("profile.menuButton")} className="app-avatar-button">
                   <Indicator
                     disabled={emailVerified}
-                    color="yellow"
+                    color="var(--status-warning)"
                     size={10}
                     offset={4}
                     withBorder

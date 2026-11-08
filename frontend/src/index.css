@@ -141,8 +141,8 @@
   --fs-22: 22px;
   --fs-24: 24px;
   --fs-30: 30px;
-  /* Blur under glass "chrome" (header pills, language switcher). The auth card has its own, denser
-     one: there the glass carries the form, not a small element. */
+  /* Blur under glass "chrome" (header pills, language switcher). Cards have their own, denser
+     `--card-blur`: there the glass carries content, not a small element. */
   --blur-glass: 6px;
 
   /* --- Warm design language. Global tokens. --- */
@@ -163,6 +163,7 @@
   --sky: #6f8fd6;
   --sky-bright: #4ab3ff;
   --muted-on-dark: #9aa6c4;
+  --amber: #fab005;
 
   /*
    * Palette channels for translucent derivatives: `rgb(var(--ink-rgb) / 0.86)`.
@@ -181,6 +182,7 @@
   --sun-rgb: 232 147 92;
   --sun-deep-rgb: 207 106 58;
   --glow-rgb: 246 177 122;
+  --amber-rgb: 250 176 5;
   /* Cast shadow colour: deeper than the background, a separate role (no hex token: never used opaque). */
   --shadow-rgb: 2 6 20;
 
@@ -202,6 +204,14 @@
   /* Raised surface: cards and panels over the background (glass + blur). Taken from the auth card,
      the denser variant, so glass is one material everywhere. */
   --surface-card: rgb(var(--ink-glass-rgb) / 0.62);
+  /* The rest of the card glass material (auth card, profile). Floating map panels on Journeys are
+     a lighter, smaller role and keep their own values. */
+  --card-radius: 22px;
+  --card-blur: 16px;
+  --card-shadow: 0 30px 70px rgb(var(--shadow-rgb) / 0.55);
+  /* Mantine inputs restyled for the card glass. */
+  --card-input-bg: rgb(var(--ink-deep-rgb) / 0.5);
+  --card-input-bd: rgb(var(--ink-on-dark-rgb) / 0.18);
   --text: var(--ink-on-dark);
   --text-muted: var(--muted-on-dark);
   /* Mono "stamps" (section labels, coordinates, dates) in the sunset glow. */
@@ -222,6 +232,9 @@
    * is 5.85:1, passing AA.
    */
   --text-error: #fa5252;
+  /* "Needs attention" status (unverified email). Value = Mantine `yellow.6`, which the dot used
+     before, kept in our palette so a Mantine theme change cannot move it. */
+  --status-warning: var(--amber);
 }
 
 *,
