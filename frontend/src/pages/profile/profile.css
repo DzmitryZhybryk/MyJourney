@@ -12,16 +12,13 @@
 }
 
 .profile-card {
-  --profile-input-bg: rgb(var(--ink-deep-rgb) / 0.5);
-  --profile-input-bd: rgb(var(--ink-on-dark-rgb) / 0.18);
-
   width: min(100%, 560px);
   padding: 32px;
-  border-radius: 22px;
+  border-radius: var(--card-radius);
   border: 1px solid var(--hairline);
   background: var(--surface-card);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 30px 70px rgb(var(--shadow-rgb) / 0.55);
+  backdrop-filter: blur(var(--card-blur));
+  box-shadow: var(--card-shadow);
   color: var(--text);
 }
 
@@ -65,8 +62,8 @@
   font: 600 var(--fs-30)/1.15 var(--font-display);
   letter-spacing: -0.01em;
   color: var(--text);
-  background-color: var(--profile-input-bg);
-  border-color: var(--profile-input-bd);
+  background-color: var(--card-input-bg);
+  border-color: var(--card-input-bd);
 }
 
 .profile-card .profile-name__input:focus {
@@ -144,7 +141,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--mantine-color-yellow-filled);
+  background: var(--status-warning);
 }
 
 /* ---- Marketing emails ---- */

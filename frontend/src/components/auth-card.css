@@ -9,20 +9,20 @@
  */
 
 .auth-card {
-  --auth-input-bg: rgb(var(--ink-deep-rgb) / 0.5);
+  --auth-input-bg: var(--card-input-bg);
   /* The same field colour but opaque: needed where translucency would let a foreign background
      through (autofill, see below). Value = composite of `--auth-input-bg` over the card glass. */
   --auth-input-bg-solid: #080b16;
-  --auth-input-bd: rgb(var(--ink-on-dark-rgb) / 0.18);
+  --auth-input-bd: var(--card-input-bd);
   --auth-input-placeholder: rgb(var(--muted-on-dark-rgb) / 0.6);
   --auth-on-sun: var(--on-sun);
 
   padding: 34px 32px 30px;
-  border-radius: 22px;
+  border-radius: var(--card-radius);
   border: 1px solid var(--line-dark);
   background: var(--surface-card);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 30px 70px rgb(var(--shadow-rgb) / 0.55);
+  backdrop-filter: blur(var(--card-blur));
+  box-shadow: var(--card-shadow);
   color: var(--ink-on-dark);
 }
 
