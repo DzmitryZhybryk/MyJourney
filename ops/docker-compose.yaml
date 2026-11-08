@@ -107,12 +107,6 @@ services:
     restart: unless-stopped
     develop: *rebuild-on-deps
 
-  # Дев-фронт — Vite на хосте (`make fe-dev`), не в контейнере: VirtioFS Docker Desktop не доносит
-  # до контейнера создание файлов, и Vite отдаёт новый файл в первой версии до рестарта. Сервис
-  # объявлен в base, override удалить его не может — профиль лишь не даёт `make run` его поднять.
-  frontend:
-    profiles: [unused-in-dev]
-
   myjourney_pg:
     container_name: myjourney_pg
     ports:

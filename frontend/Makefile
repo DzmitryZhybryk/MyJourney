@@ -18,9 +18,15 @@ help: ## Show this help message
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  ${AZURE}%-15s${RESET} %s\n", $$1, $$2}'
 
-dev: ## Run the Vite dev server on :5173 (needs the backend from the root `make run`)
+dev: node_modules/.package-lock.json ## Run the Vite dev server on :5173 (needs the backend from the root `make run`)
 	@echo "${GREEN}INFO :  ${AZURE}Run '${PURPLE}vite${AZURE}' dev server${RESET}"
 	@npm run dev
+
+# npm rewrites this file on every install, so it is older than the lockfile exactly when the
+# installed tree is stale (a pull or branch switch changed package-lock.json).
+node_modules/.package-lock.json: package-lock.json
+	@echo "${GREEN}INFO :  ${AZURE}package-lock.json changed, run '${PURPLE}npm ci${AZURE}'${RESET}"
+	@npm ci
 
 typecheck: ## Type-check sources with tsc
 	@echo "${GREEN}INFO :  ${AZURE}Run '${PURPLE}tsc${AZURE}' typecheck${RESET}"

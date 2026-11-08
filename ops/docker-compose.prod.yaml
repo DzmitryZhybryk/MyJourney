@@ -93,6 +93,8 @@ services:
   frontend:
     image: ghcr.io/dzmitryzhybryk/myjourney-frontend:${IMAGE_TAG:-latest}
     build:
+      context: ./frontend
+      dockerfile: Dockerfile
       target: final
     container_name: myjourney_frontend
     restart: unless-stopped

@@ -20,4 +20,4 @@ make typecheck          # ty: тайпчек
 uv run pytest           # тесты (asyncio_mode=auto)
 ```
 
-Полный стек (app + worker + postgres + frontend + логирование) поднимается из **корня** репозитория одной командой `make run`.
+Дев-стек (app + worker + postgres + логирование) поднимается из **корня** репозитория командой `make run`; фронт к нему — `make fe-dev` на хосте.

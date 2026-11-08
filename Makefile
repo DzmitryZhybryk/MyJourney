@@ -51,7 +51,7 @@ COMPOSE_BASE := docker compose --project-directory . -f ops/docker-compose.base.
 COMPOSE      := $(COMPOSE_BASE) -f ops/docker-compose.yaml
 COMPOSE_PROD := $(COMPOSE_BASE) -f ops/docker-compose.prod.yaml
 
-run: ## Поднять dev-стек (app+worker+pg+frontend+логирование); миграции и газеттир — one-shot'ами до app
+run: ## Поднять dev-стек (app+worker+pg+логирование); миграции и газеттир — one-shot'ами до app. Фронт — make fe-dev
 	$(COMPOSE) up -d --build --remove-orphans
 
 watch: ## Dev-стек в foreground: пересобирает backend при правке pyproject.toml / uv.lock
@@ -167,7 +167,7 @@ test-e2e: ## Frontend e2e (Playwright; сам собирает образы, п�
 	$(COMPOSE_E2E) down -v --remove-orphans; \
 	exit $$status
 
-# База уже поднятого дев-стека (`make run`). Переопределяется, если фронт слушает не там.
+# База уже поднятого дев-стека (`make run` + `make fe-dev`). Переопределяется, если фронт слушает не там.
 DEV_BASE_URL ?= http://localhost:5173
 
 # Прогон по УЖЕ поднятому дев-стеку — для цикла разработки: не тратит ~минуту на подъём и снос
@@ -177,13 +177,18 @@ DEV_BASE_URL ?= http://localhost:5173
 #
 # Готовность проверяем POST'ом на /v1/auth/refresh/, а не GET'ом на «/»: он проходит весь путь,
 # который нужен тестам — Vite отдаёт SPA И проксирует /v1 на backend. Живой стек отвечает 401
-# (нет cookie), мёртвый — не отвечает вовсе. GET «/» показал бы только что Vite жив, а бэк за
-# ним мог бы лежать. `/healthz/` для этого не годится: он подключён без префикса /v1, а Vite
+# (нет cookie). Нет ответа — не запущен Vite; 5xx — Vite жив, но его прокси не достучался до
+# бэкенда (Vite отвечает 502). GET «/» показал бы только что Vite жив, а бэк за ним мог бы лежать. `/healthz/` для этого не годится: он подключён без префикса /v1, а Vite
 # проксирует только /v1 — снаружи его не достать.
-test-e2e-dev: ## Frontend e2e по УЖЕ ПОДНЯТОМУ дев-стеку (make run). Быстро, но ПИШЕТ В ДЕВ-БАЗУ. E2E_ARGS="--project=chromium"
+test-e2e-dev: ## Frontend e2e по УЖЕ ПОДНЯТОМУ дев-стеку (make run + make fe-dev). Быстро, но ПИШЕТ В ДЕВ-БАЗУ. E2E_ARGS="--project=chromium"
 	@code=$$(curl -s -o /dev/null -X POST -w '%{http_code}' --max-time 5 $(DEV_BASE_URL)/v1/auth/refresh/ 2>/dev/null); \
 	if [ -z "$$code" ] || [ "$$code" = "000" ]; then \
-		echo "${GREEN}INFO :  ${AZURE}Дев-стек не отвечает на ${PURPLE}$(DEV_BASE_URL)${AZURE}${RESET}"; \
+		echo "${GREEN}INFO :  ${AZURE}Vite не отвечает на ${PURPLE}$(DEV_BASE_URL)${AZURE}${RESET}"; \
+		echo "${GREEN}INFO :  ${AZURE}Запусти ${PURPLE}make fe-dev${AZURE} (бэкенд — ${PURPLE}make run${AZURE}), либо гоняй одноразовый: ${PURPLE}make test-e2e${RESET}"; \
+		exit 1; \
+	fi; \
+	if [ "$$code" -ge 500 ]; then \
+		echo "${GREEN}INFO :  ${AZURE}Vite жив, но бэкенд за ним не отвечает (/v1 → $$code)${RESET}"; \
 		echo "${GREEN}INFO :  ${AZURE}Подними его через ${PURPLE}make run${AZURE}, либо гоняй одноразовый: ${PURPLE}make test-e2e${RESET}"; \
 		exit 1; \
 	fi; \
