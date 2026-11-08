@@ -97,7 +97,7 @@ export const zLanguageEnum = z.enum(['en', 'ru']);
  * LoginRequest
  */
 export const zLoginRequest = z.object({
-  login: z.string().check(z.minLength(1), z.maxLength(254))
+  login: z.string().check(z.minLength(1), z.maxLength(254), z.regex(/^[^\x00-\x1F\x7F-\x9F]*$/))
 });
 
 /**
@@ -229,7 +229,7 @@ export const zErrorResponse = z.object({
  * RegisterRequest
  */
 export const zRegisterRequest = z.object({
-  username: z.string().check(z.minLength(3), z.maxLength(50)),
+  username: z.string().check(z.minLength(3), z.maxLength(50), z.regex(/^[a-zA-Z0-9_.-]+$/)),
   email: z.email().check(z.maxLength(254)),
   termsAccepted: z.boolean(),
   marketingEmailsConsent: z.boolean()
@@ -345,7 +345,7 @@ export const zVerifyEmailRequest = z.object({
  * LoginRequest
  */
 export const zLoginRequestWritable = z.object({
-  login: z.string().check(z.minLength(1), z.maxLength(254)),
+  login: z.string().check(z.minLength(1), z.maxLength(254), z.regex(/^[^\x00-\x1F\x7F-\x9F]*$/)),
   password: z.string().check(z.minLength(1), z.maxLength(50))
 });
 
@@ -353,7 +353,7 @@ export const zLoginRequestWritable = z.object({
  * RegisterRequest
  */
 export const zRegisterRequestWritable = z.object({
-  username: z.string().check(z.minLength(3), z.maxLength(50)),
+  username: z.string().check(z.minLength(3), z.maxLength(50), z.regex(/^[a-zA-Z0-9_.-]+$/)),
   email: z.email().check(z.maxLength(254)),
   password: z.string().check(z.minLength(8), z.maxLength(50)),
   termsAccepted: z.boolean(),

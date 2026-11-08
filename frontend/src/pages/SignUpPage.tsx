@@ -14,6 +14,8 @@ import { applyApiError, resolveErrorToken, withLocalizedError } from "../api/err
 import { register } from "../api/sdk";
 import { useAuth } from "../auth/useAuth";
 
+const USERNAME_PATTERN = /^[a-zA-Z0-9_.-]+$/u;
+
 type SignUpFormValues = {
   username: string;
   email: string;
@@ -47,6 +49,7 @@ export function SignUpPage() {
         const trimmed = value.trim();
         if (trimmed.length < 3) return "auth:validation.usernameMin";
         if (trimmed.length > 50) return "auth:validation.usernameMax";
+        if (!USERNAME_PATTERN.test(trimmed)) return "auth:validation.usernameChars";
         return null;
       },
       email: (value) => {

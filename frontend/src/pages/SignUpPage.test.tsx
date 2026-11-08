@@ -114,6 +114,35 @@ describe("SignUpPage", () => {
     }
   });
 
+  it.each(["john doe", "юзер", "john@doe"])(
+    "username с недопустимым символом (%s) даёт ошибку под полем и не отправляет запрос",
+    async (username) => {
+      const { user, authValue } = renderSignup();
+
+      await user.click(screen.getByRole("checkbox", termsCheckbox));
+      await user.type(screen.getByLabelText("Username"), username);
+      await user.type(screen.getByLabelText("Email"), "alice@example.com");
+      await user.type(screen.getByLabelText("Password"), "s3cret-pass");
+      await user.click(screen.getByRole("button", { name: "Create account" }));
+
+      expect(await screen.findByText("Use only Latin letters, digits and _ . -")).toBeInTheDocument();
+      expect(authValue.setAccessToken).not.toHaveBeenCalled();
+    },
+  );
+
+  it("username с цифрами и _ . - проходит валидацию формы", async () => {
+    const { user, authValue } = renderSignup();
+
+    await user.type(screen.getByLabelText("Username"), "John.Doe_42-x");
+    await user.type(screen.getByLabelText("Email"), "alice@example.com");
+    await user.type(screen.getByLabelText("Password"), "s3cret-pass");
+    await user.click(screen.getByRole("checkbox", termsCheckbox));
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("home-landing")).toBeInTheDocument();
+    expect(authValue.setAccessToken).toHaveBeenCalledWith(TEST_ACCESS_TOKEN);
+  });
+
   it("слишком длинные поля дают max-length ошибки и не отправляют запрос", async () => {
     const { user, authValue } = renderSignup();
 
