@@ -22,3 +22,20 @@
   every field looks toy-like.
 - Rejected: an "Edit" mode for the whole card — breaks instant save with undo on the journey card.
 - Source: PR #200, 2026-11-07
+
+## The dev Vite server runs on the host, not in Docker
+- `make run` starts the backend and infrastructure; `make fe-dev` starts Vite on the host, proxying
+  `/v1` to the published `app` port. The e2e stack still runs Vite in a container (a fresh stack
+  creates no files mid-run).
+- Why: Docker Desktop's VirtioFS on macOS does not deliver file creation from the host to the
+  container (directory mtime stays cached, no inotify create event), so Vite served a new file's
+  first version until restart. Edits to existing files did arrive.
+- Rejected: polling (`usePolling`, `CHOKIDAR_USEPOLLING`) — reads the same cached attributes; tried and failed.
+- Rejected: `docker compose watch` sync — without a running watch the whole frontend freezes silently.
+- Rejected: gRPC FUSE or OrbStack — each has its own host-to-container sync bugs.
+- Rejected: atomic writes (temp + rename) — editors, git and Claude all write in place.
+- Rejected: dev served like prod (`vite build --watch` + nginx) — loses HMR; prod parity is `make test-e2e`.
+- Rejected: Podman — `podman machine` has the same Mac-to-VM VirtioFS boundary.
+- Revisit when: a container on Docker Desktop sees a host-created file through inotify or polling
+  (probe described in the Podman backlog task).
+- Source: PR #205, 2026-11-08

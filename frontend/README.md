@@ -1,7 +1,8 @@
 # MyJourney — frontend
 
 SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо MyJourney; оркестрация
-всего стека — из корня (`make run`), см. корневой `CLAUDE.md`.
+бэкенда — из корня (`make run`), сам фронт в деве запускается на хосте (`make fe-dev`),
+см. корневой `CLAUDE.md`.
 
 ## Требования
 
@@ -15,7 +16,8 @@ SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо
 
 ```bash
 npm ci                # установка строго по lock-файлу (не npm install)
-npm run dev           # Vite dev-сервер на :5173, /v1 проксируется на backend
+make dev              # Vite dev-сервер на :5173 (из корня — make fe-dev); /v1 → backend
+                      # дев-стека на 127.0.0.1:8050, поэтому сначала `make run` из корня
 
 make lint             # oxlint. ESLint в проекте НЕТ — мигрировали, конфига нет
 make lint-fix         # oxlint --fix. Форматтера/prettier тоже нет
@@ -70,12 +72,8 @@ e2e/                # Playwright-спеки по флоу
   чанков: динамический `import()` попадает в манифест предзагрузки и легко читается как
   статическая зависимость.
 - Порог покрытия 90% форсится pre-commit хуком (`make hooks` из корня, разово), а не CI.
-- **`node_modules` в дев-контейнере — отдельный docker-том**, он затеняет то, что лежит в образе.
-  Контейнер на старте сам делает `npm install`, поэтому после правки `package.json` достаточно
-  перезапустить фронт (из корня):
-  `docker compose --project-directory . -f ops/docker-compose.base.yaml -f ops/docker-compose.yaml restart frontend`.
-  Тот же перезапуск лечит «Что-то пошло не так» после `PARSE_ERROR` посреди правок — Vite продолжает
-  отдавать сломанный модуль, и перезагрузка вкладки не помогает. Полный сброс тома —
-  `... rm -sf frontend && docker volume rm myjourney_frontend_node_modules && make run`; не
-  `down -v`: он снесёт и данные Postgres/Loki/Grafana.
+- **Зависимости дев-сервера.** `make dev` сам делает `npm ci`, если `package-lock.json` новее
+  установленного дерева; после правки `package.json` достаточно перезапустить `make dev`. Тот же
+  перезапуск лечит «Что-то пошло не так» после `PARSE_ERROR` посреди правок — Vite продолжает
+  отдавать сломанный модуль, и перезагрузка вкладки не помогает.
 - **`Cannot find module` из `node_modules/.bin/*`** — несвежая установка, лечится `npm ci`.

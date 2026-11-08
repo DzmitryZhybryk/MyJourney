@@ -86,7 +86,7 @@ files already at 100%: for exact per-file numbers use `--coverage.reporter=json-
   and on a push to `main`.
 - `make test-e2e` starts a throwaway stack (`ops/docker-compose.e2e.yaml`), runs Playwright and
   tears it down with `-v`. `make test-e2e-dev` runs against the already-running dev stack
-  (`make run`): faster, but it **writes users into the dev database**. Narrow a run with
+  (`make run` plus `make fe-dev`): faster, but it **writes users into the dev database**. Narrow a run with
   `E2E_ARGS="--project=chromium"`.
 - Playwright browsers live on the **host**, not in a container. After a package update run
   `npx playwright install`. A mismatch shows as "Executable doesn't exist at

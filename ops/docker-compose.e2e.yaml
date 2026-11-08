@@ -10,7 +10,7 @@
 # изолирует контейнеры/тома/сеть от дев-стека: можно держать оба разом. `container_name` нигде не
 # задаём (compose сам префиксует проектом → нет клеша с дев), сеть — дефолтная проектная
 # (`docker network create` не нужен). Имена сервисов myjourney_pg/app совпадают с хостами в .env и
-# vite.config (API_PROXY_TARGET) → .env переиспользуется как есть. Оверрайды — только Resend и адрес
+# API_PROXY_TARGET ниже → .env переиспользуется как есть. Оверрайды — только Resend и адрес
 # S3-эмулятора: у e2e свой порт (9051), чтобы стек жил рядом с дев-стеком, а дев-.env указывает на 9050.
 name: myjourney_e2e
 
@@ -109,12 +109,13 @@ services:
   # node_modules на первом старте пуст — см. frontend/Dockerfile).
   frontend:
     build:
+      context: ./frontend
+      dockerfile: Dockerfile
       # target: dev — Vite dev-сервер (:5173). Без target собралась бы последняя стадия
       # `final` (nginx :80): фронт вставал nginx'ом, healthcheck на :5173 не проходил → unhealthy.
       target: dev
     environment:
       API_PROXY_TARGET: "http://app:8000"
-      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5273:5173"
     volumes:

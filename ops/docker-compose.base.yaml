@@ -63,8 +63,3 @@ services:
         condition: service_healthy
       myjourney_migrate:
         condition: service_completed_successfully
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile

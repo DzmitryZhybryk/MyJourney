@@ -2,7 +2,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://app:8000";
+// The default is the dev backend's published port: the dev Vite runs on the host. The e2e stack
+// runs Vite in a container and sets the in-network address explicitly.
+const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8050";
 
 /**
  * Vitest test scope by extension: unit (`*.test.ts`, pure logic) vs component (`*.test.tsx`,
@@ -27,12 +29,8 @@ function resolveVitestInclude(): string[] {
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: "0.0.0.0",
     port: 5173,
-    // In Docker on macOS bind-mount file events do not always reach the container and Vite serves a
-    // stale module. Polling is enabled by the same flag set in ops/docker-compose.yaml; it is set
-    // explicitly here rather than via chokidar's own environment variable.
-    watch: { usePolling: process.env.CHOKIDAR_USEPOLLING === "true" },
+    strictPort: true,
     proxy: {
       "/v1": {
         target: apiProxyTarget,

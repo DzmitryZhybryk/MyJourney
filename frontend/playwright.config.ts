@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * Tests run against a SEPARATE throwaway stack (`docker-compose.e2e.yaml`) that the root
  * `make test-e2e` brings up: the frontend on :5273 proxies `/v1` to the backend, Postgres lives in
- * tmpfs and is torn down after the run; the dev database (`make run`, :5173) is not
+ * tmpfs and is torn down after the run; the dev database (`make run` + `make fe-dev`, :5173) is not
  * touched. So there is NO `webServer` here: the stack lifecycle belongs to the Makefile, not Playwright.
  *
  * The default baseURL is the throwaway stack's port (:5273), not the dev frontend's (:5173): a bare
