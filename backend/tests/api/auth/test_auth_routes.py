@@ -189,6 +189,40 @@ async def test_register_invalid_field_returns_422(client: AsyncClient, invalid_b
     assert response.json()["code"] == "validation_error"
 
 
+@pytest.mark.parametrize("username", ["user\x00name", "user name", "юзер", "user@name", "user!"])
+async def test_register_username_with_disallowed_character_returns_422(client: AsyncClient, username: str) -> None:
+    """register: username вне набора латиница/цифры/«_.-» (NUL, пробел внутри, кириллица, @) → 422."""
+    response = await client.post(
+        "/v1/auth/register/",
+        json={
+            "username": username,
+            "email": "valid@example.com",
+            "password": "password123",
+            "terms_accepted": True,
+            "marketing_emails_consent": False,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+
+async def test_register_username_with_allowed_punctuation_returns_201(client: AsyncClient) -> None:
+    """register: username с цифрами, «_», «.» и «-» проходит → 201."""
+    response = await client.post(
+        "/v1/auth/register/",
+        json={
+            "username": "John.Doe_42-x",
+            "email": "valid@example.com",
+            "password": "password123",
+            "terms_accepted": True,
+            "marketing_emails_consent": False,
+        },
+    )
+
+    assert response.status_code == 201
+
+
 # --- login -------------------------------------------------------------------
 
 
@@ -263,6 +297,14 @@ async def test_login_unknown_login_returns_401(client: AsyncClient) -> None:
 async def test_login_invalid_body_returns_422(client: AsyncClient) -> None:
     """login без обязательного password → 422 validation_error."""
     response = await client.post("/v1/auth/login/", json={"login": "user@example.com"})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+
+
+async def test_login_with_control_character_returns_422(client: AsyncClient) -> None:
+    """login с управляющим символом (NUL) в логине → 422, до запроса в БД."""
+    response = await client.post("/v1/auth/login/", json={"login": "user\x00", "password": "password123"})
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
