@@ -69,7 +69,7 @@
 ## Русские имена из Wikidata
 
 У GeoNames русского имени нет примерно у двух третей городов. Пробел закрывает обогащение
-`python -m app.geo.infra.datasets.wikidata`: оно берёт файл датасета и пишет его новую версию.
+`python -m devtools.geo_datasets.wikidata` (из `backend/`): оно берёт файл датасета и пишет его новую версию.
 
 - Имя ищется только у города **без** `name_ru` и с населением не меньше `--min-population`
   (по умолчанию 0 — у всех городов). Заполненные имена не меняются.
@@ -88,7 +88,7 @@
 «Хуаншань»). Но и Wikidata ошибается («Посёлок Загорье», «Клайпедское городское самоуправление»),
 поэтому победителя выбирает арбитр, а не правило.
 
-- Решения лежат в `ru_name_decisions.csv` рядом с манифестом, в git: `external_id`, оба спорящих
+- Решения лежат в `backend/devtools/geo_datasets/ru_name_decisions.csv`, в git: `external_id`, оба спорящих
   имени, выбранное `name_ru`, кто решил (`llm` / `human`) и причина. Сборка только применяет их —
   повторная сборка даёт тот же результат.
 - Решение действует, пока спорят те же имена. Изменилось имя в GeoNames или метки Wikidata —
@@ -112,7 +112,7 @@
 
 ## Места из Wikidata
 
-Датасет мест собирает `python -m app.geo.infra.datasets.wikidata_places --output <путь>.csv.gz
+Датасет мест собирает `python -m devtools.geo_datasets.wikidata_places --output <путь>.csv.gz
 [--min-sitelinks N]`: по SPARQL-запросу к Wikidata на каждый класс мест.
 
 - Классы перечислены в `wikidata_places/query.py` от узкого к широкому. Объект получает тип первого

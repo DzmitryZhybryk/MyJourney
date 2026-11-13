@@ -5,7 +5,7 @@ import gzip
 import hashlib
 from pathlib import Path
 
-from app.geo.infra.datasets.writer import write_dataset_file
+from devtools.geo_datasets.writer import write_dataset_file
 
 _FIELDNAMES = ("external_id", "name_en", "name_ru")
 _ROWS = ({"external_id": "Wikidata:Q724367", "name_en": "Belukha", "name_ru": "Белуха"},)

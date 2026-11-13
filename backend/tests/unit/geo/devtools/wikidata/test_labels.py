@@ -6,7 +6,7 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from app.geo.infra.datasets.wikidata.labels import (
+from devtools.geo_datasets.wikidata.labels import (
     EnrichmentReport,
     acceptable_ru_name,
     acceptable_ru_names,

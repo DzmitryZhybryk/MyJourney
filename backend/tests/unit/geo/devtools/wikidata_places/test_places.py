@@ -5,8 +5,8 @@ from collections import Counter
 import pytest
 
 from app.geo.domain.enums import PlaceKindEnum
-from app.geo.infra.datasets.wikidata_places.places import ExportedPlace, ExportOutcomeEnum, collect_places
 from app.shared.types import DictStrAny
+from devtools.geo_datasets.wikidata_places.places import ExportedPlace, ExportOutcomeEnum, collect_places
 
 # WKT в ответе Wikidata: сначала долгота, потом широта.
 _TIAN_SHAN: DictStrAny = {

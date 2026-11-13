@@ -39,7 +39,7 @@ services:
   # One-shot: грузит газеттир после миграций; уже загруженные версии датасетов пропускает.
   myjourney_geo_load:
     <<: *backend
-    command: python -m app.geo.infra.datasets
+    command: python -m app.geo.scripts.load_datasets
     depends_on:
       myjourney_migrate:
         condition: service_completed_successfully

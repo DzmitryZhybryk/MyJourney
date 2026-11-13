@@ -1,7 +1,7 @@
 """
 CLI: дописывает русские имена в файл датасета из Wikidata и применяет решения по спорам с GeoNames.
 
-``python -m app.geo.infra.datasets.wikidata --output <путь>.csv.gz [--input <путь>] [--min-population N]
+``python -m devtools.geo_datasets.wikidata --output <путь>.csv.gz [--input <путь>] [--min-population N]
 [--disputes-out <споры>.json] [--record <вердикты>.json]``
 
 Без ``--input`` берёт файл датасета из ``manifest.toml`` (скачивает в кеш, если его там нет).
@@ -15,6 +15,7 @@ import argparse
 import csv
 import gzip
 import json
+import sys
 from pathlib import Path
 from typing import Final
 
@@ -22,8 +23,12 @@ import httpx
 
 from app.geo.infra.datasets.cache import ensure_cached
 from app.geo.infra.datasets.manifest import DatasetFormatEnum, read_manifest
-from app.geo.infra.datasets.wikidata.disputes import (
+from app.shared.logging import configure_logging, get_logger
+from app.shared.settings import settings
+from app.shared.types import DictStrAny
+from devtools.geo_datasets.wikidata.disputes import (
     ArbiterVerdict,
+    ArbitrationError,
     RuNameDispute,
     apply_decisions,
     find_disputes,
@@ -32,16 +37,13 @@ from app.geo.infra.datasets.wikidata.disputes import (
     record_verdicts,
     write_decisions,
 )
-from app.geo.infra.datasets.wikidata.labels import (
+from devtools.geo_datasets.wikidata.labels import (
     candidate_geonames_id,
     enrich_rows,
     fetch_ru_labels,
     geonames_id_of,
 )
-from app.geo.infra.datasets.writer import write_dataset_file
-from app.shared.logging import configure_logging, get_logger
-from app.shared.settings import settings
-from app.shared.types import DictStrAny
+from devtools.geo_datasets.writer import write_dataset_file
 
 logger = get_logger(__name__)
 
@@ -63,7 +65,7 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> int:
     """
     Читает датасет, дописывает имена из Wikidata и пишет новый файл.
 
@@ -71,6 +73,9 @@ def main() -> None:
         - сборка новой версии датасета с русскими названиями из Wikidata
         - выгрузка споров о русских названиях на арбитраж
         - запись вердиктов арбитра в файл решений
+
+    Returns:
+        Код выхода процесса: 0 — датасет записан, 1 — вердикт или файл решений отвергнут
     """
     configure_logging(include_debug=False)
     args = _parse_args()
@@ -95,12 +100,17 @@ def main() -> None:
         labels = fetch_ru_labels(geonames_ids=geonames_ids, http_client=http_client)
 
     disputes = find_disputes(rows=rows, labels=labels)
-    decisions = read_decisions()
-    if args.record:
-        verdicts = [ArbiterVerdict(**entry) for entry in json.loads(args.record.read_text(encoding="utf-8"))]
-        recorded = record_verdicts(verdicts=verdicts, rows=rows, disputes=disputes)
-        decisions = merge_decisions(decisions=decisions, recorded=recorded)
-        write_decisions(decisions=decisions.values())
+    try:
+        decisions = read_decisions()
+        if args.record:
+            verdicts = [ArbiterVerdict(**entry) for entry in json.loads(args.record.read_text(encoding="utf-8"))]
+            recorded = record_verdicts(verdicts=verdicts, rows=rows, disputes=disputes)
+            decisions = merge_decisions(decisions=decisions, recorded=recorded)
+            write_decisions(decisions=decisions.values())
+    except ArbitrationError as error:
+        # A rejected verdict is bad input, not a bug: a traceback would bury the one line that matters.
+        logger.error("geo.wikidata.arbitration_rejected", reason=str(error))  # noqa: TRY400
+        return 1
 
     decided, unresolved, disputes_report = apply_decisions(rows=rows, disputes=disputes, decisions=decisions)
     enriched, report = enrich_rows(rows=decided, labels=labels, min_population=args.min_population)
@@ -127,6 +137,7 @@ def main() -> None:
         corrected=disputes_report.corrected,
         stale_decisions=disputes_report.stale,
     )
+    return 0
 
 
 def _dispute_to_json(*, dispute: RuNameDispute) -> DictStrAny:
@@ -141,4 +152,4 @@ def _dispute_to_json(*, dispute: RuNameDispute) -> DictStrAny:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

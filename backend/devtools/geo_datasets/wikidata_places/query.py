@@ -3,8 +3,8 @@ from typing import Final
 import httpx
 
 from app.geo.domain.enums import PlaceKindEnum
-from app.geo.infra.datasets.wikidata.sparql import fetch_sparql_bindings
 from app.shared.types import DictStrAny
+from devtools.geo_datasets.wikidata.sparql import fetch_sparql_bindings
 
 # Классы Wikidata от узкого к широкому: место получает тип первого класса, в который попало
 # (водохранилище — подкласс озера, вулкан — подкласс горы).

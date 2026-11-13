@@ -5,8 +5,8 @@ from enum import StrEnum
 from typing import Final
 
 from app.geo.domain.enums import PlaceKindEnum
-from app.geo.infra.datasets.wikidata.labels import MAX_NAME_LENGTH, acceptable_ru_name, strip_qualifier
 from app.shared.types import DictStrAny
+from devtools.geo_datasets.wikidata.labels import MAX_NAME_LENGTH, acceptable_ru_name, strip_qualifier
 
 _EXTERNAL_ID_PREFIX: Final[str] = "Wikidata:"
 

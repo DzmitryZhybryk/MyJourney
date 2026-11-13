@@ -1,6 +1,6 @@
 [project]
 name = "MyJourney"
-version = "7.5.0"
+version = "7.5.1"
 description = "Personal travel atlas: journeys, cities and routes on a globe"
 authors = [
     { name = "Dzmitry Zhybryk", email = "mr.zhybryk@gmail.com" }
@@ -75,9 +75,6 @@ markers = [
 omit = [
     "app/__main__.py",
     "app/*/scripts/*",
-    "app/geo/infra/datasets/__main__.py",
-    "app/geo/infra/datasets/wikidata/__main__.py",
-    "app/geo/infra/datasets/wikidata_places/__main__.py",
     "app/shared/infra/procrastinate/__main__.py",
 ]
 
@@ -159,7 +156,7 @@ overrides = [
 ]
 
 [tool.vulture]
-paths = ["app", "vulture_whitelist.py"]
+paths = ["app", "devtools", "vulture_whitelist.py"]
 min_confidence = 60
 # Декораторы, после которых vulture не должен считать функцию мёртвой:
 # фреймворк (FastAPI/Starlette) или Pydantic вызывают такие функции неявно.

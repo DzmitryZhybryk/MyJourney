@@ -13,6 +13,17 @@ CHANGELOG остаётся один. Новые записи группирую�
 
 ## 2026-11-13
 
+### Backend 7.5.1
+
+- Загрузка газеттира в базу — `python -m app.geo.scripts.load_datasets` (было `python -m app.geo.infra.datasets`); compose-сервис `myjourney_geo_load` и `make geo-load` запускают её по-новому
+- Сборщики датасетов из Wikidata и файл решений арбитра `ru_name_decisions.csv` переехали в `backend/devtools/geo_datasets/` и больше не попадают в прод-образ: `python -m devtools.geo_datasets.wikidata`, `python -m devtools.geo_datasets.wikidata_places`
+- Отвергнутый вердикт арбитра или строка файла решений завершает сборку одной строкой в логе и кодом 1, без traceback
+- Скрипт назначения первого админа берёт роль из `UserRoleEnum`, а не из строки
+
+### Project
+
+- Правило о скриптах в `layers.md`: серверный — в `app/<домен>/scripts/` и импортирует только свой домен и `shared`, локальный — вне пакета приложения и прод-образа
+
 ### Backend 7.5.0
 
 - Роль и тариф разделены: роль — `user` или `admin`, тариф — `free` или `premium` (новая колонка `user_credentials.plan`). Новый аккаунт получает `user` и `free`

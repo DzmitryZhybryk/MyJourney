@@ -3,13 +3,11 @@
 import argparse
 import logging
 import sys
-from typing import Final
 
 import psycopg
 
+from app.auth.domain.enums import UserRoleEnum
 from app.shared.settings import settings
-
-_ADMIN_ROLE: Final[str] = "admin"
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +29,7 @@ def _set_admin_role(*, connection: psycopg.Connection, email: str) -> int:
     with connection.transaction():
         existing_admin = connection.execute(
             "SELECT email FROM user_credentials WHERE role = %(role)s LIMIT 1",
-            {"role": _ADMIN_ROLE},
+            {"role": UserRoleEnum.ADMIN},
         ).fetchone()
         if existing_admin is not None:
             logger.error("Админ уже есть: %s. Скрипт только для назначения первого админа", existing_admin[0])
@@ -48,9 +46,9 @@ def _set_admin_role(*, connection: psycopg.Connection, email: str) -> int:
         user_id, current_role = row
         connection.execute(
             "UPDATE user_credentials SET role = %(role)s, updated_at = now() WHERE user_id = %(user_id)s",
-            {"role": _ADMIN_ROLE, "user_id": user_id},
+            {"role": UserRoleEnum.ADMIN, "user_id": user_id},
         )
-        logger.info("%s: %s → %s", email, current_role, _ADMIN_ROLE)
+        logger.info("%s: %s → %s", email, current_role, UserRoleEnum.ADMIN)
         return 0
 
 
