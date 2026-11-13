@@ -4,13 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from app.geo.infra.datasets.exceptions import (
-    HumanDecisionOverrideError,
-    InvalidRuNameDecisionError,
-    UnknownVerdictCityError,
-)
-from app.geo.infra.datasets.wikidata.disputes import (
+from app.shared.types import DictStrAny
+from devtools.geo_datasets.wikidata.disputes import (
     ArbiterVerdict,
+    ArbitrationError,
     DisputesReport,
     RuNameDecision,
     RuNameDispute,
@@ -21,7 +18,6 @@ from app.geo.infra.datasets.wikidata.disputes import (
     record_verdicts,
     write_decisions,
 )
-from app.shared.types import DictStrAny
 
 _HUANGSHAN_ROW = {
     "external_id": "GeoNames:1792359",
@@ -322,7 +318,7 @@ def test_record_verdicts_unknown_city_raises() -> None:
     """record_verdicts: вердикт по городу, которого нет в датасете, — ошибка, а не молчаливый пропуск."""
     verdict = ArbiterVerdict(external_id="GeoNames:404", name_ru="Нигде", decided_by="llm", reason="-")
 
-    with pytest.raises(UnknownVerdictCityError, match="GeoNames:404"):
+    with pytest.raises(ArbitrationError, match="GeoNames:404"):
         record_verdicts(verdicts=[verdict], rows=[_HUANGSHAN_ROW], disputes=[])
 
 
@@ -387,7 +383,7 @@ def test_record_verdicts_rejects_invalid_verdict(entry: DictStrAny, match: str) 
     }
     verdict = ArbiterVerdict(**(verdict_entry | entry))
 
-    with pytest.raises(InvalidRuNameDecisionError, match=match):
+    with pytest.raises(ArbitrationError, match=match):
         record_verdicts(verdicts=[verdict], rows=[_HUANGSHAN_ROW], disputes=[_HUANGSHAN_DISPUTE])
 
 
@@ -395,7 +391,7 @@ def test_record_verdicts_rejects_duplicate_city() -> None:
     """record_verdicts: два вердикта по одному городу — ошибка, а не молчаливая победа второго."""
     verdict = ArbiterVerdict(external_id="GeoNames:1792359", name_ru="Хуаншань", decided_by="llm", reason="-")
 
-    with pytest.raises(InvalidRuNameDecisionError, match="duplicate"):
+    with pytest.raises(ArbitrationError, match="duplicate"):
         record_verdicts(verdicts=[verdict, verdict], rows=[_HUANGSHAN_ROW], disputes=[_HUANGSHAN_DISPUTE])
 
 
@@ -419,7 +415,7 @@ def test_read_decisions_rejects_invalid_file(tmp_path: Path, lines: list[str], m
     path = tmp_path / "decisions.csv"
     path.write_text("\n".join(["external_id,geonames_ru,wikidata_ru,name_ru,decided_by,reason", *lines]) + "\n")
 
-    with pytest.raises(InvalidRuNameDecisionError, match=match):
+    with pytest.raises(ArbitrationError, match=match):
         read_decisions(path=path)
 
 
@@ -469,7 +465,7 @@ def test_merge_decisions_llm_cannot_override_human_decision() -> None:
         reason="re-arbitrated",
     )
 
-    with pytest.raises(HumanDecisionOverrideError, match="GeoNames:611403"):
+    with pytest.raises(ArbitrationError, match="GeoNames:611403"):
         merge_decisions(decisions={"GeoNames:611403": human_decision}, recorded=[recorded])
 
 

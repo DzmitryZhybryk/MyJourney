@@ -23,27 +23,6 @@ class DatasetColumnsError(DatasetFormatError):
         super().__init__(f"Unexpected dataset columns: {sorted(columns)}")
 
 
-class UnknownVerdictCityError(Exception):
-    """Вердикт арбитра ссылается на город, которого нет в датасете."""
-
-    def __init__(self, *, external_id: str) -> None:
-        super().__init__(f"Arbiter verdict references a city missing from the dataset: {external_id}")
-
-
-class InvalidRuNameDecisionError(Exception):
-    """Вердикт арбитра или строка файла решений не годится: пустое имя, неизвестный автор, повтор города."""
-
-    def __init__(self, *, external_id: str, problem: str) -> None:
-        super().__init__(f"Invalid ru name decision for {external_id}: {problem}")
-
-
-class HumanDecisionOverrideError(Exception):
-    """Вердикт арбитра пытается заменить решение, принятое человеком."""
-
-    def __init__(self, *, external_id: str) -> None:
-        super().__init__(f"Verdict for {external_id} would override a human decision; edit the decisions file instead")
-
-
 class MissingEnglishNameError(DatasetFormatError):
     """У строки датасета нет имени на ``en`` — фолбэка отображения для любого языка."""
 

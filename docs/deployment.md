@@ -18,7 +18,7 @@
   доступны лишь внутри docker-сети `myjourney-network`.
 - Образы `myjourney-backend`/`myjourney-frontend` собирает CI и пушит в **GHCR**; сервер их только `pull`-ит.
 - Миграции БД прогоняет one-shot `myjourney_migrate` (`alembic upgrade head` + схема procrastinate) до старта app/worker.
-- Газеттир загружает one-shot `myjourney_geo_load` (`python -m app.geo.infra.datasets`) после миграций и до старта app: скачивает датасеты из `manifest.toml` (GitHub Release), проверяет sha256 и пропускает уже загруженные версии.
+- Газеттир загружает one-shot `myjourney_geo_load` (`python -m app.geo.scripts.load_datasets`) после миграций и до старта app: скачивает датасеты из `manifest.toml` (GitHub Release), проверяет sha256 и пропускает уже загруженные версии.
 
 ## Предпосылки
 

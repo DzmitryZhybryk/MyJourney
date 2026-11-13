@@ -6,7 +6,7 @@ from typing import Final
 
 import httpx
 
-from app.geo.infra.datasets.wikidata.sparql import fetch_sparql_bindings
+from devtools.geo_datasets.wikidata.sparql import fetch_sparql_bindings
 
 _GEONAMES_PREFIX: Final[str] = "GeoNames:"
 

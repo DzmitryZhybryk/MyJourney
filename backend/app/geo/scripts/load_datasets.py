@@ -1,4 +1,4 @@
-"""CLI загрузки датасетов из ``manifest.toml``: ``python -m app.geo.infra.datasets``."""
+"""CLI загрузки датасетов из ``manifest.toml``: ``python -m app.geo.scripts.load_datasets``."""
 
 from typing import Final
 

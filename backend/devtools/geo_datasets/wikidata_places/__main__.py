@@ -1,7 +1,7 @@
 """
 CLI: выгружает места (озёра, горы, хребты…) из Wikidata в файл датасета формата ``places``.
 
-``python -m app.geo.infra.datasets.wikidata_places --output <путь>.csv.gz [--min-sitelinks N]``
+``python -m devtools.geo_datasets.wikidata_places --output <путь>.csv.gz [--min-sitelinks N]``
 
 Результат — новая версия датасета: её заливают ассетом GitHub Release и прописывают в манифест.
 """
@@ -13,11 +13,11 @@ from typing import Final
 import httpx
 
 from app.geo.domain.enums import PlaceKindEnum
-from app.geo.infra.datasets.wikidata_places.places import ExportedPlace, collect_places
-from app.geo.infra.datasets.wikidata_places.query import PLACE_CLASSES, fetch_class_bindings
-from app.geo.infra.datasets.writer import write_dataset_file
 from app.shared.logging import configure_logging, get_logger
 from app.shared.types import DictStrAny
+from devtools.geo_datasets.wikidata_places.places import ExportedPlace, collect_places
+from devtools.geo_datasets.wikidata_places.query import PLACE_CLASSES, fetch_class_bindings
+from devtools.geo_datasets.writer import write_dataset_file
 
 logger = get_logger(__name__)
 

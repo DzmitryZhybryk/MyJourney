@@ -5,7 +5,7 @@ paths:
 ---
 # Layers of a Python domain
 
-> Where each kind of code lives and which way it may depend, not a DDD tutorial. How what lives
+> Where each kind of code lives and which way it may depend. How what lives
 > there is named — `naming.md`; what crosses a boundary — `dto.md`; reading soft-deleted rows —
 > `soft-delete.md`. Where a project already has its own answer, the project wins.
 
@@ -50,8 +50,11 @@ A small domain gets the same packages — one layout everywhere is worth more th
   bus and the `infra` handler registered under that name — the same `infra → application`
   direction as a port, so they live in `ports/tasks.py`.
 
-Presentation schemas stay separate from application DTOs. What crosses each boundary, how it is
-named and where it is converted — `dto.md`.
+## Scripts
+
+A command run on the server lives in `app/<domain>/scripts/` and imports its own domain and
+`shared`, never another domain. A tool run only on a developer's machine lives outside the
+application package and the production image; the app never imports it.
 
 ## Domain config
 
@@ -79,12 +82,10 @@ fakes depend on the port.
 - A port module imports only `domain`, `shared`, sibling ports and third-party types — never
   `schemas/`, `services/` or `infra` (a module-boundary checker such as tach enforces the last).
 
-How a port, its module and its implementation are named — `naming.md`.
-
 ## Transaction boundary (UoW)
 
 One use case = one transaction: `async with uow.transaction(): ... await uow.commit()`.
-Rollback by default — leaving the block without an explicit commit rolls back.
+Leaving the block without `commit()` rolls back.
 
 **Every use case that touches its own store opens the block — reads included.** A read leaves
 the block without `commit()`. One shape for every use case: a read on the bare session is not a

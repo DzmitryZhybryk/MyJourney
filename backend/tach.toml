@@ -21,7 +21,7 @@ depends_on = ["app.shared"]
 
 [[modules]]
 path = "app.auth.scripts"
-depends_on = ["app.shared"]
+depends_on = ["app.auth.domain", "app.shared"]
 
 [[modules]]
 path = "app.auth.domain"
@@ -57,6 +57,10 @@ depends_on = ["app.geo.domain", "app.shared"]
 [[modules]]
 path = "app.geo.infra"
 depends_on = ["app.geo.domain", "app.geo.application", "app.shared"]
+
+[[modules]]
+path = "app.geo.scripts"
+depends_on = ["app.geo.infra", "app.shared"]
 
 [[modules]]
 path = "app.geo.presentation"
@@ -129,4 +133,4 @@ depends_on = []
 # Инструменты локальной разработки и тестов вне пакета app: в образ прода не попадают, app о них не знает.
 [[modules]]
 path = "devtools"
-depends_on = ["app.media.infra", "app.shared"]
+depends_on = ["app.geo.domain", "app.geo.infra", "app.media.infra", "app.shared"]

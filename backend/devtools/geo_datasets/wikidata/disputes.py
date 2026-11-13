@@ -5,14 +5,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from app.geo.infra.datasets.exceptions import (
-    HumanDecisionOverrideError,
-    InvalidRuNameDecisionError,
-    UnknownVerdictCityError,
-)
-from app.geo.infra.datasets.wikidata.labels import acceptable_ru_names, geonames_id_of
+from devtools.geo_datasets.wikidata.labels import acceptable_ru_names, geonames_id_of
 
 DECISIONS_PATH: Final[Path] = Path(__file__).parents[1] / "ru_name_decisions.csv"
+
+
+class ArbitrationError(Exception):
+    """Вердикт арбитра или строка файла решений не годится; сборка останавливается до записи файлов."""
+
+    def __init__(self, *, external_id: str, problem: str) -> None:
+        super().__init__(f"Rejected ru name decision for {external_id}: {problem}")
+
 
 DECISION_COLUMNS: Final[tuple[str, ...]] = (
     "external_id",
@@ -207,13 +210,16 @@ def merge_decisions(
         Все решения по ``external_id``
 
     Raises:
-        HumanDecisionOverrideError: новое решение не от человека заменяет решение человека
+        ArbitrationError: новое решение не от человека заменяет решение человека
     """
     merged = dict(decisions)
     for decision in recorded:
         current = merged.get(decision.external_id)
         if current is not None and current.decided_by == _HUMAN and decision.decided_by != _HUMAN:
-            raise HumanDecisionOverrideError(external_id=decision.external_id)
+            raise ArbitrationError(
+                external_id=decision.external_id,
+                problem="would override a human decision; edit the decisions file instead",
+            )
 
         merged[decision.external_id] = decision
 
@@ -254,8 +260,8 @@ def record_verdicts(
         Решения в порядке вердиктов
 
     Raises:
-        UnknownVerdictCityError: вердикт ссылается на город, которого нет в датасете
-        InvalidRuNameDecisionError: вердикт без имени, с неизвестным автором или повторный по городу
+        ArbitrationError: вердикт ссылается на город, которого нет в датасете, или он без имени,
+            с неизвестным автором, повторный по городу
     """
     disputes_by_id = {dispute.external_id: dispute for dispute in disputes}
     names_by_id = {row["external_id"]: row["name_ru"] for row in rows}
@@ -275,7 +281,7 @@ def record_verdicts(
         elif verdict.external_id in names_by_id:
             geonames_ru, wikidata_ru = names_by_id[verdict.external_id], frozenset[str]()
         else:
-            raise UnknownVerdictCityError(external_id=verdict.external_id)
+            raise ArbitrationError(external_id=verdict.external_id, problem="city missing from the dataset")
 
         decisions.append(
             RuNameDecision(
@@ -300,13 +306,13 @@ def read_decisions(*, path: Path = DECISIONS_PATH) -> dict[str, RuNameDecision]:
         - запись вердиктов арбитра в файл решений
 
     Args:
-        path: Путь к CSV (по умолчанию — ``ru_name_decisions.csv`` рядом с манифестом)
+        path: Путь к CSV (по умолчанию — ``ru_name_decisions.csv`` пакета сборщиков)
 
     Returns:
         Решения по ``external_id``
 
     Raises:
-        InvalidRuNameDecisionError: строка без имени, с неизвестным автором или повторный город
+        ArbitrationError: строка без имени, с неизвестным автором или повторный город
     """
     decisions: dict[str, RuNameDecision] = {}
     with path.open(encoding="utf-8", newline="") as decisions_file:
@@ -401,16 +407,16 @@ def _check_decision(*, external_id: str, name_ru: str, decided_by: str, seen_ids
         - запись вердиктов арбитра в файл решений
 
     Raises:
-        InvalidRuNameDecisionError: решение не проходит проверку
+        ArbitrationError: решение не проходит проверку
     """
     if not name_ru or name_ru != name_ru.strip():
-        raise InvalidRuNameDecisionError(external_id=external_id, problem=f"name_ru {name_ru!r}")
+        raise ArbitrationError(external_id=external_id, problem=f"name_ru {name_ru!r}")
 
     if decided_by not in _DECIDERS:
-        raise InvalidRuNameDecisionError(external_id=external_id, problem=f"decided_by {decided_by!r}")
+        raise ArbitrationError(external_id=external_id, problem=f"decided_by {decided_by!r}")
 
     if external_id in seen_ids:
-        raise InvalidRuNameDecisionError(external_id=external_id, problem="duplicate decision")
+        raise ArbitrationError(external_id=external_id, problem="duplicate decision")
 
 
 def _same_name(*, left: str, right: str) -> bool:
