@@ -2,11 +2,17 @@ from enum import StrEnum
 
 
 class UserRoleEnum(StrEnum):
-    """Роль пользователя, определяющая уровень доступа и привилегии."""
+    """Роль пользователя: что ему разрешено делать в системе."""
+
+    USER = "user"
+    ADMIN = "admin"
+
+
+class UserPlanEnum(StrEnum):
+    """Тариф пользователя: за что он платит. Независим от роли."""
 
     FREE = "free"
     PREMIUM = "premium"
-    ADMIN = "admin"
 
 
 class ChallengeTypeEnum(StrEnum):

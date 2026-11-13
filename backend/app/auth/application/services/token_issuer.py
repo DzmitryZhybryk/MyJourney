@@ -7,8 +7,9 @@ from pydantic import SecretStr
 from app.auth.application.schemas.metadata import ClientMetadata
 from app.auth.application.schemas.results import IssuedRefreshToken, TokenPairResult
 from app.auth.domain.entities import RefreshTokenEntity, UserCredentialsEntity
+from app.auth.domain.permissions import expand_permissions
 from app.shared.infra.crypto import DeterministicHasherPort
-from app.shared.infra.jwt import AccessTokenIssuerPort
+from app.shared.infra.jwt import AccessTokenClaims, AccessTokenIssuerPort
 
 _REFRESH_TOKEN_SECRET_BYTES: Final[int] = 32
 
@@ -111,9 +112,16 @@ class TokenIssuer:
             Готовый к отдаче через presentation-слой результат
         """
         access_token = self._access_token_issuer.create_access_token(
-            user_id=user_credentials_entity.user_id,
-            role=user_credentials_entity.role.value,
-            email_verified=user_credentials_entity.is_email_verified,
+            claims=AccessTokenClaims(
+                user_id=user_credentials_entity.user_id,
+                role=user_credentials_entity.role.value,
+                plan=user_credentials_entity.plan.value,
+                permissions=expand_permissions(
+                    role=user_credentials_entity.role,
+                    plan=user_credentials_entity.plan,
+                ),
+                email_verified=user_credentials_entity.is_email_verified,
+            ),
         )
         return TokenPairResult(
             access_token=SecretStr(access_token),

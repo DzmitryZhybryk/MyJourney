@@ -1,4 +1,11 @@
-from app.shared.exceptions import UnauthenticatedError
+from app.shared.exceptions import PermissionDeniedError, UnauthenticatedError
+
+
+class PermissionRequiredError(PermissionDeniedError):
+    """В access-токене нет права, которого требует маршрут."""
+
+    code = "permission_required"
+    message = "Недостаточно прав"
 
 
 class InvalidAccessTokenError(UnauthenticatedError):

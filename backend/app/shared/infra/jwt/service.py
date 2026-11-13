@@ -1,9 +1,11 @@
 import datetime as dt
 from functools import cache
-from uuid import UUID
 
 import jwt
+from pydantic import ValidationError
 
+from app.shared.infra.jwt.ports import AccessTokenClaims
+from app.shared.infra.jwt.schemas import AccessTokenPayload
 from app.shared.settings import settings
 
 
@@ -19,51 +21,53 @@ class JWTService:
         self._algorithm = algorithm
         self._expire_minutes = access_token_expire_minutes
 
-    def create_access_token(self, *, user_id: UUID, role: str, email_verified: bool) -> str:
+    def create_access_token(self, *, claims: AccessTokenClaims) -> str:
         now = dt.datetime.now(tz=dt.UTC)
-        payload = {
-            "sub": str(user_id),
-            "role": role,
-            "email_verified": email_verified,
-            "iat": now,
-            "exp": now + dt.timedelta(minutes=self._expire_minutes),
-        }
-        return jwt.encode(payload, self._secret, algorithm=self._algorithm)
+        payload = AccessTokenPayload(
+            sub=claims.user_id,
+            role=claims.role,
+            plan=claims.plan,
+            email_verified=claims.email_verified,
+            permissions=sorted(claims.permissions),
+            iat=int(now.timestamp()),
+            exp=int((now + dt.timedelta(minutes=self._expire_minutes)).timestamp()),
+        )
+        return jwt.encode(payload.model_dump(mode="json"), self._secret, algorithm=self._algorithm)
 
-    def decode_access_token(self, token: str) -> UUID:
+    def decode_access_token(self, token: str) -> AccessTokenClaims:
         """
-        Декодирует access-токен и возвращает идентификатор пользователя.
+        Декодирует access-токен и возвращает его содержимое.
 
         Все ошибки PyJWT (истёкший срок, неверная подпись, искажённый формат)
-        и невалидный ``sub`` оборачиваются в ``JWTDecodeError`` — инкапсулируем
+        и claim неверного типа оборачиваются в ``JWTDecodeError`` — инкапсулируем
         зависимость от pyjwt в инфраструктурном слое, presentation работает
         только с этим типом.
 
         Scenarios:
-            - любой эндпоинт, которому нужен текущий пользователь
+            - любой эндпоинт, которому нужен текущий пользователь или право
 
         Args:
             token: Plaintext JWT access-токен из заголовка Authorization
 
         Returns:
-            UUID пользователя из claim'а ``sub``
+            Содержимое токена
 
         Raises:
-            JWTDecodeError: Если токен не проходит валидацию или ``sub`` отсутствует/некорректен
+            JWTDecodeError: Токен не проходит валидацию или claim отсутствует/неверного типа
         """
         try:
-            payload = jwt.decode(token, self._secret, algorithms=[self._algorithm])
-        except jwt.PyJWTError as exc:
+            raw_payload = jwt.decode(token, self._secret, algorithms=[self._algorithm])
+            payload = AccessTokenPayload.model_validate(raw_payload)
+        except (jwt.PyJWTError, ValidationError) as exc:
             raise JWTDecodeError() from exc
 
-        sub = payload.get("sub")
-        if not isinstance(sub, str):
-            raise JWTDecodeError()
-
-        try:
-            return UUID(sub)
-        except ValueError as exc:
-            raise JWTDecodeError() from exc
+        return AccessTokenClaims(
+            user_id=payload.sub,
+            role=payload.role,
+            plan=payload.plan,
+            permissions=frozenset(payload.permissions),
+            email_verified=payload.email_verified,
+        )
 
 
 @cache

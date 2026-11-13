@@ -21,4 +21,5 @@ class UserCredentials(DateTimeMixin, BaseDBModel):
     username: Mapped[str] = mapped_column(String(50))
     password_hash: Mapped[str]
     role: Mapped[str] = mapped_column(String(20))
+    plan: Mapped[str] = mapped_column(String(20))
     email_verified_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)

@@ -1,8 +1,12 @@
 import datetime as dt
 from uuid import uuid4
 
+import pytest
+
 from app.auth.application.schemas.metadata import ClientMetadata
 from app.auth.application.services.token_issuer import TokenIssuer
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
+from app.auth.domain.permissions import MEDIA_CONFIG_EDIT
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
 from app.shared.infra.jwt.service import JWTService
 from tests.builders import make_user_credentials
@@ -64,6 +68,41 @@ def test_build_token_pair_access_token_decodes_back_to_user(
         refresh_token_entity=refresh_token_entity,
     )
 
-    assert jwt_service.decode_access_token(pair.access_token.get_secret_value()) == user_credentials_entity.user_id
+    claims = jwt_service.decode_access_token(pair.access_token.get_secret_value())
+    assert claims.user_id == user_credentials_entity.user_id
     assert pair.refresh_token.secret.get_secret_value() == refresh_secret
     assert pair.refresh_token.expires_at == refresh_token_entity.expires_at
+
+
+@pytest.mark.parametrize(
+    ("role", "plan", "expected_permissions"),
+    [
+        (UserRoleEnum.USER, UserPlanEnum.FREE, frozenset()),
+        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({MEDIA_CONFIG_EDIT})),
+    ],
+)
+def test_build_token_pair_access_token_carries_role_plan_and_expanded_permissions(
+    token_issuer: TokenIssuer,
+    jwt_service: JWTService,
+    role: UserRoleEnum,
+    plan: UserPlanEnum,
+    expected_permissions: frozenset[str],
+) -> None:
+    """В access-токене роль, тариф, признак подтверждения email и права, раскрытые из роли и тарифа."""
+    user_credentials_entity = make_user_credentials(role=role, plan=plan, email_verified_at=dt.datetime.now(tz=dt.UTC))
+    refresh_secret, refresh_token_entity = token_issuer.issue_refresh_token(
+        user_id=user_credentials_entity.user_id,
+        client_metadata=ClientMetadata(),
+    )
+
+    pair = token_issuer.build_token_pair(
+        user_credentials_entity=user_credentials_entity,
+        refresh_secret=refresh_secret,
+        refresh_token_entity=refresh_token_entity,
+    )
+
+    claims = jwt_service.decode_access_token(pair.access_token.get_secret_value())
+    assert claims.role == role.value
+    assert claims.plan == plan.value
+    assert claims.permissions == expected_permissions
+    assert claims.email_verified is True

@@ -1,7 +1,28 @@
 """Протоколы выпуска access-токенов."""
 
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
+
+
+@dataclass(frozen=True, slots=True)
+class AccessTokenClaims:
+    """
+    Содержимое access-токена.
+
+    Attributes:
+        user_id: Владелец токена, попадает в claim ``sub``
+        role: Роль пользователя
+        plan: Тариф пользователя
+        permissions: Раскрытые права — по ним маршруты решают, пускать ли запрос
+        email_verified: Подтверждён ли email
+    """
+
+    user_id: UUID
+    role: str
+    plan: str
+    permissions: frozenset[str]
+    email_verified: bool
 
 
 class AccessTokenIssuerPort(Protocol):
@@ -12,7 +33,7 @@ class AccessTokenIssuerPort(Protocol):
     зависимость от неё.
     """
 
-    def create_access_token(self, *, user_id: UUID, role: str, email_verified: bool) -> str:
+    def create_access_token(self, *, claims: AccessTokenClaims) -> str:
         """
         Подписывает access-токен пользователя.
 
@@ -20,9 +41,7 @@ class AccessTokenIssuerPort(Protocol):
             - домен, который выдаёт пару токенов: регистрация, вход, обновление сессии
 
         Args:
-            user_id: Владелец токена, попадает в claim ``sub``
-            role: Роль пользователя
-            email_verified: Подтверждён ли email
+            claims: Содержимое токена
 
         Returns:
             Подписанный JWT

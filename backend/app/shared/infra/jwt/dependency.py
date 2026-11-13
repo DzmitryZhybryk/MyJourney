@@ -5,6 +5,7 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.shared.infra.jwt.exceptions import InvalidAccessTokenError
+from app.shared.infra.jwt.ports import AccessTokenClaims
 from app.shared.infra.jwt.service import JWTDecodeError, JWTService, get_jwt_service
 from app.shared.logging import bind_log_context
 
@@ -15,17 +16,17 @@ def jwt_service_dependency() -> JWTService:
     return get_jwt_service()
 
 
-async def current_user_id_dependency(
+async def current_user_claims_dependency(
     *,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     jwt_service: Annotated[JWTService, Depends(jwt_service_dependency)],
-) -> UUID:
+) -> AccessTokenClaims:
     """
-    Извлекает ``user_id`` из Bearer access-токена и привязывает его к строкам лога запроса.
+    Декодирует Bearer access-токен и привязывает ``user_id`` к строкам лога запроса.
 
     Заголовок ``Authorization: Bearer <token>`` обязателен — отсутствие
     или невалидный токен (просроченная подпись, искажённый формат, чужой
-    secret) приводят к 401 ``InvalidAccessTokenError``.
+    secret, claim неверного типа) приводят к 401 ``InvalidAccessTokenError``.
 
     Функция асинхронная намеренно: синхронную зависимость FastAPI выполняет в потоке с копией
     контекста, и привязанный к логу ``user_id`` пропал бы вместе с копией.
@@ -35,14 +36,14 @@ async def current_user_id_dependency(
     от auth.presentation, замыкая цикл auth ↔ users.
 
     Scenarios:
-        - любой эндпоинт, которому нужен текущий пользователь
+        - любой эндпоинт, которому нужен текущий пользователь или право
 
     Args:
         credentials: Распарсенный ``Authorization`` (или ``None`` если заголовка нет)
         jwt_service: Сервис подписи/декодирования JWT
 
     Returns:
-        UUID пользователя из claim'а ``sub``
+        Содержимое токена
 
     Raises:
         InvalidAccessTokenError: Заголовок отсутствует или токен не прошёл валидацию
@@ -51,9 +52,27 @@ async def current_user_id_dependency(
         raise InvalidAccessTokenError()
 
     try:
-        user_id = jwt_service.decode_access_token(token=credentials.credentials)
+        claims = jwt_service.decode_access_token(token=credentials.credentials)
     except JWTDecodeError as exc:
         raise InvalidAccessTokenError() from exc
 
-    bind_log_context(user_id=user_id)
-    return user_id
+    bind_log_context(user_id=claims.user_id)
+    return claims
+
+
+async def current_user_id_dependency(
+    claims: Annotated[AccessTokenClaims, Depends(current_user_claims_dependency)],
+) -> UUID:
+    """
+    Возвращает ``user_id`` из Bearer access-токена.
+
+    Scenarios:
+        - любой эндпоинт, которому нужен текущий пользователь
+
+    Args:
+        claims: Содержимое токена
+
+    Returns:
+        UUID пользователя из claim'а ``sub``
+    """
+    return claims.user_id

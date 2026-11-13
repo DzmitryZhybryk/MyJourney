@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.application.ports.user_credentials_repository import UserCredentialsRepositoryPort
 from app.auth.domain.entities import UserCredentialsEntity
-from app.auth.domain.enums import UserRoleEnum
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
 from app.auth.infra.models import UserCredentials
 from app.shared.repositories.base_repository import BaseDBRepository
@@ -145,6 +145,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             "username": user_credentials_entity.username,
             "password_hash": user_credentials_entity.password.hash,
             "role": user_credentials_entity.role.value,
+            "plan": user_credentials_entity.plan.value,
             "email_verified_at": user_credentials_entity.email_verified_at,
             "created_at": user_credentials_entity.created_at,
             "updated_at": user_credentials_entity.updated_at,
@@ -173,6 +174,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             username=user_credentials_model.username,
             password=Password(hash=user_credentials_model.password_hash),
             role=UserRoleEnum(user_credentials_model.role),
+            plan=UserPlanEnum(user_credentials_model.plan),
             email_verified_at=user_credentials_model.email_verified_at,
             created_at=user_credentials_model.created_at,
             updated_at=user_credentials_model.updated_at,

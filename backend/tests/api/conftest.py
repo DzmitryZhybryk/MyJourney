@@ -41,7 +41,7 @@ from httpx import ASGITransport, AsyncClient, Response
 
 from app.main import create_app, create_default_app
 from app.shared.exceptions.handlers import register_exception_handlers
-from app.shared.infra.jwt import get_jwt_service
+from app.shared.infra.jwt import AccessTokenClaims, get_jwt_service
 from app.shared.schemas.base import BFastAPI
 from app.shared.types import DictStrAny
 
@@ -139,7 +139,22 @@ def mint_access_token() -> Callable[..., str]:
     """
     jwt_service = get_jwt_service()
 
-    def _mint(*, user_id: UUID, role: str = "free", email_verified: bool = False) -> str:
-        return jwt_service.create_access_token(user_id=user_id, role=role, email_verified=email_verified)
+    def _mint(
+        *,
+        user_id: UUID,
+        role: str = "user",
+        plan: str = "free",
+        permissions: frozenset[str] = frozenset(),
+        email_verified: bool = False,
+    ) -> str:
+        return jwt_service.create_access_token(
+            claims=AccessTokenClaims(
+                user_id=user_id,
+                role=role,
+                plan=plan,
+                permissions=permissions,
+                email_verified=email_verified,
+            ),
+        )
 
     return _mint

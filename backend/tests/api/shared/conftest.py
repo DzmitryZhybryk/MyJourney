@@ -21,7 +21,9 @@ from structlog.typing import Processor
 
 from app.shared.exceptions import InternalError, NotFoundError, TemporaryError
 from app.shared.exceptions.handlers import register_exception_handlers
+from app.shared.infra.jwt import AccessTokenClaims
 from app.shared.infra.jwt.dependency import current_user_id_dependency
+from app.shared.infra.jwt.permission_checker import PermissionChecker
 from app.shared.infra.telemetry import get_api_telemetry_config
 from app.shared.logging.context import add_trace_context
 from app.shared.logging.middleware import HTTPLoggingMiddleware
@@ -81,6 +83,25 @@ def middleware_app() -> BFastAPI:
         raise RuntimeError("unhandled failure")  # noqa: TRY003 — намеренный сбой роута
 
     return app
+
+
+@pytest.fixture
+def guarded_permission() -> str:
+    """Право, которого требует маршрут ``/guarded/`` в ``guarded_app``."""
+    return "test.guarded"
+
+
+@pytest.fixture
+def guarded_app(middleware_app: BFastAPI, guarded_permission: str) -> BFastAPI:
+    """``middleware_app`` плюс маршрут ``/guarded/``, закрытый правом ``guarded_permission``."""
+
+    @middleware_app.get("/guarded/")
+    async def _guarded(
+        claims: Annotated[AccessTokenClaims, Depends(PermissionChecker(guarded_permission))],
+    ) -> dict[str, str]:
+        return {"user_id": str(claims.user_id)}
+
+    return middleware_app
 
 
 @pytest.fixture
