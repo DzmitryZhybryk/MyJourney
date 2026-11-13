@@ -1,43 +1,14 @@
 """
-Шина задач procrastinate для application-слоя.
-
-Вертикаль procrastinate сама владеет своими протоколами (как ``crypto`` —
-``SaltedHasherPort``): application зависит от Protocol'ов ``TaskBusPort`` /
-``SessionBoundTaskBusPort``, а конкретная реализация на procrastinate
-(``ProcrastinateTaskBus`` / ``ProcrastinateSessionBoundTaskBus``) живёт здесь же.
-Тесты подставляют фейк, реализующий тот же Protocol, без наследования impl.
-
-Контракт расщеплён на два по зависимостям:
-
-- ``TaskBusPort`` — defer вне транзакции (fire-and-forget). Для atomic defer'а в
-  текущей SA-транзакции — ``TaskBusPort.bind_to(session) -> SessionBoundTaskBusPort``.
-- ``SessionBoundTaskBusPort`` — view, привязанный к ``AsyncSession``: defer попадает
-  в ту же транзакцию, что и pending writes. Commit'ит ``UnitOfWork``.
-
-Зависимость зашита в тип — каждый новый метод попадает в правильный контракт
-без обсуждений: не нужна сессия → ``TaskBusPort``; нужна активная SA-tx →
-``SessionBoundTaskBusPort``.
+Реализации шины задач на procrastinate: ``ProcrastinateTaskBus`` и
+``ProcrastinateSessionBoundTaskBus``. Контракты, на которые опирается application, — в ``ports.py``.
 """
 
-from typing import Any, Protocol
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.infra.procrastinate.component import ProcrastinateApp
-
-
-class SessionBoundTaskBusPort(Protocol):
-    """Контракт defer'а procrastinate-таски в текущей SA-транзакции."""
-
-    async def defer(self, *, task_name: str, lock: str | None = None, **task_kwargs: Any) -> None: ...
-
-
-class TaskBusPort(Protocol):
-    """Контракт постановки procrastinate-задач: fire-and-forget defer и привязка к транзакции."""
-
-    async def defer(self, *, task_name: str, lock: str | None = None, **task_kwargs: Any) -> None: ...
-
-    def bind_to(self, session: AsyncSession) -> SessionBoundTaskBusPort: ...
+from app.shared.infra.procrastinate.ports import SessionBoundTaskBusPort, TaskBusPort
 
 
 class ProcrastinateSessionBoundTaskBus(SessionBoundTaskBusPort):

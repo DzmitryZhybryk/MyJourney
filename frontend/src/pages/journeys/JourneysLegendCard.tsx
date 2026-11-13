@@ -6,9 +6,8 @@ import { MAP_TONE } from "./journeys-data";
 import { isLegendCollapsed, setLegendCollapsed } from "./legendStorage";
 
 /**
- * Плавающая карточка легенды в углу карты. Сворачивается/разворачивается по
- * клику на заголовок; выбор запоминается (localStorage) и применяется при
- * следующих заходах — кто запомнил цвета, легенду больше не видит.
+ * Floating legend card in a corner of the map. Collapses/expands on a title click; the choice is
+ * remembered (localStorage) and applied on later visits.
  */
 export function JourneysLegendCard() {
   const { t } = useTranslation("journeys");

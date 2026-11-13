@@ -2,89 +2,53 @@ import logging
 import sys
 
 import structlog
+from structlog.typing import Processor
 
+from app.shared.logging.context import add_trace_context
+from app.shared.logging.foreign import drop_color_message, hide_task_arguments
 from app.shared.utils.json_serializer import serialize_to_json
+
+_UVICORN_APP_EXCEPTION_PREFIX = "Exception in ASGI application"
 
 
 def configure_logging(include_debug: bool = False) -> None:
     """
-    Настройка логирования с использованием structlog и интеграцией со stdlib.
+    Настраивает логирование процесса: каждая запись — одна JSON-строка в stdout, от structlog и от стандартного
+    ``logging`` одинаково.
 
-    Использует упрощенный подход на основе ProcessorFormatter:
-    - structlog рендерит свои логи в JSON
-    - ProcessorFormatter преобразует логи от стандартного logging (uvicorn и т.д.) в JSON
+    Scenarios:
+        - запуск API, воркера и CLI-скриптов
 
-    Основано на документации structlog:
-    https://www.structlog.org/en/stable/standard-library.html#rendering-using-structlog-based-formatters-within-logging
-
+    Args:
+        include_debug: Писать ли записи уровня DEBUG
     """
-    log_level = logging.DEBUG if include_debug else logging.INFO
+    shared_processors = get_shared_processors()
 
-    # Общие процессоры для всех типов логов
-    shared_processors = [
-        # Добавляет переменные контекста из contextvars (request_id, user_id и т.д.)
-        # Эти переменные устанавливаются в middleware/dependencies и автоматически добавляются ко всем логам
-        structlog.contextvars.merge_contextvars,
-        # Добавляет уровень логирования (info, warning, error и т.д.) в поле "level"
-        structlog.stdlib.add_log_level,
-        # Добавляет имя логгера (например, "app.shared.middleware.exception_logging") в поле "logger"
-        structlog.stdlib.add_logger_name,
-        # Добавляет временную метку в ISO формате (например, "2026-01-03T15:51:20.104096Z") в поле "timestamp"
-        structlog.processors.TimeStamper(fmt="iso"),
-        # Добавляет информацию о стеке вызовов при наличии (для отладки)
-        structlog.processors.StackInfoRenderer(),
-        # Форматирует информацию об исключениях (traceback) в читаемый вид при наличии exc_info
-        structlog.processors.format_exc_info,
-    ]
-
-    # Создаем форматтер для стандартного logging
-    # ProcessorFormatter нужен для:
-    # 1. Structlog логов - они используют wrap_for_formatter и распространяются в root logger
-    # 2. Логов от других библиотек, использующих стандартный logging (если появятся)
-    # Примечание: uvicorn.error отключен, но uvicorn может логировать критические ошибки
-    formatter = structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=shared_processors,  # Процессоры для логов от stdlib
-        processors=[
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            structlog.processors.JSONRenderer(serializer=serialize_to_json),
-        ],
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setFormatter(
+        fmt=structlog.stdlib.ProcessorFormatter(
+            foreign_pre_chain=[
+                *shared_processors,
+                structlog.stdlib.ExtraAdder(),
+                drop_color_message,
+                hide_task_arguments,
+            ],
+            processors=[
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.processors.JSONRenderer(serializer=serialize_to_json),
+            ],
+        )
     )
 
-    # Настройка стандартного logging
-    logging.basicConfig(
-        format="%(message)s",
-        stream=sys.stdout,
-        level=log_level,
-        force=True,  # Перезаписываем существующую конфигурацию
-    )
-
-    # Очищаем все существующие handlers у root_logger
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
-    root_logger.setLevel(log_level)
-
-    # Создаем один handler для root_logger
-    handler = logging.StreamHandler(stream=sys.stdout)
-    handler.setFormatter(fmt=formatter)
     root_logger.addHandler(hdlr=handler)
+    root_logger.setLevel(logging.DEBUG if include_debug else logging.INFO)
 
-    # Отключаем логирование uvicorn.error
-    # Все ошибки приложения логируются через HTTPLoggingMiddleware
-    uvicorn_error_logger = logging.getLogger("uvicorn.error")
-    uvicorn_error_logger.handlers.clear()  # Удаляем все handlers
-    uvicorn_error_logger.setLevel(logging.CRITICAL)  # Устанавливаем высокий уровень, чтобы ничего не логировалось
-    uvicorn_error_logger.propagate = False  # Отключаем распространение в root logger. Логи не попадут в наш форматтер
+    _route_uvicorn_logs_to_root()
 
-    # Настройка structlog
-    # Используем wrap_for_formatter для работы с ProcessorFormatter
-    # Логи structlog будут распространяться в root logger (propagate=True по умолчанию)
-    # который уже настроен с ProcessorFormatter
     structlog.configure(
-        processors=[
-            *shared_processors,
-            # wrap_for_formatter преобразует event dict в формат для ProcessorFormatter
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-        ],
+        processors=[*shared_processors, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
@@ -92,9 +56,34 @@ def configure_logging(include_debug: bool = False) -> None:
     )
 
 
+def get_shared_processors() -> tuple[Processor, ...]:
+    """
+    Возвращает процессоры, через которые проходит каждая строка лога — наша и чужих библиотек.
+
+    Scenarios:
+        - настройка логирования процесса
+        - тесты строк лога, которым нужна настоящая цепочка процессоров
+
+    Returns:
+        Процессоры в порядке применения
+    """
+    return (
+        structlog.contextvars.merge_contextvars,
+        add_trace_context,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    )
+
+
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     """
     Получает настроенный логгер structlog.
+
+    Scenarios:
+        - любой модуль, который пишет в лог
 
     Args:
         name: Имя логгера (обычно __name__ модуля). Если None, используется имя вызывающего модуля.
@@ -104,6 +93,47 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
 
     Example:
         logger = get_logger(__name__)
-        logger.info("User created", user_id=123)
+        logger.info("journey.created", journey_id=journey_id)
     """
     return structlog.get_logger(name)
+
+
+def _route_uvicorn_logs_to_root() -> None:
+    """
+    Пускает логи uvicorn через наш JSON-обработчик, чтобы ошибки сервера и падение старта попадали в лог.
+
+    Свой текстовый обработчик uvicorn вешает на родительский логгер ``uvicorn`` — его и снимаем. Его записи
+    пропускаем не ниже WARNING, а уровень строже, заданный флагом ``--log-level``, оставляем. Строку о
+    необработанном исключении отбрасываем: такую же с трейсбеком уже написал middleware логирования. Журнал
+    запросов uvicorn выключен — строку на каждый запрос пишет то же middleware.
+
+    Scenarios:
+        - запуск API под uvicorn
+    """
+    uvicorn_logger = logging.getLogger("uvicorn")
+    uvicorn_logger.handlers.clear()
+    uvicorn_logger.propagate = True
+
+    uvicorn_error_logger = logging.getLogger("uvicorn.error")
+    uvicorn_error_logger.setLevel(max(uvicorn_error_logger.level, logging.WARNING))
+    uvicorn_error_logger.addFilter(_is_not_app_exception_duplicate)
+
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.handlers.clear()
+    uvicorn_access_logger.propagate = False
+
+
+def _is_not_app_exception_duplicate(record: logging.LogRecord) -> bool:
+    """
+    Отличает запись uvicorn о необработанном исключении приложения от остальных его записей.
+
+    Scenarios:
+        - необработанное исключение в HTTP-запросе: в лог попадает одна строка, от middleware логирования
+
+    Args:
+        record: Запись логгера ``uvicorn.error``
+
+    Returns:
+        ``False`` для записи о необработанном исключении, иначе ``True``
+    """
+    return not str(record.msg).startswith(_UVICORN_APP_EXCEPTION_PREFIX)

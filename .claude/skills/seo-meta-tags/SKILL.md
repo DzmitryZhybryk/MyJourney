@@ -40,7 +40,7 @@ Add only the missing ones. Do not duplicate or rewrite existing tags without an 
 
 ## Brand context
 
-- **User-facing brand:** `MyJourney`. The internal repo codename is `MindTrace`. **Never** use `MindTrace` in SEO copy.
+- **User-facing brand:** `MyJourney`.
 - **Product:** travel tracking + self-reflection, unified by a globe-with-aura on the home page.
 - **Tone:** quiet, atmospheric, observational. Avoid hype: "revolutionary", "best-in-class", "unleash", "supercharge". Verbs: *track*, *log*, *reflect*, *mark*, *watch*. Address the user as "you/your".
 - **Audience:** travelers who keep records of their trips and reflect on them.

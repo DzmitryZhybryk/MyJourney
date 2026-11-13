@@ -1,27 +1,32 @@
 [project]
-name = "MindTrace"
-version = "1.0.4"
-description = "Service for managing mindtrace"
+name = "MyJourney"
+version = "7.5.1"
+description = "Personal travel atlas: journeys, cities and routes on a globe"
 authors = [
     { name = "Dzmitry Zhybryk", email = "mr.zhybryk@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.14,<3.15"
 readme = "README.md"
 
 dependencies = [
-    "fastapi[standard]>=0.141.1",
-    "alembic>=1.19.0",
-    "orjson>=3.11.9",
-    "pydantic-settings>=2.14.2",
-    "sqlalchemy[asyncio]>=2.0.51",
+    "fastapi[standard]>=0.159.1",
+    "alembic>=1.20.1",
+    "orjson>=3.13.0",
+    "pydantic-settings>=2.16.1",
+    "sqlalchemy[asyncio]>=2.1.6",
     "structlog>=26.1.0",
-    "uvicorn>=0.52.1",
+    "uvicorn>=0.54.0",
     "argon2-cffi>=25.1.0",
-    "pyjwt>=2.10.0",
+    "pyjwt>=2.15.1",
     "httpx>=0.28.0",
-    "procrastinate>=3.9.0",
+    "procrastinate>=3.10.0",
     "jinja2>=3.1.6",
-    "psycopg[binary]>=3.3.4",
+    "psycopg[binary]>=3.3.6",
+    "aiobotocore>=3.10.0",
+    "opentelemetry-api>=1.45.1",
+    "opentelemetry-sdk>=1.45.1",
+    "opentelemetry-semantic-conventions>=0.66b1",
+    "cryptography>=50.0.2",
 ]
 
 [dependency-groups]
@@ -29,17 +34,28 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
-    "ruff>=0.16.1",
-    "tach>=0.35.0",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.17.1",
+    "tach>=0.35.3",
     "testcontainers[postgres]>=4.15.0",
-    "ty>=0.0.66",
+    "ty>=0.0.90",
+    "types-aiobotocore-s3>=3.10.0",
     "vulture>=2.16",
 ]
 
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = "app"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["."]
-addopts = "--strict-markers"
+addopts = "--strict-markers --durations=5"
 markers = [
     # Ось «уровень» (выводится из tests/<level>/... авто-маркировкой в conftest)
     "unit: быстрые тесты без I/O (domain, application с фейками, чистые helpers)",
@@ -52,14 +68,15 @@ markers = [
     "journeys: тесты домена journeys",
     "geo: тесты домена geo",
     "health: тесты домена health",
+    "media: тесты домена media",
 ]
 
 [tool.coverage.run]
-# Чистый entry-point клей — только запуск uvicorn/asyncio, тестировать нечего, а его
-# «непокрытие» искажало бы гейт. Реальную логику воркера (_ensure_procrastinate_schema)
-# здесь НЕ прячем: её обёртка run_worker помечена ``# pragma: no cover`` точечно в самом
-# модуле, а сама функция покрыта integration-тестом (tests/integration/shared/...).
-omit = ["app/__main__.py"]
+omit = [
+    "app/__main__.py",
+    "app/*/scripts/*",
+    "app/shared/infra/procrastinate/__main__.py",
+]
 
 [tool.ruff]
 line-length = 120
@@ -139,7 +156,7 @@ overrides = [
 ]
 
 [tool.vulture]
-paths = ["app", "vulture_whitelist.py"]
+paths = ["app", "devtools", "vulture_whitelist.py"]
 min_confidence = 60
 # Декораторы, после которых vulture не должен считать функцию мёртвой:
 # фреймворк (FastAPI/Starlette) или Pydantic вызывают такие функции неявно.

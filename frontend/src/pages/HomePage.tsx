@@ -1,17 +1,14 @@
 import { useTranslation } from "react-i18next";
 
 import { AppHeader } from "../components/AppHeader";
+import { useCurrentUser } from "../user/useCurrentUser";
 import "./home.css";
 
 /*
- * ЗАГЛУШКИ. Дашборд ещё не подключён к бэку: ни статистики, ни рекомендаций, ни списка
- * недавних поездок API пока не отдаёт. Данные оставлены английскими намеренно — переводить
- * вымышленные цифры и описания на два языка значит удваивать работу, которая удалится
- * вместе с моком. Подписи разделов вокруг них — настоящий UI, и они через i18n.
- *
- * Имя в приветствии — тоже заглушка, и её нельзя убрать простой правкой фронта: access-токен
- * несёт только `sub`/`email_verified`/`exp` (см. auth/jwt.ts), эндпоинта профиля в API нет.
- * Нужен либо `/v1/users/me`, либо имя отдельным claim'ом — это бэкенд-задача.
+ * PLACEHOLDERS. The dashboard is not wired to the backend yet: the API returns no statistics,
+ * recommendations or recent trips. The data is English on purpose: translating fictional numbers
+ * and descriptions into two languages doubles work that goes away with the mock. The section
+ * labels around them are real UI and go through i18n.
  */
 const STAT_KEYS = ["countries", "cities", "streak"] as const;
 const STAT_VALUES: Record<(typeof STAT_KEYS)[number], number> = {
@@ -39,26 +36,44 @@ const RECENT = [
   { city: "Berlin", date: "Nov 2025" },
 ] as const;
 
-const GREETING_NAME = "Dzmitry";
-const GREETING_DATE = "Saturday · May 2026";
+/**
+ * "Saturday · May 2026": the current date in the UI language. Built from parts (weekday +
+ * standalone month + year) rather than one format: the single Russian Intl format would add
+ * "г." after the year and decline the month ("мая" instead of "май").
+ */
+function formatGreetingDate(locale: string): string {
+  const now = new Date();
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(now);
+  const month = new Intl.DateTimeFormat(locale, { month: "long" }).format(now);
+  return `${weekday} · ${month} ${now.getFullYear()}`;
+}
 
 export function HomePage() {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
+  const currentUser = useCurrentUser();
 
   return (
-    <div className="app-shell home-shell">
+    <div className="app-shell home-shell" data-globe-passthrough>
       <AppHeader />
 
       <main className="home-main">
+        {/* The date does not depend on the network and shows immediately; only the greeting line
+            is gated on /me. While there is no profile (loading/error) an nbsp holds its place, so
+            the name appears on a reserved line with no layout jump. */}
         <div className="home-greeting">
-          <span className="home-greeting__hello">{t("greeting", { name: GREETING_NAME })}</span>
-          <span className="home-greeting__date">{GREETING_DATE}</span>
+          <span className="home-greeting__hello">
+            {currentUser.status === "ready"
+              ? t("greeting", { name: currentUser.user.displayName })
+              : " "}
+          </span>
+          <span className="home-greeting__date">{formatGreetingDate(i18n.language)}</span>
         </div>
 
-        {/* Пустой центральный слот: место, где визуально стоит app-global глобус-фон (корневой
-            PersistentGlobeHost, кадрируется по data-screen="home"). Держит вертикальный ритм
-            greeting → планета → подпись; сам прозрачен — глобус виден сквозь него. */}
-        <div className="home-stage" aria-hidden />
+        {/* Empty center slot where the app-global globe background visually sits (the root
+            PersistentGlobeHost, framed by data-screen="home"). Holds the vertical rhythm greeting ->
+            planet -> caption; it is transparent to both eyes and events, so gestures pass through
+            to the planet (drag rotation, contract in persistent-globe.css). */}
+        <div className="home-stage" aria-hidden data-globe-slot />
 
         <p className="home-aura">{t("home.aura")}</p>
 

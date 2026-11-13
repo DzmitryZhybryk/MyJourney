@@ -1,12 +1,11 @@
 /**
- * Флаг «легенда карты свёрнута» живёт в localStorage — выбор запоминается между
- * сессиями и заходами на страницу: один раз свернул — дальше карта открывается
- * со свёрнутой легендой (подсказки по цветам пользователю уже не нужны).
+ * The "map legend collapsed" flag lives in localStorage: the choice persists across sessions and
+ * visits, so once collapsed the map keeps opening with a collapsed legend.
  */
 
 const LEGEND_COLLAPSED_KEY = "journeys-legend-collapsed";
 
-/** Проверяет, свёрнута ли легенда по сохранённому выбору пользователя. */
+/** Whether the legend is collapsed, per the user's saved choice. */
 export function isLegendCollapsed(): boolean {
   try {
     return localStorage.getItem(LEGEND_COLLAPSED_KEY) === "1";
@@ -15,7 +14,7 @@ export function isLegendCollapsed(): boolean {
   }
 }
 
-/** Сохраняет состояние свёрнутости легенды (свёрнута → пишем, развёрнута → чистим). */
+/** Saves the collapsed state (collapsed: write the flag, expanded: clear it). */
 export function setLegendCollapsed(collapsed: boolean): void {
   try {
     if (collapsed) {
@@ -24,6 +23,6 @@ export function setLegendCollapsed(collapsed: boolean): void {
       localStorage.removeItem(LEGEND_COLLAPSED_KEY);
     }
   } catch {
-    // localStorage недоступен (приватный режим / отключён) — состояние не сохраняем.
+    // localStorage unavailable (private mode / disabled): the state is not persisted.
   }
 }

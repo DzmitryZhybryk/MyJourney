@@ -1,22 +1,22 @@
 /**
- * Глобальный setup для Vitest (подключён через `test.setupFiles` в `vite.config.ts`).
+ * Global Vitest setup (wired via `test.setupFiles` in `vite.config.ts`).
  *
- * Делает четыре вещи:
- *  1. i18n — синхронно подгружает `en`-бандлы на тот же singleton-инстанс, что
- *     использует код (в приложении локали грузятся лениво через dynamic `import()`,
- *     поэтому без этого `i18n.t(...)` вернул бы сам ключ). Так `messageForCode` и UI
- *     резолвят реальные английские тексты — тестируем настоящий маппинг, а не моки.
- *  2. jest-dom — регистрирует матчеры (`toBeInTheDocument` и пр.) в `expect`.
- *  3. jsdom-полифилы — `matchMedia` и `ResizeObserver`, которых нет в jsdom, но к
- *     которым обращаются Mantine (Menu/Modal) и контейнер `GlobeCanvas`.
- *  4. MSW — сетевой слой component-тестов: listen/reset/close + очистка модульного
- *     состояния (`tokenStore`, `sessionStorage`) и моков после каждого теста.
- *     Unit-тесты ставят собственный `fetch`-мок и MSW минуют (см. `handlers.ts`).
+ * Does four things (plus a shared Testing Library wait timeout, see below):
+ *  1. i18n: synchronously loads the `en` bundles onto the same singleton instance the code uses
+ *     (in the app locales load lazily via dynamic `import()`, so without this `i18n.t(...)` would
+ *     return the key itself). So `messageForCode` and the UI resolve real English texts: the real
+ *     mapping is tested, not mocks.
+ *  2. jest-dom: registers matchers (`toBeInTheDocument` etc.) in `expect`.
+ *  3. jsdom polyfills: `matchMedia`, `ResizeObserver` and `IntersectionObserver`, which jsdom lacks
+ *     but Mantine (Menu/Modal), the `GlobeCanvas` container and the feed use.
+ *  4. MSW: the network layer of component tests: listen/reset/close, plus clearing module state
+ *     (`tokenStore`, `sessionStorage`) and mocks after every test. Unit tests install their own
+ *     `fetch` mock and bypass MSW (see `handlers.ts`).
  */
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 import { clearAccessToken } from "../auth/tokenStore";
@@ -26,6 +26,7 @@ import enErrors from "../locales/en/errors.json";
 import enJourneys from "../locales/en/journeys.json";
 import { i18n } from "../i18n";
 import { server } from "./handlers";
+import { IntersectionObserverStub } from "./intersection";
 
 i18n.addResourceBundle("en", "common", enCommon, true, true);
 i18n.addResourceBundle("en", "auth", enAuth, true, true);
@@ -34,9 +35,14 @@ i18n.addResourceBundle("en", "journeys", enJourneys, true, true);
 
 void i18n.changeLanguage("en");
 
-// matchMedia: Mantine (Menu/Modal/визуальные хуки) обращается к нему, в jsdom его нет.
-// Ставим прямым присваиванием (не через vi.stubGlobal), чтобы `vi.unstubAllGlobals()`
-// в afterEach его не снёс.
+// findBy*/waitFor wait 1 s by default. The first city pick in a file (a cold form render, the 250 ms
+// autocomplete debounce and the MSW response) takes up to ~0.8 s under coverage and full core
+// load, and the default occasionally gave up. A satisfied wait returns at once, so the margin only
+// slows a failing test.
+configure({ asyncUtilTimeout: 3000 });
+
+// matchMedia: Mantine (Menu/Modal/visual hooks) uses it and jsdom has none. Assigned directly (not
+// via vi.stubGlobal) so `vi.unstubAllGlobals()` in afterEach does not remove it.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string): MediaQueryList =>
@@ -52,7 +58,7 @@ Object.defineProperty(window, "matchMedia", {
     }) as unknown as MediaQueryList,
 });
 
-// ResizeObserver: нет в jsdom; контейнер GlobeCanvas и часть Mantine его инстанцируют.
+// ResizeObserver: absent in jsdom; the GlobeCanvas container and part of Mantine instantiate it.
 class ResizeObserverStub {
   observe(): void {}
   unobserve(): void {}
@@ -61,23 +67,34 @@ class ResizeObserverStub {
 
 globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 
-// scrollIntoView: нет в jsdom; Mantine Combobox (selectFirstOption/навигация стрелками)
-// вызывает его на активной опции.
+// IntersectionObserver: absent in jsdom; the journey feed loads pages with it. The stub is
+// controllable: the test triggers intersection itself (`intersectAllObserved`).
+globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+
+// scrollIntoView: absent in jsdom; Mantine Combobox (selectFirstOption/arrow navigation) calls it
+// on the active option.
 Element.prototype.scrollIntoView = () => {};
 
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+// window.scrollTo: jsdom reports "Not implemented" on every call; leaving a journey card restores
+// the page scroll with it on narrow screens (the default in tests).
+window.scrollTo = () => {};
+
+// setPointerCapture: absent in jsdom; card dragging and map gestures capture the pointer with it.
+Element.prototype.setPointerCapture = () => {};
+
+beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 
 afterEach(() => {
-  // Сначала размонтируем дерево (отписки эффектов), затем чистим сеть и состояние.
+  // Unmount the tree first (effect unsubscriptions), then clear network and state.
   cleanup();
   server.resetHandlers();
   clearAccessToken();
-  // Node ≥26 инжектит собственные глобалы localStorage/sessionStorage (экспериментальный
-  // Web Storage API), которые затеняют jsdom-storage и роняют этот clear(). Отключены флагом
-  // --no-experimental-webstorage в NODE_OPTIONS test-скриптов (package.json); на node 22 — no-op.
+  // Node >= 26 injects its own localStorage/sessionStorage globals (the experimental Web Storage
+  // API), which shadow jsdom's storage and break this clear(). They are disabled by the
+  // --no-experimental-webstorage flag in NODE_OPTIONS of the test scripts (package.json); a no-op on node 22.
   sessionStorage.clear();
-  // Persist-состояние (флаг легенды, дисмисс баннера, язык i18next) живёт в
-  // localStorage — чистим, чтобы оно не протекало в соседние тесты.
+  // Persisted state (legend flag, banner dismiss, i18next language) lives in localStorage; clear it
+  // so it does not leak into neighbouring tests.
   localStorage.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();

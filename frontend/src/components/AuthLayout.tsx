@@ -3,20 +3,19 @@ import type { ReactNode } from "react";
 import "./auth-layout.css";
 
 interface AuthLayoutProps {
-  /** Сторона, с которой всплывает форма. Парная кадрированию сферы (см. ниже). */
+  /** Side the form appears on. Paired with the sphere framing (see below). */
   side: "left" | "right";
   children: ReactNode;
 }
 
 /**
- * Каркас auth-экрана «Уровня 3»: тонкий позиционер формы поверх персистентного
- * глобуса из `PublicLayout`. Собственного глобуса и шапки здесь нет — и то, и другое
- * смонтировано выше по дереву и переживает навигацию, поэтому переход лендинг →
- * форма читается перелётом камеры, а не загрузкой новой страницы.
+ * Auth screen shell: a thin form positioner over the persistent globe from `PublicLayout`. It has
+ * no globe or header of its own (both are mounted higher up and survive navigation), so landing ->
+ * form reads as a camera fly-over, not a page load.
  *
- * `side` задан явно, а не выведен из маршрута: он парный к кадрированию сферы в
- * `persistent-globe.css` (`data-screen` уводит глобус в ПРОТИВОПОЛОЖНЫЙ край), и
- * менять одну половину пары без второй нельзя — явный проп держит это на виду.
+ * `side` is explicit, not derived from the route: it is paired with the sphere framing in
+ * `persistent-globe.css` (`data-screen` moves the globe to the OPPOSITE edge), and one half must
+ * not change without the other. An explicit prop keeps that visible.
  */
 export function AuthLayout({ side, children }: AuthLayoutProps) {
   return (

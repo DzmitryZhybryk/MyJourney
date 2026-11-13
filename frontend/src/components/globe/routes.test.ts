@@ -10,7 +10,7 @@ describe("наборы маршрутов глобуса", () => {
     ({ set }) => {
       const cities = set.chains.flat();
       expect(cities).toHaveLength(12);
-      expect(new Set(cities.map((city) => city.name)).size).toBe(12);
+      expect(new Set(cities.map((city) => city.id)).size).toBe(12);
 
       for (const continent of CONTINENTS) {
         expect(cities.filter((city) => city.continent === continent)).toHaveLength(2);
@@ -33,7 +33,7 @@ describe("наборы маршрутов глобуса", () => {
       const sameContinent = routesOf(set).filter(
         (route) => route.from.continent === route.to.continent,
       );
-      expect(sameContinent.map((route) => `${route.from.name}→${route.to.name}`)).toEqual([]);
+      expect(sameContinent.map((route) => `${route.from.id}→${route.to.id}`)).toEqual([]);
     },
   );
 
@@ -42,8 +42,8 @@ describe("наборы маршрутов глобуса", () => {
     ({ set }) => {
       const degree = new Map<string, number>();
       for (const route of routesOf(set)) {
-        degree.set(route.from.name, (degree.get(route.from.name) ?? 0) + 1);
-        degree.set(route.to.name, (degree.get(route.to.name) ?? 0) + 1);
+        degree.set(route.from.id, (degree.get(route.from.id) ?? 0) + 1);
+        degree.set(route.to.id, (degree.get(route.to.id) ?? 0) + 1);
       }
 
       expect(degree.size).toBe(12);
@@ -55,13 +55,13 @@ describe("наборы маршрутов глобуса", () => {
   it.each(ROUTE_SETS.map((set, index) => ({ set, index })))(
     "набор $index: перемычки идут между цепями, а не внутри одной",
     ({ set }) => {
-      const chainOf = (name: string) =>
-        set.chains.findIndex((chain) => chain.some((city) => city.name === name));
+      const chainOf = (cityId: string) =>
+        set.chains.findIndex((chain) => chain.some((city) => city.id === cityId));
 
       const withinOneChain = set.bridges.filter(
-        (bridge) => chainOf(bridge.from.name) === chainOf(bridge.to.name),
+        (bridge) => chainOf(bridge.from.id) === chainOf(bridge.to.id),
       );
-      expect(withinOneChain.map((b) => `${b.from.name}→${b.to.name}`)).toEqual([]);
+      expect(withinOneChain.map((b) => `${b.from.id}→${b.to.id}`)).toEqual([]);
     },
   );
 });

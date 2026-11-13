@@ -23,15 +23,15 @@ from typing import Any
 import pytest
 from fastapi import APIRouter
 
-from app.auth import auth_router
-from app.auth.application.settings import EmailVerificationConfig
+from app.auth.application.config import EmailVerificationConfig
 from app.auth.presentation.dependencies import (
     auth_uow_dependency,
-    email_verification_settings_dependency,
+    email_verification_config_dependency,
     salted_hasher_dependency,
     task_bus_dependency,
     users_client_dependency,
 )
+from app.auth.presentation.routes import auth_router
 from tests.fakes import (
     FakeAuthUnitOfWork,
     FakeSaltedHasher,
@@ -58,12 +58,12 @@ def dependency_overrides(
     fake_users_client: FakeUsersClient,
     fake_salted_hasher: FakeSaltedHasher,
     fake_task_bus: FakeTaskBus,
-    email_verification_settings: EmailVerificationConfig,
+    email_verification_config: EmailVerificationConfig,
 ) -> dict[Callable[..., Any], Callable[..., Any]]:
     return {
         auth_uow_dependency: lambda: fake_uow,
         users_client_dependency: lambda: fake_users_client,
         salted_hasher_dependency: lambda: fake_salted_hasher,
         task_bus_dependency: lambda: fake_task_bus,
-        email_verification_settings_dependency: lambda: email_verification_settings,
+        email_verification_config_dependency: lambda: email_verification_config,
     }

@@ -1,4 +1,4 @@
-name: mindtrace
+name: myjourney
 
 # Единый лимит на docker json-file логи для ВСЕХ сервисов: max-size x max-file = кап 30 MB
 # на контейнер. Без него дефолт Docker — без лимита, и при краш-лупе лог за ночь может
@@ -9,104 +9,118 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+x-dev-backend: &dev-backend
+  build:
+    target: dev
+  volumes:
+    - ./backend:/src
+  networks:
+    - default
+  logging: *default-logging
+
+# Зависимости живут в образе (/opt/venv), а не в смонтированном коде: после правки
+# pyproject.toml или uv.lock нужна пересборка. `make run` собирает сам, `make watch` — на лету.
+x-rebuild-on-deps: &rebuild-on-deps
+  watch:
+    - action: rebuild
+      path: ./backend/pyproject.toml
+    - action: rebuild
+      path: ./backend/uv.lock
+
 networks:
   default:
-    name: mindtrace-network
+    name: myjourney-network
     external: true
 
 services:
 
-  app:
+  myjourney_migrate:
+    <<: *dev-backend
+    container_name: myjourney_migrate
+
+  myjourney_geo_load:
+    <<: *dev-backend
+    container_name: myjourney_geo_load
+
+  # S3-эмулятор вместо R2. Порт внутри и снаружи один и тот же, а алиас s3.localhost бэкенд резолвит
+  # через DNS docker-сети, браузер — как loopback: подписанная ссылка годится обоим, потому что хост
+  # и порт входят в подпись.
+  myjourney_s3:
+    image: rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
+    container_name: myjourney_s3
+    environment:
+      RUSTFS_ADDRESS: ":9050"
+      RUSTFS_ACCESS_KEY: ${MEDIA_S3_ACCESS_KEY_ID}
+      RUSTFS_SECRET_KEY: ${MEDIA_S3_SECRET_ACCESS_KEY}
+    ports:
+      - "9050:9050"
+    volumes:
+      - s3_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9050/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - s3.localhost
+    logging: *default-logging
+
+  myjourney_s3_bootstrap:
+    <<: *dev-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: dev
-    container_name: mindtrace_app
+    env_file: .env
+    container_name: myjourney_s3_bootstrap
+    command: python -m devtools.storage_bootstrap --cors-origin http://localhost:5173
+    depends_on:
+      myjourney_s3:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    <<: *dev-backend
+    container_name: myjourney_app
     command: >
       sh -c "uvicorn app.main:create_app --factory --no-use-colors
       --host ${HOST} --port ${PORT}
       --log-level error
-      ${RELOAD:+--reload}"
-    env_file: .env
+      ${RELOAD:+--reload --reload-dir app}"
     ports:
       - "8050:8000"
-    volumes:
-      - ./backend/app:/src/app
-      - ./backend/migrations:/src/migrations
-      - ./backend/alembic.ini:/src/alembic.ini:ro
-      - ./backend/pyproject.toml:/src/pyproject.toml:ro
     depends_on:
-      mindtrace_pg:
-        condition: service_healthy
+      myjourney_s3_bootstrap:
+        condition: service_completed_successfully
     restart: unless-stopped
-    networks:
-      - default
-    logging: *default-logging
+    develop: *rebuild-on-deps
 
-  mindtrace_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: dev
-    container_name: mindtrace_worker
-    command: python -m app.worker
-    env_file: .env
-    volumes:
-      - ./backend/app:/src/app
-      - ./backend/pyproject.toml:/src/pyproject.toml:ro
+  myjourney_worker:
+    <<: *dev-backend
+    container_name: myjourney_worker
     depends_on:
-      mindtrace_pg:
-        condition: service_healthy
+      myjourney_s3_bootstrap:
+        condition: service_completed_successfully
     restart: unless-stopped
-    networks:
-      - default
-    logging: *default-logging
+    develop: *rebuild-on-deps
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: dev
-    container_name: mindtrace_frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    environment:
-      CHOKIDAR_USEPOLLING: "true"
-    restart: unless-stopped
-    networks:
-      - default
-    logging: *default-logging
-
-  mindtrace_pg:
-    image: postgres:17-alpine
-    container_name: mindtrace_pg
-    env_file: .env
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    command: postgres -c log_min_messages=warning
+  myjourney_pg:
+    container_name: myjourney_pg
     ports:
       - "5439:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
     restart: unless-stopped
     networks:
       - default
     logging: *default-logging
 
   loki:
-    image: grafana/loki:3.6.3
-    container_name: mindtrace_loki
+    image: grafana/loki:3.7.9
+    container_name: myjourney_loki
     command: -config.file=/etc/loki/loki.yaml -log.level=error -target=all
     ports:
       - "3100:3100"
@@ -118,16 +132,18 @@ services:
       - default
     logging: *default-logging
 
-  promtail:
-    image: grafana/promtail:3.6.3
-    container_name: mindtrace_promtail
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: myjourney_alloy
     command:
-      - -config.file=/etc/promtail/config.yml
-      - -log.level=error
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
     volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./ops/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./ops/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
     depends_on:
       - loki
     restart: unless-stopped
@@ -136,17 +152,18 @@ services:
     logging: *default-logging
 
   grafana:
-    image: grafana/grafana:12.3.1
-    container_name: mindtrace_grafana
+    image: grafana/grafana:13.3.0
+    container_name: myjourney_grafana
     env_file: .env
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_LOG_LEVEL: warn
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./ops/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - loki
     restart: unless-stopped
@@ -156,6 +173,7 @@ services:
 
 volumes:
   pg_data:
+  s3_data:
   loki_data:
+  alloy_data:
   grafana_data:
-  frontend_node_modules:

@@ -1,40 +1,40 @@
 # syntax=docker/dockerfile:1.7
 
 # -----------------------------------------------------------------------------
-# deps: установка зависимостей по локу — кэшируется отдельно от исходников
+# deps: install dependencies from the lockfile, cached separately from the sources
 # -----------------------------------------------------------------------------
 FROM node:26-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS deps
 WORKDIR /app
-# .npmrc (engine-strict) в контекст COPY: npm ci сверит базовый node/npm с engines package.json —
-# сборка на «не той» базе упадёт сразу, а не даст молча дрейфующий лок.
+# Copy .npmrc (engine-strict) too: npm ci checks the base node/npm against engines in package.json,
+# so a build on the "wrong" base fails at once instead of silently drifting the lockfile.
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 # -----------------------------------------------------------------------------
-# dev: используется docker-compose (target: dev). Исходники том-маунтятся в
-# рантайме, CMD на старте досинхронивает node_modules и поднимает Vite dev-сервер.
+# dev: used by docker-compose (target: dev). Sources are volume-mounted at runtime; CMD syncs
+# node_modules at start and runs the Vite dev server.
 # -----------------------------------------------------------------------------
 FROM deps AS dev
 COPY . .
 EXPOSE 5173
-# `npm install` на старте синхронит named volume node_modules с package.json/lock
-# (volume переживает rebuild и иначе устаревает при смене зависимостей).
+# `npm install` at start syncs the node_modules named volume with package.json/lock (the volume
+# survives a rebuild and would otherwise go stale when dependencies change).
 CMD ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
 
 # -----------------------------------------------------------------------------
-# build: прод-бандл (tsc -b && vite build) -> /app/dist
+# build: production bundle (tsc -b && vite build) -> /app/dist
 # -----------------------------------------------------------------------------
 FROM deps AS build
 COPY . .
 RUN npm run build
 
 # -----------------------------------------------------------------------------
-# final: nginx раздаёт статику. Проксирование /v1 на backend делает внешний Caddy,
-# nginx здесь — только статический сервер SPA.
+# final: nginx serves static files. Proxying /v1 to the backend is done by the external Caddy;
+# nginx here is only a static SPA server.
 # -----------------------------------------------------------------------------
-# nginx-unprivileged: master и worker'ы под non-root (uid 101), слушает :8080 (порт >1024,
-# root не нужен). Проксирование /v1 делает внешний Caddy (reverse_proxy frontend:8080).
-FROM nginxinc/nginx-unprivileged:alpine@sha256:a6c3ec0c0d249d68b0682df854d4a9e222b90fb607dc3fcf2f1d2fcbc85d347e AS final
+# nginx-unprivileged: master and workers run non-root (uid 101) and listen on :8080 (a port >1024,
+# no root needed). Proxying /v1 is done by the external Caddy (reverse_proxy frontend:8080).
+FROM nginxinc/nginx-unprivileged:alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS final
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080

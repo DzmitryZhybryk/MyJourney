@@ -1,4 +1,4 @@
-# Деплой MindTrace на VPS
+# Деплой MyJourney на VPS
 
 Прод-выкатка через docker compose + Caddy (авто-HTTPS) + GitHub Actions (CI/CD).
 Все команды на сервере — из корня склонированного репозитория (compose-файлы живут в `ops/`,
@@ -8,20 +8,21 @@
 
 ```
 Интернет ──443/80──▶ Caddy (TLS, reverse-proxy) ─┬─ /v1/*  ▶ app:8000  (FastAPI)
-                                                  └─ /*     ▶ frontend:80 (nginx + SPA)
-                     app/worker ▶ mindtrace_pg (Postgres, НЕ виден снаружи)
-                     mindtrace_pg_backup ▶ pg_dump по расписанию
-                     loki/promtail/grafana — логирование (наружу не публикуется)
+                                                  └─ /*     ▶ frontend:8080 (nginx + SPA)
+                     app/worker ▶ myjourney_pg (Postgres, НЕ виден снаружи)
+                     myjourney_pg_backup ▶ pg_dump по расписанию
+                     loki/alloy/grafana — логирование (наружу не публикуется)
 ```
 
 - **Наружу открыт только Caddy** (80/443). Postgres/Grafana/Loki/app/frontend — без проброса портов,
-  доступны лишь внутри docker-сети `mindtrace-network`.
-- Образы `mindtrace-backend`/`mindtrace-frontend` собирает CI и пушит в **GHCR**; сервер их только `pull`-ит.
-- Миграции БД прогоняет one-shot `mindtrace_migrate` (`alembic upgrade head`) до старта app/worker.
+  доступны лишь внутри docker-сети `myjourney-network`.
+- Образы `myjourney-backend`/`myjourney-frontend` собирает CI и пушит в **GHCR**; сервер их только `pull`-ит.
+- Миграции БД прогоняет one-shot `myjourney_migrate` (`alembic upgrade head` + схема procrastinate) до старта app/worker.
+- Газеттир загружает one-shot `myjourney_geo_load` (`python -m app.geo.scripts.load_datasets`) после миграций и до старта app: скачивает датасеты из `manifest.toml` (GitHub Release), проверяет sha256 и пропускает уже загруженные версии.
 
 ## Предпосылки
 
-- **VPS** (рекомендуется тариф от 6 GB RAM: postgres + app + worker + frontend + loki + grafana + caddy).
+- **VPS** (рекомендуется тариф от 6 GB RAM: postgres + app + worker + frontend + loki + alloy + grafana + caddy).
 - **Домен** с возможностью править DNS.
 - Аккаунт **Resend** для отправки email (верификация домена-отправителя).
 
@@ -71,14 +72,14 @@ sudo ufw enable
 ### 1.4. Docker-сеть
 
 ```bash
-docker network create mindtrace-network
+docker network create myjourney-network
 ```
 
 ### 1.5. Клонирование репозитория и секреты
 
 ```bash
-git clone git@github.com:DzmitryZhybryk/MindTrace.git /opt/mindtrace
-cd /opt/mindtrace
+git clone git@github.com:DzmitryZhybryk/MyJourney.git /opt/myjourney
+cd /opt/myjourney
 cp .env.example .env
 ```
 
@@ -87,11 +88,12 @@ cp .env.example .env
 ```bash
 # сгенерировать секреты
 openssl rand -hex 32      # -> JWT_SECRET_KEY
+openssl rand -base64 32 | tr '+/' '-_'   # -> CHALLENGE_CODE_ENCRYPTION_KEY
 openssl rand -base64 32   # -> POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD
 ```
 
 Обязательно проставь: `ENVIRONMENT=production`, `RELOAD=` (пусто), `POSTGRES_ECHO=false`,
-`POSTGRES_HOST=mindtrace_pg`, `DOMAIN=<твой домен>`, `ACME_EMAIL=<email>`, `RESEND_*`.
+`POSTGRES_HOST=myjourney_pg`, `DOMAIN=<твой домен>`, `ACME_EMAIL=<email>`, `RESEND_*`.
 
 ### 1.6. Доступ к приватным образам GHCR
 
@@ -102,7 +104,7 @@ openssl rand -base64 32   # -> POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD
 echo "$GHCR_PAT" | docker login ghcr.io -u <github-username> --password-stdin
 ```
 
-Альтернатива — сделать пакеты `mindtrace-backend`/`mindtrace-frontend` публичными в настройках GHCR
+Альтернатива — сделать пакеты `myjourney-backend`/`myjourney-frontend` публичными в настройках GHCR
 (тогда `docker login` на сервере не нужен).
 
 ---
@@ -143,7 +145,7 @@ A   @   <IP VPS>
 | `SSH_USER` | пользователь SSH на сервере |
 | `SSH_KEY` | приватный SSH-ключ для деплоя (пару сгенерируй `ssh-keygen`, публичный — в `~/.ssh/authorized_keys` на сервере) |
 | `SSH_PORT` | порт SSH (например `22`) |
-| `DEPLOY_PATH` | путь к репо на сервере (например `/opt/mindtrace`) |
+| `DEPLOY_PATH` | путь к репо на сервере (например `/opt/myjourney`) |
 
 `GITHUB_TOKEN` для пуша образов в GHCR выдаётся автоматически (`packages: write` в workflow).
 
@@ -179,7 +181,7 @@ A   @   <IP VPS>
 ## 5. Первый деплой
 
 ```bash
-cd /opt/mindtrace
+cd /opt/myjourney
 make prod-pull    # стянуть образы из GHCR
 make prod-up      # поднять стек (миграции прогонятся автоматически до app)
 ```
@@ -188,9 +190,18 @@ make prod-up      # поднять стек (миграции прогонятс
 
 ```bash
 make prod-config                              # раскрытый прод-конфиг
-docker compose --project-directory . -f ops/docker-compose.prod.yaml ps
+docker compose --project-directory . -f ops/docker-compose.base.yaml -f ops/docker-compose.prod.yaml ps
 curl -I https://<домен>/                      # должен ответить 200/301 через Caddy
 ```
+
+Первый админ: зарегистрируйтесь через сайт, затем на сервере
+
+```bash
+make prod-set-admin-role email=<email>
+```
+
+Скрипт работает только пока админа нет; дальше роли меняются из админки. Новая роль попадёт в токен при
+следующем входе или обновлении сессии (откройте сайт в новой вкладке).
 
 Дальнейшие деплои идут **автоматически**: push/merge в `main` → `prod.yml` прогоняет тяжёлый гейт →
 при зелёных тестах job'ы `build-push` (образы в GHCR) и `deploy` (SSH: `git pull && make prod-pull &&
@@ -202,47 +213,60 @@ make prod-up`) выкатывают прод. Красные тесты → де
 
 ## 6. Миграции
 
-- Прогоняются автоматически one-shot сервисом `mindtrace_migrate` (`alembic upgrade head`) — `app`/`worker`
-  стартуют только после его успешного завершения (`service_completed_successfully`).
+- Прогоняются автоматически one-shot сервисом `myjourney_migrate` — `app`/`worker`
+  стартуют только после его успешного завершения (`service_completed_successfully`). Он делает два шага:
+  `alembic upgrade head` (таблицы приложения) и `python -m app.shared.infra.procrastinate` (таблицы очереди
+  задач). Без второй схемы не работает ни worker, ни регистрация в app: она кладёт письмо в очередь.
+- Схема procrastinate применяется, только если её ещё нет в базе: версию команда не сверяет. При обновлении
+  procrastinate проверь `procrastinate/sql/migrations/` в установленном пакете — файлы новее прежней версии
+  нужно применить к базе вручную до деплоя новой версии.
 - Если миграция упала — app не поднимется (это защита: не запускаем код на несовместимой схеме).
-  Смотри логи: `docker compose ... logs mindtrace_migrate`.
+  Смотри логи: `docker compose ... logs myjourney_migrate`.
 - **Перед деплоем с рискованной миграцией сделай бэкап** (см. ниже).
+- После миграций one-shot `myjourney_geo_load` загружает газеттир; app тоже ждёт его успешного
+  завершения. Повторный деплой без смены `manifest.toml` ничего не скачивает. Новая версия датасета =
+  новый ассет в GitHub Release + новые version/url/sha256 в `backend/app/geo/infra/datasets/manifest.toml`.
+  Упал — смотри `docker compose ... logs myjourney_geo_load` (нет сети до GitHub, не сошёлся sha256, битый файл).
 
 ---
 
 ## 7. Бэкапы и восстановление
 
-Сервис `mindtrace_pg_backup` (`prodrigestivill/postgres-backup-local`) делает `pg_dump` по расписанию
-(`@daily`) с ротацией (7 дней / 4 недели / 6 месяцев) в volume `mindtrace_pg_backups`.
+Сервис `myjourney_pg_backup` (`prodrigestivill/postgres-backup-local`) делает `pg_dump` по расписанию
+(`@daily`) с ротацией (7 дней / 4 недели / 6 месяцев) в volume `myjourney_pg_backups`.
 
 ```bash
 # посмотреть дампы
-docker run --rm -v mindtrace_pg_backups:/backups alpine ls -lah /backups/daily
+docker run --rm -v myjourney_pg_backups:/backups alpine ls -lah /backups/daily
 
 # ручной бэкап прямо сейчас
-docker exec mindtrace_pg_backup /backup.sh
+docker exec myjourney_pg_backup /backup.sh
 ```
 
 **Восстановление** из дампа:
 
 ```bash
 # найти нужный дамп в /backups/{daily,weekly,monthly}, затем:
-docker exec -i mindtrace_pg sh -c \
+docker exec -i myjourney_pg sh -c \
   'gunzip | psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backup.sql.gz
 ```
 
 > ⚠️ Дампы лежат на диске сервера — это защита от логической порчи, **не от гибели диска**.
 > Для durability: (1) тарифные снапшоты сервера (evps «Backups: Included»), (2) периодически
-> копируй `mindtrace_pg_backups` во внешнее хранилище (S3/rclone) отдельным cron.
-> `pg_data` и `mindtrace_pg_backups` НЕ удаляй командой `down -v` — потеряешь данные.
+> копируй `myjourney_pg_backups` во внешнее хранилище (S3/rclone) отдельным cron.
+> `pg_data` и `myjourney_pg_backups` НЕ удаляй командой `down -v` — потеряешь данные.
 
 ---
 
 ## 8. Логи и мониторинг
 
 - **Loki** хранит логи 7 дней (`ops/loki.yaml`, `retention_period: 168h`).
+- **Alloy** собирает логи контейнеров `myjourney*` через Docker API (`ops/alloy-config.alloy`) и помнит позицию
+  чтения в томе `alloy_data`. Первый запуск один раз перечитывает историю контейнеров — дубли в Loki за это
+  окно ожидаемы. Устаревший контейнер `myjourney_promtail` удаляет `make prod-up` (`--remove-orphans`).
 - Docker json-file логи ограничены `10m × 3` на контейнер (compose + `daemon.json`).
-- **Grafana** наружу не публикуется. Доступ админа — по SSH-туннелю:
+- **Grafana** наружу не публикуется; источник данных Loki подключается сам
+  (`ops/grafana/provisioning/datasources/`). Доступ админа — по SSH-туннелю:
 
   ```bash
   ssh -L 3000:localhost:3000 <user>@<VPS>
@@ -255,7 +279,7 @@ docker exec -i mindtrace_pg sh -c \
 
 - **Caddy не берёт сертификат** — проверь, что DNS указывает на сервер (`dig +short <домен>`) и
   порты 80/443 открыты (ufw + провайдер). Логи: `docker compose ... logs caddy`.
-- **app unhealthy** — `docker compose ... logs app`; проверь `.env` (POSTGRES_HOST=mindtrace_pg, секреты).
+- **app unhealthy** — `docker compose ... logs app`; проверь `.env` (POSTGRES_HOST=myjourney_pg, секреты).
 - **Откат на предыдущую версию** — образы тегируются commit-SHA. На сервере:
 
   ```bash
@@ -263,4 +287,7 @@ docker exec -i mindtrace_pg sh -c \
   IMAGE_TAG=<предыдущий-sha> make prod-up
   ```
 
+- **Автодеплой упал на `git pull --ff-only`** — на сервере правили tracked-файл руками (например,
+  `ops/Caddyfile`). Перед мержем в `main`: `git restore <файл>` на сервере. Сменился только конфиг
+  Caddy — `make prod-up` контейнер не пересоздаст, нужен `docker compose ... restart caddy`.
 - **Полная остановка** (данные сохраняются): `make prod-down`.

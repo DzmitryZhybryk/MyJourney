@@ -1,0 +1,27 @@
+{
+  "title": "Profile",
+  "loadError": "Couldn't load your profile. Refresh the page.",
+  "name": {
+    "label": "Name",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "photo": {
+    "upload": "Upload photo"
+  },
+  "account": {
+    "username": "Username",
+    "email": "Email",
+    "unverified": "Not verified",
+    "verify": "Verify",
+    "loadError": "Couldn't load your username and email. Refresh the page."
+  },
+  "consent": {
+    "label": "Product updates and news by email",
+    "description": "Emails about what's new in MyJourney. Turn off to stop receiving them."
+  },
+  "validation": {
+    "nameRequired": "Enter a name",
+    "nameMax": "50 characters at most"
+  }
+}

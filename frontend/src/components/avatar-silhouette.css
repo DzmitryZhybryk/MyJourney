@@ -1,0 +1,15 @@
+/* The shoulders run past the disc in the viewBox; the round clip turns them into a bust. */
+.avatar-silhouette {
+  display: block;
+  flex: none;
+  border-radius: 50%;
+  clip-path: circle(50%);
+}
+
+.avatar-silhouette__disc {
+  fill: var(--surface-2);
+}
+
+.avatar-silhouette__figure {
+  fill: var(--text-muted);
+}

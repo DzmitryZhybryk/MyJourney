@@ -6,8 +6,8 @@ import { Link, useNavigate } from "react-router";
 import { AuthCard } from "../components/AuthCard";
 import { authInputClassNames, authPasswordClassNames } from "../components/authInputClasses";
 import { AuthLayout } from "../components/AuthLayout";
-import { login } from "../api/auth";
 import { applyApiError, resolveErrorToken, withLocalizedError } from "../api/errors";
+import { login } from "../api/sdk";
 import { useAuth } from "../auth/useAuth";
 
 type LoginFormValues = {
@@ -22,26 +22,25 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // `controlled` (а не `uncontrolled`), потому что от значений полей зависит рендер:
-  // кнопка отправки гаснет, пока форма не заполнена (см. `canSubmit` ниже).
+  // `controlled` (not `uncontrolled`) because rendering depends on field values: the submit
+  // button is disabled until the form is filled (see `canSubmit` below).
   const form = useForm<LoginFormValues>({
     mode: "controlled",
     initialValues: {
       login: "",
       password: "",
     },
-    // Валидаторы возвращают i18n-ТОКЕН (`auth:validation.*`), а не готовый текст:
-    // резолв в строку — при рендере (`withLocalizedError`), чтобы ошибка
-    // переключалась на новый язык вместе с интерфейсом.
+    // Validators return an i18n TOKEN (`auth:validation.*`), not text: it is resolved at render
+    // (`withLocalizedError`) so the error follows a language switch.
     validate: {
       login: (value) => (value.trim().length === 0 ? "auth:validation.loginRequired" : null),
       password: (value) => (value.length === 0 ? "auth:validation.passwordRequired" : null),
     },
   });
 
-  // Кнопка ждёт ЗАПОЛНЕННОСТИ, а не валидности: правила (длина, формат) проверяются по
-  // сабмиту и объясняют себя сообщением под полем. Гаси кнопку по валидности — и
-  // пользователь упирался бы в мёртвую кнопку, не понимая, что именно не так.
+  // The button waits for the form to be FILLED, not valid: rules (length, format) are checked on
+  // submit and explain themselves with a message under the field. Disabling by validity would
+  // leave the user facing a dead button with no idea what is wrong.
   const formValues = form.getValues();
   const canSubmit = formValues.login.trim().length > 0 && formValues.password.length > 0;
 
@@ -49,12 +48,15 @@ export function LoginPage() {
     setFormError(null);
     setSubmitting(true);
     try {
-      const { accessToken } = await login(values);
+      const { accessToken } = await login({
+        body: { login: values.login.trim(), password: values.password },
+        throwOnError: true,
+      });
       setAccessToken(accessToken);
       navigate("/home");
     } catch (err) {
-      // Ошибка операции (неверные креды, сеть) — на уровне формы, у кнопки сабмита;
-      // field-bound ошибки applyApiError сам вешает на поля.
+      // An operation error (bad credentials, network) goes at form level by the submit button;
+      // applyApiError attaches field-bound errors to the fields itself.
       const message = applyApiError(err, form);
       if (message) {
         setFormError(message);
@@ -65,7 +67,7 @@ export function LoginPage() {
   };
 
   return (
-    // Форма справа — сфера на этом экране уводится влево (persistent-globe.css).
+    // Form on the right: the sphere moves left on this screen (persistent-globe.css).
     <AuthLayout side="right">
       <AuthCard title={t("login.title")} subtitle={t("login.subtitle")}>
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -93,19 +95,17 @@ export function LoginPage() {
             />
 
             {/*
-              Восстановление пароля ещё не реализовано. Раньше здесь стояла ссылка
-              `href="#"` с `preventDefault`: она попадала в Tab-обход, озвучивалась
-              скринридером как ссылка и не делала ничего — то есть обещала действие,
-              которого нет. `<span>` не фокусируется и не притворяется интерактивным;
-              подсказка остаётся видимой, чтобы не терять контекст поля пароля.
-              Вернуть `<Anchor to="/reset-password">`, когда появится сам поток.
+              Password recovery is not implemented yet. A dead `href="#"` link would be tabbable and
+              announced as a link while doing nothing; a `<span>` is not focusable and does not pretend
+              to be interactive. The hint stays visible to keep the password field's context.
+              Restore `<Anchor to="/reset-password">` once the flow exists.
             */}
             <span className="auth-card__hint" style={{ alignSelf: "flex-end" }}>
               {t("login.forgotPassword")}
             </span>
 
-            {/* `role="alert"` — иначе провал входа виден только зрячему: узел появляется
-                по условию, и live-region озвучивает его в момент появления. */}
+            {/* `role="alert"`, otherwise a failed login is visible only to sighted users: the node
+                appears conditionally and the live region announces it when it appears. */}
             {formError && (
               <p className="auth-card__error" role="alert">
                 {resolveErrorToken(formError)}

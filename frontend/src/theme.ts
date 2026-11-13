@@ -13,8 +13,8 @@ const slate: MantineColorsTuple = [
   "#0f172a",
 ];
 
-// Акцент редизайна — golden-hour терракота. Основной оттенок (--sun #e8935c) на
-// shade 6 (primaryShade), тёмный (--sun-deep #cf6a3a) на 7 (hover filled-кнопок).
+// Accent: golden-hour terracotta. Main shade (--sun #e8935c) is shade 6 (primaryShade), the dark
+// one (--sun-deep #cf6a3a) is shade 7 (hover of filled buttons).
 const sun: MantineColorsTuple = [
   "#fdf4ed",
   "#f7e4d3",
@@ -29,9 +29,8 @@ const sun: MantineColorsTuple = [
 ];
 
 /*
- * Стеки шрифтов НЕ дублируем литералом — берём те же CSS-переменные, что объявлены в
- * `index.css`. Раньше стек жил в двух местах сразу, и третья копия в `globe-label.css`
- * уже успела разойтись с оригиналом. Один источник истины — `:root`.
+ * Do NOT duplicate font stacks as literals: use the CSS variables declared in `index.css`.
+ * `:root` is the single source of truth.
  */
 const bodyFont = "var(--font-body)";
 const displayFont = "var(--font-display)";
@@ -41,13 +40,12 @@ export const theme = createTheme({
   primaryShade: 6,
   colors: { slate, sun },
   /*
-   * Метку на залитой акцентом кнопке выбирает Mantine, а не каждый экран вручную. Закат
-   * `#e8935c` светлый (luminance 0.388 против порога 0.179), поэтому белая метка давала
-   * 2.4:1 — ниже AA. С `autoContrast` подставляется тёмная: 7.2:1.
+   * Mantine picks the label colour on accent-filled buttons. The accent `#e8935c` is light
+   * (luminance 0.388 vs threshold 0.179), so a white label gave 2.4:1, below AA; with
+   * `autoContrast` a dark label is used: 7.2:1.
    *
-   * `black` переопределён намеренно: autoContrast берёт именно `theme.black`, а дефолтный
-   * чистый #000 по терракоте звучит грубее, чем спроектированный `--on-sun`. Значение то же,
-   * что у токена, — тогда Mantine и CSS дают один цвет, а не два похожих.
+   * `black` is overridden on purpose: autoContrast uses `theme.black`, and pure #000 on terracotta
+   * is harsher than the designed `--on-sun`. Same value as the token, so Mantine and CSS agree.
    */
   autoContrast: true,
   black: "#2a1608",

@@ -3,9 +3,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.application.ports import ChallengeRepositoryPort
+from app.auth.application.ports.challenge_repository import ChallengeRepositoryPort
 from app.auth.domain.entities import ChallengeEntity
-from app.auth.domain.enums import ChallengeType
+from app.auth.domain.enums import ChallengeTypeEnum
 from app.auth.infra.models import Challenge
 from app.shared.repositories.base_repository import BaseDBRepository
 from app.shared.types import DictStrAny
@@ -39,15 +39,16 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
 
     async def find_active_challenge_for_update(
         self,
+        *,
         user_id: UUID,
-        challenge_type: ChallengeType,
+        challenge_type: ChallengeTypeEnum,
     ) -> ChallengeEntity | None:
         """
         Находит активный challenge заданного типа и блокирует строку до конца транзакции.
 
-        ``SELECT ... FOR UPDATE`` нужен для verify-флоу: гарантирует, что
-        параллельные запросы на ввод кода сериализуются и не дают потерять
-        increment счётчика попыток (read-modify-write race под READ COMMITTED).
+        ``SELECT ... FOR UPDATE`` сериализует параллельные запросы к одному challenge'у:
+        ввод кода не теряет increment счётчика попыток (read-modify-write race под
+        READ COMMITTED), а две повторные отправки не проходят cooldown обе.
 
         Args:
             user_id: ID пользователя
@@ -91,6 +92,9 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
         и UPDATE (те же колонки минус PK). Новое поле добавляется здесь один раз —
         и попадает и в INSERT, и в UPDATE, рассинхрон между ними невозможен.
 
+        Scenarios:
+            - отправка и ввод кода в диалоге «Подтвердите email», код после регистрации
+
         Args:
             challenge_entity: Доменная сущность challenge'а
 
@@ -101,8 +105,9 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
             "id": challenge_entity.challenge_id,
             "user_id": challenge_entity.user_id,
             "challenge_type": challenge_entity.challenge_type.value,
-            "code_hash": challenge_entity.code_hash,
+            "code_ciphertext": challenge_entity.code_ciphertext,
             "expires_at": challenge_entity.expires_at,
+            "last_sent_at": challenge_entity.last_sent_at,
             "attempts": challenge_entity.attempts,
             "used_at": challenge_entity.used_at,
             "created_at": challenge_entity.created_at,
@@ -114,6 +119,9 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
         """
         Конвертирует ORM-модель в доменную сущность.
 
+        Scenarios:
+            - повторный запрос и ввод кода в диалоге «Подтвердите email»
+
         Args:
             challenge_model: ORM-модель из БД
 
@@ -123,9 +131,10 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
         return ChallengeEntity(
             challenge_id=challenge_model.id,
             user_id=challenge_model.user_id,
-            challenge_type=ChallengeType(challenge_model.challenge_type),
-            code_hash=challenge_model.code_hash,
+            challenge_type=ChallengeTypeEnum(challenge_model.challenge_type),
+            code_ciphertext=challenge_model.code_ciphertext,
             expires_at=challenge_model.expires_at,
+            last_sent_at=challenge_model.last_sent_at,
             attempts=challenge_model.attempts,
             used_at=challenge_model.used_at,
             created_at=challenge_model.created_at,

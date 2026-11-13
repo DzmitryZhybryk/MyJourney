@@ -8,14 +8,12 @@ interface PublicOnlyRouteProps {
 }
 
 /**
- * Зеркало `ProtectedRoute`: пускает только НЕаутентифицированного, залогиненного уводит
- * на дашборд. Нужен на всех трёх публичных маршрутах (`/`, `/login`, `/signup`) — до него
- * проверка стояла только на корне, поэтому залогиненный пользователь, открывший `/login`
- * по закладке или кнопкой «назад», получал форму входа в уже открытую сессию.
+ * Mirror of `ProtectedRoute`: admits only UNauthenticated users and sends logged-in ones to the
+ * dashboard. Used on all three public routes (`/`, `/login`, `/signup`), otherwise a logged-in
+ * user opening `/login` via a bookmark or Back would get a login form inside an open session.
  *
- * `isBootstrapping` отдаёт `null`, а не редирект: пока сессия поднимается из refresh-cookie,
- * ещё не известно, аутентифицирован ли пользователь, и ранний редирект в любую сторону был
- * бы угадыванием.
+ * While `isBootstrapping` it renders `null`, not a redirect: the session is still being restored
+ * from the refresh cookie, so an early redirect either way would be a guess.
  */
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
   const { isAuthenticated, isBootstrapping } = useAuth();

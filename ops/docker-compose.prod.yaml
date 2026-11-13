@@ -1,13 +1,12 @@
-name: mindtrace
+name: myjourney
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ПРОД-стек. Отличия от docker-compose.yaml (dev):
+# ПРОД-стек, override поверх docker-compose.base.yaml. Отличия от dev:
 #   • образы pull'ятся из GHCR (build оставлен для локальной сборки/отладки);
 #   • НЕТ проброса портов у внутренних сервисов (postgres/loki/grafana/app/frontend) —
 #     наружу торчит только Caddy (80/443). ВАЖНО: docker `ports:` обходит ufw, поэтому
 #     единственная публичная точка входа — Caddy;
-#   • app/worker/frontend на prod-таргете `final` (без volume-mount и --reload);
-#   • one-shot `mindtrace_migrate` (alembic upgrade head) — gate для app/worker.
+#   • app/worker/frontend на prod-таргете `final` (без volume-mount и --reload).
 #
 # Пути внутри резолвятся от КОРНЯ репо (запуск через `make prod-*` с --project-directory .),
 # поэтому build-context ./backend и конфиги ./ops/... указаны относительно корня, не ops/.
@@ -21,23 +20,24 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
-x-backend-image: &backend-image
-  image: ghcr.io/dzmitryzhybryk/mindtrace-backend:${IMAGE_TAG:-latest}
+x-prod-backend: &prod-backend
+  image: ghcr.io/dzmitryzhybryk/myjourney-backend:${IMAGE_TAG:-latest}
   build:
-    context: ./backend
-    dockerfile: Dockerfile
     target: final
+  networks:
+    - default
+  logging: *default-logging
 
 networks:
   default:
-    name: mindtrace-network
+    name: myjourney-network
     external: true
 
 services:
 
   caddy:
-    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-    container_name: mindtrace_caddy
+    image: caddy:2-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    container_name: myjourney_caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -57,99 +57,63 @@ services:
       - default
     logging: *default-logging
 
-  # Одноразовый прогон миграций перед стартом app/worker. Гейт service_completed_successfully
-  # гарантирует, что схема БД накатана до того, как приложение начнёт её использовать.
-  mindtrace_migrate:
-    <<: *backend-image
-    container_name: mindtrace_migrate
-    command: alembic upgrade head
-    env_file: .env
-    depends_on:
-      mindtrace_pg:
-        condition: service_healthy
-    restart: "no"
-    networks:
-      - default
-    logging: *default-logging
+  myjourney_migrate:
+    <<: *prod-backend
+    container_name: myjourney_migrate
+
+  # Кеш во /tmp: образ работает под nonroot.
+  myjourney_geo_load:
+    <<: *prod-backend
+    container_name: myjourney_geo_load
+    environment:
+      GEO_DATASETS_CACHE_DIR: /tmp/geo-datasets
 
   app:
-    <<: *backend-image
-    container_name: mindtrace_app
+    <<: *prod-backend
+    container_name: myjourney_app
     # --forwarded-allow-ips: доверять X-Forwarded-For только от прокси из docker-подсети
-    # (172.16.0.0/12 покрывает bridge-сеть mindtrace-network) → request.client.host = реальный
+    # (172.16.0.0/12 покрывает bridge-сеть myjourney-network) → request.client.host = реальный
     # IP клиента, а не внутренний адрес Caddy. НЕ ставить '*': Caddy аппендит XFF, и с '*'
     # uvicorn берёт leftmost-значение → клиент подделает свой IP в аудите/rate-limit.
     command: uvicorn app.main:create_app --factory --no-use-colors --host 0.0.0.0 --port 8000 --log-level error --forwarded-allow-ips=172.16.0.0/12
-    env_file: .env
-    depends_on:
-      mindtrace_pg:
-        condition: service_healthy
-      mindtrace_migrate:
-        condition: service_completed_successfully
     healthcheck:
-      # slim-образ без curl — пробуем /healthz через python; не-200 бросает исключение -> unhealthy.
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
+      # slim-образ без curl — пробуем /healthz/ через python; не-200 бросает исключение -> unhealthy.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/').read()"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
     restart: unless-stopped
-    networks:
-      - default
-    logging: *default-logging
 
-  mindtrace_worker:
-    <<: *backend-image
-    container_name: mindtrace_worker
-    command: python -m app.worker
-    env_file: .env
-    depends_on:
-      mindtrace_pg:
-        condition: service_healthy
-      mindtrace_migrate:
-        condition: service_completed_successfully
+  myjourney_worker:
+    <<: *prod-backend
+    container_name: myjourney_worker
     restart: unless-stopped
-    networks:
-      - default
-    logging: *default-logging
 
   frontend:
-    image: ghcr.io/dzmitryzhybryk/mindtrace-frontend:${IMAGE_TAG:-latest}
+    image: ghcr.io/dzmitryzhybryk/myjourney-frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: final
-    container_name: mindtrace_frontend
+    container_name: myjourney_frontend
     restart: unless-stopped
     networks:
       - default
     logging: *default-logging
 
-  mindtrace_pg:
-    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
-    container_name: mindtrace_pg
-    env_file: .env
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    command: postgres -c log_min_messages=warning
+  myjourney_pg:
+    container_name: myjourney_pg
     volumes:
       - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
     restart: unless-stopped
     networks:
       - default
     logging: *default-logging
 
   loki:
-    image: grafana/loki:3.6.3@sha256:cd6e176883a90c21755f0315688668991634143423f75bdedfef41441b0fdc3c
-    container_name: mindtrace_loki
+    image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+    container_name: myjourney_loki
     command: -config.file=/etc/loki/loki.yaml -log.level=error -target=all
     volumes:
       - loki_data:/loki
@@ -159,16 +123,18 @@ services:
       - default
     logging: *default-logging
 
-  promtail:
-    image: grafana/promtail:3.6.3@sha256:130b6dd63277d99ce87560c0266c0c30d07bc15ba0a8a590d42215465d4f5363
-    container_name: mindtrace_promtail
+  alloy:
+    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
+    container_name: myjourney_alloy
     command:
-      - -config.file=/etc/promtail/config.yml
-      - -log.level=error
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
     volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./ops/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./ops/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
     depends_on:
       - loki
     restart: unless-stopped
@@ -179,8 +145,8 @@ services:
   # Grafana наружу НЕ публикуется (нет ports, Caddy её не проксирует). Доступ админа —
   # по SSH-туннелю к 3000 (см. docs/deployment.md).
   grafana:
-    image: grafana/grafana:12.3.1@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f
-    container_name: mindtrace_grafana
+    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    container_name: myjourney_grafana
     env_file: .env
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
@@ -188,6 +154,7 @@ services:
       GF_LOG_LEVEL: warn
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./ops/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - loki
     restart: unless-stopped
@@ -200,11 +167,11 @@ services:
   # порчи данных, но не от гибели диска — для настоящей durability копируй pg_backups во
   # внешнее хранилище (S3/rclone) отдельным cron, плюс тарифные снапшоты сервера
   # (см. docs/deployment.md → Бэкапы и восстановление). Восстановление: docs/deployment.md.
-  mindtrace_pg_backup:
+  myjourney_pg_backup:
     image: prodrigestivill/postgres-backup-local:17@sha256:e803bd9eb4bfb42e9b3e74ba411227f3d55da292905800395659cc579b6641e8
-    container_name: mindtrace_pg_backup
+    container_name: myjourney_pg_backup
     environment:
-      POSTGRES_HOST: mindtrace_pg
+      POSTGRES_HOST: myjourney_pg
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -215,7 +182,7 @@ services:
     volumes:
       - pg_backups:/backups
     depends_on:
-      mindtrace_pg:
+      myjourney_pg:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -226,6 +193,7 @@ volumes:
   pg_data:
   pg_backups:
   loki_data:
+  alloy_data:
   grafana_data:
   caddy_data:
   caddy_config:

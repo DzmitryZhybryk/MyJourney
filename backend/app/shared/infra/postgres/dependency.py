@@ -14,7 +14,12 @@ __all__ = [
 
 
 async def db_session_dependency(request: Request) -> AsyncGenerator[AsyncSession]:
-    """Общая зависимость для получения сессии БД."""
+    """
+    Общая зависимость для получения сессии БД.
+
+    Scenarios:
+        - любой запрос, который работает с базой: одна сессия на запрос
+    """
     app: BFastAPI = request.app
     sessionmaker = app.registry.get(SessionMaker)
     async with sessionmaker() as session:

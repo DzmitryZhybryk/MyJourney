@@ -2,46 +2,42 @@ import { emit } from "../auth/events";
 import { getAccessToken, setAccessToken } from "../auth/tokenStore";
 import { ApiError, type ApiErrorBody } from "./errors";
 
-const EMAIL_NOT_VERIFIED_CODE = "auth.email_not_verified";
 const INVALID_CREDENTIALS_CODE = "auth.invalid_credentials";
 const REFRESH_PATH = "/v1/auth/refresh/";
 
-export type ApiFetchInit = Omit<RequestInit, "body"> & {
-  json?: unknown;
-};
-
 let pendingRefresh: Promise<boolean> | null = null;
 
-/**
- * Тонкая обёртка над `fetch` для всех вызовов нашего API:
- * - `credentials: "include"` для refresh-cookie;
- * - авто-вставка `Authorization: Bearer <access_token>` из `tokenStore`;
- * - JSON-сериализация тела через `json`;
- * - маппинг неуспеха в `ApiError`;
- * - single-flight refresh при 401 (кроме invalid_credentials / email_not_verified / самого /refresh/);
- * - перехват 401 `auth.email_not_verified` для JIT-гейта (эмит `verify-required`).
- */
-export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promise<T> {
-  const response = await sendRequest(path, init);
+function shouldRetryAfterRefresh(status: number, code: string, pathname: string): boolean {
+  return status === 401 && code !== INVALID_CREDENTIALS_CODE && pathname !== REFRESH_PATH;
+}
 
+/**
+ * Transport of the generated SDK: the only path for every call to our API.
+ *
+ * The SDK parses and validates successful responses; this handles the session and failures:
+ * Bearer from `tokenStore`, refresh cookie, single-flight refresh on 401 with a retry, and the
+ * `auth-required` event. Throws `ApiError` on non-2xx.
+ */
+export async function appFetch(input: URL | RequestInfo, init?: RequestInit): Promise<Response> {
+  const request = new Request(input, init);
+
+  // A request body is a one-shot stream, so clone for the retry before the first send.
+  const retryable = request.clone();
+  const { pathname } = new URL(request.url);
+
+  const response = await sendWithSession(request);
   if (response.ok) {
-    return parseSuccess<T>(response);
+    return response;
   }
 
   const errorBody = await parseErrorBody(response);
 
-  const canRetryAfterRefresh =
-    response.status === 401 &&
-    errorBody.code !== INVALID_CREDENTIALS_CODE &&
-    errorBody.code !== EMAIL_NOT_VERIFIED_CODE &&
-    path !== REFRESH_PATH;
-
-  if (canRetryAfterRefresh) {
+  if (shouldRetryAfterRefresh(response.status, errorBody.code, pathname)) {
     const refreshed = await ensureRefreshed();
     if (refreshed) {
-      const retryResponse = await sendRequest(path, init);
+      const retryResponse = await sendWithSession(retryable);
       if (retryResponse.ok) {
-        return parseSuccess<T>(retryResponse);
+        return retryResponse;
       }
 
       throw new ApiError(retryResponse.status, await parseErrorBody(retryResponse));
@@ -50,55 +46,37 @@ export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promis
     emit("auth-required", undefined);
   }
 
-  if (response.status === 401 && errorBody.code === EMAIL_NOT_VERIFIED_CODE) {
-    emit("verify-required", undefined);
-  }
-
   throw new ApiError(response.status, errorBody);
 }
 
-async function sendRequest(path: string, init: ApiFetchInit): Promise<Response> {
-  const { json, headers, ...rest } = init;
+function sendWithSession(request: Request): Promise<Response> {
+  const headers = withAuthorization(new Headers(request.headers));
 
-  const finalHeaders = new Headers(headers);
-  if (json !== undefined && !finalHeaders.has("Content-Type")) {
-    finalHeaders.set("Content-Type", "application/json");
-  }
+  return fetch(new Request(request, { credentials: "include", headers }));
+}
 
-  const token = getAccessToken();
-  if (token !== null && !finalHeaders.has("Authorization")) {
-    finalHeaders.set("Authorization", `Bearer ${token}`);
-  }
-
-  return fetch(path, {
-    ...rest,
+/**
+ * Calls `/refresh/` bypassing the SDK: `sdk.ts` configures the client with this transport, so
+ * importing the generated `refresh()` here would create an import cycle.
+ *
+ * The path is a string, not a `Request`: outside a browser (jsdom + undici) a relative URL in
+ * the `Request` constructor fails with "Failed to parse URL".
+ */
+function sendRefreshRequest(): Promise<Response> {
+  return fetch(REFRESH_PATH, {
+    method: "POST",
     credentials: "include",
-    headers: finalHeaders,
-    body: json !== undefined ? JSON.stringify(json) : undefined,
+    headers: withAuthorization(new Headers()),
   });
 }
 
-async function parseSuccess<T>(response: Response): Promise<T> {
-  // Успешный ответ может не иметь тела: 204, либо любой 2xx с пустым телом (напр.
-  // 202 «принято в async-обработку» на send-verification). Читаем тело как текст и
-  // парсим JSON только если оно непустое — иначе `response.json()` бросил бы на
-  // пустом теле. Так фронт устойчив к любым success без контента, не только к 204.
-  const rawBody = await response.text();
-  if (rawBody.length === 0) {
-    return undefined as T;
+function withAuthorization(headers: Headers): Headers {
+  const token = getAccessToken();
+  if (token !== null && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Тело непустое, но может быть битым JSON (прокси отдал HTML-ошибку под 2xx,
-  // обрезанный ответ и т.п.). Не даём JSON.parse выбросить голый SyntaxError —
-  // заворачиваем в ApiError с машинным кодом, который UI отрендерит через messageForCode.
-  try {
-    return JSON.parse(rawBody) as T;
-  } catch {
-    throw new ApiError(response.status, {
-      code: "invalid_response",
-      message: "Malformed JSON in a successful response",
-    });
-  }
+  return headers;
 }
 
 async function parseErrorBody(response: Response): Promise<ApiErrorBody> {
@@ -107,17 +85,12 @@ async function parseErrorBody(response: Response): Promise<ApiErrorBody> {
 }
 
 /**
- * Single-flight refresh: параллельные обращения шерят один pending promise,
- * чтобы не делать N запросов к /v1/auth/refresh/ одновременно. Покрывает оба
- * источника refresh'а — 401-ретраи из `apiFetch` и bootstrap из `AuthContext`
- * (включая двойной запуск эффекта под React StrictMode в dev). Это критично
- * из-за ротации refresh-токена с reuse-detection на бэке: два параллельных
- * /refresh/ с одной cookie привели бы к revoke-all и обрыву сессии. После
- * завершения promise сбрасывается; следующий вызов запустит новый refresh.
+ * Single-flight refresh: concurrent callers share one pending promise. Covers both refresh
+ * sources: 401 retries from `appFetch` and the `AuthContext` bootstrap (including the double
+ * effect run under StrictMode). Critical because the backend rotates refresh tokens with
+ * reuse detection: two parallel `/refresh/` calls with one cookie would revoke the whole session.
  *
- * Returns:
- *     `true`, если есть валидная сессия (access-token записан в tokenStore),
- *     иначе `false`.
+ * Resolves `true` if a valid session exists (access token stored in `tokenStore`).
  */
 export function ensureRefreshed(): Promise<boolean> {
   if (pendingRefresh !== null) {
@@ -126,7 +99,7 @@ export function ensureRefreshed(): Promise<boolean> {
 
   pendingRefresh = (async () => {
     try {
-      const response = await sendRequest(REFRESH_PATH, { method: "POST" });
+      const response = await sendRefreshRequest();
       if (!response.ok) {
         return false;
       }

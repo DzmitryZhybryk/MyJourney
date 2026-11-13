@@ -3,21 +3,23 @@ api-тесты email-роутов (send-verification / verify) через ASGI �
 
 Эти роуты защищены Bearer'ом: ``current_user_id_dependency`` — настоящий, токен выпускаем
 ``mint_access_token`` тем же ``get_jwt_service()``, которым приложение его и декодит. I/O
-(UoW/репо, salted-hasher, task-bus) — фейки. Пиннят статусы и машинные ``code`` всей
-матрицы доменных ошибок верификации.
+(UoW/репо, task-bus) — фейки; шифратор кодов настоящий, с ключом из settings, как у приложения.
+Пиннят статусы и машинные ``code`` всей матрицы доменных ошибок верификации.
 """
 
 import datetime as dt
+import math
 from collections.abc import Callable
 from uuid import uuid4
 
+import pytest
 from httpx import AsyncClient
 
-from app.auth.application.settings import EmailVerificationConfig
+from app.auth.application.config import EmailVerificationConfig
+from app.shared.infra.crypto.fernet import FernetSecretCipher
 from tests.builders import make_challenge, make_user_credentials
 from tests.fakes import (
     FakeChallengeRepository,
-    FakeSaltedHasher,
     FakeTaskBus,
     FakeUserCredentialsRepository,
 )
@@ -38,7 +40,7 @@ async def test_send_verification_returns_202_and_defers_email(
     """send-verification для неподтверждённой учётки → 202, таска на письмо поставлена в очередь."""
     user_credentials_entity = make_user_credentials()
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(_SEND_VERIFICATION_URL, headers={"Authorization": f"Bearer {token}"})
 
@@ -62,17 +64,17 @@ async def test_send_verification_malformed_bearer_returns_401(client: AsyncClien
     assert response.json()["code"] == "auth.invalid_access_token"
 
 
-async def test_send_verification_unknown_user_returns_404(
+async def test_send_verification_unknown_user_returns_401(
     client: AsyncClient,
     mint_access_token: Callable[..., str],
 ) -> None:
-    """send-verification с токеном без учётки в БД → 404 auth.user_credentials_not_found."""
-    token = mint_access_token(uuid4())
+    """send-verification с токеном без учётки в БД → 401 auth.account_not_found."""
+    token = mint_access_token(user_id=uuid4())
 
     response = await client.post(_SEND_VERIFICATION_URL, headers={"Authorization": f"Bearer {token}"})
 
-    assert response.status_code == 404
-    assert response.json()["code"] == "auth.user_credentials_not_found"
+    assert response.status_code == 401
+    assert response.json()["code"] == "auth.account_not_found"
 
 
 async def test_send_verification_already_verified_returns_409(
@@ -84,7 +86,7 @@ async def test_send_verification_already_verified_returns_409(
     """send-verification для уже подтверждённого email → 409 auth.email_already_verified."""
     user_credentials_entity = make_user_credentials(email_verified_at=past)
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(_SEND_VERIFICATION_URL, headers={"Authorization": f"Bearer {token}"})
 
@@ -102,7 +104,7 @@ async def test_send_verification_within_cooldown_returns_429(
     user_credentials_entity = make_user_credentials()
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(make_challenge(user_id=user_credentials_entity.user_id))
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(_SEND_VERIFICATION_URL, headers={"Authorization": f"Bearer {token}"})
 
@@ -110,28 +112,62 @@ async def test_send_verification_within_cooldown_returns_429(
     assert response.json()["code"] == "auth.challenge_resend_cooldown"
 
 
+async def test_send_verification_exhausted_live_code_returns_429_with_retry_after(
+    client: AsyncClient,
+    fake_user_credentials_repository: FakeUserCredentialsRepository,
+    fake_challenge_repository: FakeChallengeRepository,
+    email_verification_config: EmailVerificationConfig,
+    mint_access_token: Callable[..., str],
+) -> None:
+    """send-verification при исчерпанном живом коде → 429 auth.challenge_attempts_exceeded с секундами в details."""
+    user_credentials_entity = make_user_credentials()
+    fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=300)
+    fake_challenge_repository.challenges.append(
+        make_challenge(
+            user_id=user_credentials_entity.user_id,
+            attempts=email_verification_config.max_attempts,
+            expires_at=expires_at,
+        )
+    )
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
+
+    response = await client.post(_SEND_VERIFICATION_URL, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 429
+    body = response.json()
+    assert body["code"] == "auth.challenge_attempts_exceeded"
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    assert body["details"].keys() == {"retry_after_seconds"}
+    seconds = body["details"]["retry_after_seconds"]
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= seconds <= 300
+
+
 # --- verify ------------------------------------------------------------------
 
 
+@pytest.mark.parametrize("submitted_code", ["123456", " 123456 "])
 async def test_verify_valid_code_returns_204_and_marks_verified(
     client: AsyncClient,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
-    fake_salted_hasher: FakeSaltedHasher,
+    secret_cipher: FernetSecretCipher,
     mint_access_token: Callable[..., str],
+    submitted_code: str,
 ) -> None:
-    """verify с верным кодом → 204, email помечен подтверждённым, challenge использован."""
-    code = "123456"
+    """verify с верным кодом (в т.ч. с пробелами по краям) → 204, email подтверждён, challenge использован."""
     user_credentials_entity = make_user_credentials()
-    challenge = make_challenge(user_id=user_credentials_entity.user_id, code_hash=fake_salted_hasher.hash(code))
+    challenge = make_challenge(
+        user_id=user_credentials_entity.user_id, code_ciphertext=secret_cipher.encrypt(secret="123456")
+    )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(
         _VERIFY_URL,
         headers={"Authorization": f"Bearer {token}"},
-        json={"code": code},
+        json={"code": submitted_code},
     )
 
     assert response.status_code == 204
@@ -139,24 +175,28 @@ async def test_verify_valid_code_returns_204_and_marks_verified(
     assert challenge.used_at is not None
 
 
+@pytest.mark.parametrize("wrong_code", ["000000", "١٢٣٤٥٦"])
 async def test_verify_wrong_code_returns_400_and_increments_attempts(
     client: AsyncClient,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
-    fake_salted_hasher: FakeSaltedHasher,
+    secret_cipher: FernetSecretCipher,
     mint_access_token: Callable[..., str],
+    wrong_code: str,
 ) -> None:
-    """verify с неверным кодом → 400 auth.verification_code_invalid, счётчик попыток +1."""
+    """verify с неверным кодом (в т.ч. не-ASCII цифрами) → 400 auth.verification_code_invalid, попытка +1."""
     user_credentials_entity = make_user_credentials()
-    challenge = make_challenge(user_id=user_credentials_entity.user_id, code_hash=fake_salted_hasher.hash("123456"))
+    challenge = make_challenge(
+        user_id=user_credentials_entity.user_id, code_ciphertext=secret_cipher.encrypt(secret="123456")
+    )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(
         _VERIFY_URL,
         headers={"Authorization": f"Bearer {token}"},
-        json={"code": "000000"},
+        json={"code": wrong_code},
     )
 
     assert response.status_code == 400
@@ -166,12 +206,12 @@ async def test_verify_wrong_code_returns_400_and_increments_attempts(
     assert challenge.attempts == 1
 
 
-async def test_verify_unknown_user_returns_404(
+async def test_verify_unknown_user_returns_401(
     client: AsyncClient,
     mint_access_token: Callable[..., str],
 ) -> None:
-    """verify с токеном без учётки в БД → 404 auth.user_credentials_not_found."""
-    token = mint_access_token(uuid4())
+    """verify с токеном без учётки в БД → 401 auth.account_not_found."""
+    token = mint_access_token(user_id=uuid4())
 
     response = await client.post(
         _VERIFY_URL,
@@ -179,8 +219,8 @@ async def test_verify_unknown_user_returns_404(
         json={"code": "123456"},
     )
 
-    assert response.status_code == 404
-    assert response.json()["code"] == "auth.user_credentials_not_found"
+    assert response.status_code == 401
+    assert response.json()["code"] == "auth.account_not_found"
 
 
 async def test_verify_no_active_challenge_returns_404(
@@ -191,7 +231,7 @@ async def test_verify_no_active_challenge_returns_404(
     """verify без активного challenge → 404 auth.challenge_not_found."""
     user_credentials_entity = make_user_credentials()
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(
         _VERIFY_URL,
@@ -212,7 +252,7 @@ async def test_verify_already_verified_returns_409(
     """verify для уже подтверждённого email → 409 auth.email_already_verified."""
     user_credentials_entity = make_user_credentials(email_verified_at=past)
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(
         _VERIFY_URL,
@@ -228,7 +268,7 @@ async def test_verify_expired_challenge_returns_410(
     client: AsyncClient,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
-    fake_salted_hasher: FakeSaltedHasher,
+    secret_cipher: FernetSecretCipher,
     mint_access_token: Callable[..., str],
     past: dt.datetime,
 ) -> None:
@@ -237,12 +277,12 @@ async def test_verify_expired_challenge_returns_410(
     user_credentials_entity = make_user_credentials()
     challenge = make_challenge(
         user_id=user_credentials_entity.user_id,
-        code_hash=fake_salted_hasher.hash(code),
+        code_ciphertext=secret_cipher.encrypt(secret=code),
         expires_at=past,
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(
         _VERIFY_URL,
@@ -258,21 +298,23 @@ async def test_verify_attempts_exceeded_returns_429(
     client: AsyncClient,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
-    fake_salted_hasher: FakeSaltedHasher,
-    email_verification_settings: EmailVerificationConfig,
+    secret_cipher: FernetSecretCipher,
+    email_verification_config: EmailVerificationConfig,
     mint_access_token: Callable[..., str],
 ) -> None:
-    """verify при выбранном лимите попыток → 429 auth.challenge_attempts_exceeded."""
+    """verify при выбранном лимите попыток → 429 auth.challenge_attempts_exceeded с секундами в details."""
     code = "123456"
     user_credentials_entity = make_user_credentials()
+    expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420)
     challenge = make_challenge(
         user_id=user_credentials_entity.user_id,
-        code_hash=fake_salted_hasher.hash(code),
-        attempts=email_verification_settings.email_verification_max_attempts,
+        code_ciphertext=secret_cipher.encrypt(secret=code),
+        attempts=email_verification_config.max_attempts,
+        expires_at=expires_at,
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
-    token = mint_access_token(user_credentials_entity.user_id)
+    token = mint_access_token(user_id=user_credentials_entity.user_id)
 
     response = await client.post(
         _VERIFY_URL,
@@ -281,7 +323,12 @@ async def test_verify_attempts_exceeded_returns_429(
     )
 
     assert response.status_code == 429
-    assert response.json()["code"] == "auth.challenge_attempts_exceeded"
+    body = response.json()
+    assert body["code"] == "auth.challenge_attempts_exceeded"
+    checked_at = dt.datetime.now(tz=dt.UTC)
+    assert body["details"].keys() == {"retry_after_seconds"}
+    seconds = body["details"]["retry_after_seconds"]
+    assert math.ceil((expires_at - checked_at).total_seconds()) <= seconds <= 420
 
 
 async def test_verify_malformed_code_returns_422(
@@ -289,7 +336,7 @@ async def test_verify_malformed_code_returns_422(
     mint_access_token: Callable[..., str],
 ) -> None:
     """verify с кодом не из 6 цифр → 422 validation_error (валидный Bearer, ошибка в теле)."""
-    token = mint_access_token(uuid4())
+    token = mint_access_token(user_id=uuid4())
 
     response = await client.post(
         _VERIFY_URL,

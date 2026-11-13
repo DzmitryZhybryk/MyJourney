@@ -23,6 +23,7 @@ jobs:
   backend:
     name: Backend audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: backend
@@ -32,7 +33,7 @@ jobs:
           ref: dev
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
 
       - name: Audit (uv audit по uv.lock)
         run: make audit
@@ -40,6 +41,7 @@ jobs:
   frontend:
     name: Frontend audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: frontend
@@ -49,7 +51,7 @@ jobs:
           ref: dev
 
       - name: Install Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: 26
 

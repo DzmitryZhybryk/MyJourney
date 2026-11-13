@@ -2,11 +2,13 @@ import { Button, Group, Modal, PinInput, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { refresh, sendEmailVerification, verifyEmail } from "../api/auth";
-import { ApiError, errorCodeToken, resolveErrorToken } from "../api/errors";
+import { ApiError, type ErrorParams, errorCodeToken, resolveErrorToken } from "../api/errors";
+import { refresh, sendEmailVerification, verifyEmail } from "../api/sdk";
 import { setAccessToken } from "./tokenStore";
 
 type Stage = "intro" | "code";
+
+type DialogError = Readonly<{ token: string; params?: ErrorParams }>;
 
 interface VerifyEmailDialogProps {
   opened: boolean;
@@ -15,16 +17,17 @@ interface VerifyEmailDialogProps {
 }
 
 const CODE_LENGTH = 6;
+const ATTEMPTS_EXCEEDED_CODE = "auth.challenge_attempts_exceeded";
+const SECONDS_PER_MINUTE = 60;
 
 export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDialogProps) {
   const { t } = useTranslation(["auth", "errors"]);
   const [stage, setStage] = useState<Stage>("intro");
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DialogError | null>(null);
 
-  // Сброс состояния делаем в обработчике закрытия (а не в эффекте на `opened`),
-  // чтобы следующее открытие стартовало с чистой стадии "intro".
+  // Reset in the close handler (not an effect on `opened`) so the next open starts at "intro".
   const handleClose = () => {
     setStage("intro");
     setCode("");
@@ -37,21 +40,21 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
     setError(null);
     setSubmitting(true);
     try {
-      await sendEmailVerification();
+      await sendEmailVerification({ throwOnError: true });
       setStage("code");
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          // Email уже подтверждён в другой сессии/вкладке — синхронизируем токен.
+          // Already verified in another session/tab: sync the token.
           await syncVerifiedClaim();
           onVerified?.();
           handleClose();
           return;
         }
 
-        setError(errorCodeToken(err.code));
+        setError(toDialogError(err));
       } else {
-        setError(errorCodeToken("network"));
+        setError({ token: errorCodeToken("network") });
       }
     } finally {
       setSubmitting(false);
@@ -60,37 +63,37 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
 
   const handleVerify = async () => {
     if (code.length !== CODE_LENGTH) {
-      setError("auth:verifyEmail.codeIncomplete");
+      setError({ token: "auth:verifyEmail.codeIncomplete" });
       return;
     }
 
     setError(null);
     setSubmitting(true);
     try {
-      await verifyEmail({ code });
+      await verifyEmail({ body: { code }, throwOnError: true });
       await syncVerifiedClaim();
       onVerified?.();
       handleClose();
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          // Email уже подтверждён — закрываем и синкаем.
+          // Already verified: close and sync.
           await syncVerifiedClaim();
           onVerified?.();
           handleClose();
           return;
         }
 
-        // 410 (expired), 404 (not found), 429 (attempts exceeded) — откатываем
-        // на стадию "intro", чтобы пользователь мог запросить новый код.
+        // 410 (expired), 404 (not found), 429 (attempts exceeded): back to "intro" so the user
+        // can request a new code.
         const shouldResetToIntro = err.status === 410 || err.status === 404 || err.status === 429;
-        setError(errorCodeToken(err.code));
+        setError(toDialogError(err));
         if (shouldResetToIntro) {
           setStage("intro");
           setCode("");
         }
       } else {
-        setError(errorCodeToken("network"));
+        setError({ token: errorCodeToken("network") });
       }
     } finally {
       setSubmitting(false);
@@ -104,8 +107,8 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
       centered
       radius="lg"
       title={
-        // Modal оборачивает title в свой <h2> — внутри должен быть НЕ заголовок (иначе
-        // <h2><h3> = невалидный HTML + дублирующий heading для скринридера). Text сохраняет вид.
+        // Modal wraps title in its own <h2>, so the content must NOT be a heading (nested headings
+        // are invalid HTML and duplicate the heading for screen readers). Text keeps the look.
         <Text size="h4" fw={700} style={{ color: "var(--text)" }}>
           {t("verifyEmail.title")}
         </Text>
@@ -119,7 +122,7 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
             </Text>
             {error && (
               <Text size="sm" fw={500} c="var(--text-error)" role="alert">
-                {resolveErrorToken(error)}
+                {resolveErrorToken(error.token, error.params)}
               </Text>
             )}
             <Group justify="flex-end">
@@ -154,7 +157,7 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
 
             {error && (
               <Text size="sm" fw={500} ta="center" c="var(--text-error)" role="alert">
-                {resolveErrorToken(error)}
+                {resolveErrorToken(error.token, error.params)}
               </Text>
             )}
 
@@ -174,17 +177,29 @@ export function VerifyEmailDialog({ opened, onClose, onVerified }: VerifyEmailDi
 }
 
 /**
- * После успешной верификации бэк не возвращает новый access-токен,
- * а email_verified claim в текущем токене остаётся false. Подтягиваем
- * свежий токен через /v1/auth/refresh/, чтобы UI-состояние сошлось с
- * фактическим состоянием на бэке.
+ * Maps an API error to the dialog's error. Exhausted attempts carry the wait until a new code in
+ * `details.retry_after_seconds`; without a usable number the generic text is shown, never a raw
+ * `{{minutes}}` placeholder.
+ */
+function toDialogError(err: ApiError): DialogError {
+  const retryAfterSeconds = err.details?.retry_after_seconds;
+  if (err.code !== ATTEMPTS_EXCEEDED_CODE || typeof retryAfterSeconds !== "number" || retryAfterSeconds < 0) {
+    return { token: errorCodeToken(err.code) };
+  }
+
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / SECONDS_PER_MINUTE));
+  return { token: errorCodeToken(`${ATTEMPTS_EXCEEDED_CODE}_retry`), params: { minutes } };
+}
+
+/**
+ * After verification the backend returns no new access token and the `email_verified` claim in
+ * the current one stays false, so fetch a fresh token via /v1/auth/refresh/.
  */
 async function syncVerifiedClaim(): Promise<void> {
   try {
-    const { accessToken } = await refresh();
+    const { accessToken } = await refresh({ throwOnError: true });
     setAccessToken(accessToken);
   } catch {
-    // Refresh может упасть, если refresh-cookie истёк; UI всё равно
-    // получит актуальное состояние при следующем логине.
+    // Refresh may fail if the refresh cookie expired; the UI catches up on the next login.
   }
 }

@@ -1,16 +1,6 @@
-from app.shared.infra.procrastinate.bus import (
-    ProcrastinateTaskBus,
-    SessionBoundTaskBusPort,
-    TaskBusPort,
-)
-from app.shared.infra.procrastinate.bus_component import TaskBusComponent
-from app.shared.infra.procrastinate.component import ProcrastinateApp, ProcrastinateComponent
+from app.shared.infra.procrastinate.ports import SessionBoundTaskBusPort, TaskBusPort
 
 __all__ = [
-    "ProcrastinateApp",
-    "ProcrastinateComponent",
-    "ProcrastinateTaskBus",
     "SessionBoundTaskBusPort",
-    "TaskBusComponent",
     "TaskBusPort",
 ]

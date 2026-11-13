@@ -4,24 +4,24 @@ import { expect, test } from "../fixtures";
 import { clearCookies, clearSessionStorage, getRefreshCookie, WEBKIT_SECURE_COOKIE_REASON } from "../helpers/session";
 
 /**
- * E2E: жизненный цикл сессии — флоу D (ProtectedRoute + bootstrap-refresh) и K (атрибуты
- * refresh-cookie).
+ * E2E: session lifecycle: flow D (ProtectedRoute + bootstrap refresh) and K (refresh cookie
+ * attributes).
  *
- * Это ровно та real-stack интеграция, которую MSW-компонентные тесты не достают: настоящая
- * HttpOnly refresh-cookie и реальный bootstrap-refresh при перезагрузке/новой вкладке. Логика
- * рендера ProtectedRoute покрыта `ProtectedRoute.test.tsx`.
+ * This is exactly the real-stack integration MSW component tests cannot reach: a real HttpOnly
+ * refresh cookie and a real bootstrap refresh on reload/new tab. ProtectedRoute's render logic is
+ * covered by `ProtectedRoute.test.tsx`.
  *
- * E1 (single-flight на 401 при защищённом действии) сознательно НЕ в e2e: его логика
- * исчерпывающе и детерминированно покрыта `api/client.test.ts` (включая «один /refresh/ на
- * параллельные вызовы»), а единственный authed-UI-триггер (send-verification) завязан на
- * resend-cooldown от авто-challenge регистрации → флак. Реальную rotation refresh-токена
- * против бэка гоняет D2.
+ * E1 (single-flight on 401 during a protected action) is deliberately NOT in e2e: its logic is
+ * exhaustively and deterministically covered by `api/client.test.ts` (including "one /refresh/
+ * for parallel calls"), and the only authed UI trigger (send-verification) depends on the resend
+ * cooldown from the registration auto-challenge, which is flaky. D2 exercises real refresh token
+ * rotation against the backend.
  */
 
 const REFRESH_URL = "/v1/auth/refresh/";
 const PROFILE_BUTTON_NAME = "Open profile menu";
 
-/** Навешивает счётчик POST `/refresh/` на страницу; возвращает массив URL'ов. */
+/** Attaches a counter of POST `/refresh/` calls to the page; returns the array of URLs. */
 function trackRefreshRequests(page: Page): string[] {
   const requests: string[] = [];
   page.on("request", (request) => {
@@ -47,8 +47,8 @@ test.describe("Session lifecycle", () => {
   }) => {
     test.skip(browserName === "webkit", WEBKIT_SECURE_COOKIE_REASON);
 
-    // Чистим только sessionStorage — refresh-cookie жива. На reload bootstrap видит «токена нет»
-    // и поднимает сессию из cookie. StrictMode дважды дёргает эффект → single-flight даёт ОДИН /refresh/.
+    // Clear only sessionStorage; the refresh cookie is alive. On reload the bootstrap sees "no token"
+    // and restores the session from the cookie. StrictMode runs the effect twice, so single-flight gives ONE /refresh/.
     await clearSessionStorage(authedPage);
     const refreshRequests = trackRefreshRequests(authedPage);
 
@@ -71,13 +71,13 @@ test.describe("Session lifecycle", () => {
   test("D4: новая вкладка с живой cookie → bootstrap → /home", async ({ authedPage, context, browserName }) => {
     test.skip(browserName === "webkit", WEBKIT_SECURE_COOKIE_REASON);
 
-    // authedPage уже залогинен → refresh-cookie живёт в контексте. У новой вкладки свой
-    // sessionStorage (без токена), но cookie общая → bootstrap-refresh поднимает сессию.
+    // authedPage is already logged in, so the refresh cookie lives in the context. A new tab has its
+    // own sessionStorage (no token) but the cookie is shared, so the bootstrap refresh restores the session.
     await expect(authedPage).toHaveURL(/\/home$/u);
 
     const newTab = await context.newPage();
-    // Открываем именно корень — так поступает пользователь. После bootstrap'а PublicOnlyRoute
-    // видит поднятую сессию и уводит с публичного лендинга на дашборд.
+    // Open exactly the root, as a user does. After the bootstrap PublicOnlyRoute sees the restored
+    // session and moves them from the public landing to the dashboard.
     await newTab.goto("/");
 
     await expect(newTab.getByRole("button", { name: PROFILE_BUTTON_NAME })).toBeVisible();
@@ -87,18 +87,18 @@ test.describe("Session lifecycle", () => {
   });
 
   test("D5: аноним на «/» остаётся на публичном лендинге", async ({ page }) => {
-    // После редизайна «/» — публичная зона, а не защищённый дашборд: аноним видит лендинг
-    // и никуда не уводится. Проверка самого ProtectedRoute переехала в D6.
+    // "/" is the public zone, not the protected dashboard: an anonymous user sees the landing and is
+    // not redirected. ProtectedRoute itself is checked in D6.
     await page.goto("/");
 
     await expect(page).toHaveURL(/\/$/u);
-    // Лендинг опознаём по единственному h1, а не по тексту кнопки: копирайт живёт в i18n
-    // и меняется, а «на странице есть заголовок первого уровня» — структурный инвариант.
+    // Recognize the landing by its single h1, not by button text: copy lives in i18n and changes,
+    // while "the page has a level-one heading" is a structural invariant.
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("D6: аноним на защищённом /home → редирект на /login", async ({ page }) => {
-    // Свежий контекст без токена и cookie — ProtectedRoute уводит на /login.
+    // A fresh context with no token and no cookie: ProtectedRoute redirects to /login.
     await page.goto("/home");
 
     await expect(page).toHaveURL(/\/login$/u);
@@ -111,7 +111,7 @@ test.describe("Session lifecycle", () => {
   }) => {
     test.skip(browserName === "webkit", WEBKIT_SECURE_COOKIE_REASON);
 
-    // authedPage гарантирует прошедший логин → cookie выставлена.
+    // authedPage guarantees a completed login, so the cookie is set.
     await expect(authedPage).toHaveURL(/\/home$/u);
 
     const refreshCookie = await getRefreshCookie(context);
@@ -119,7 +119,7 @@ test.describe("Session lifecycle", () => {
     expect(refreshCookie).toBeDefined();
     expect(refreshCookie?.httpOnly).toBe(true);
     expect(refreshCookie?.sameSite).toBe("Lax");
-    // Secure=true, но cookie всё равно сохранена на http://localhost (localhost = secure context) — это K3.
+    // Secure=true, yet the cookie is still stored on http://localhost (localhost is a secure context); this is K3.
     expect(refreshCookie?.secure).toBe(true);
   });
 });

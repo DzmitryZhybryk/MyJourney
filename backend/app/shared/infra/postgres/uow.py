@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +31,7 @@ class BaseUnitOfWork:
         self._session = session
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
+    async def transaction(self) -> AsyncGenerator[None]:
         """
         Явная транзакционная область поверх request-scoped сессии.
 
@@ -40,6 +40,9 @@ class BaseUnitOfWork:
         откатывается); после успешного commit'а ``rollback`` на выходе — no-op
         (зафиксированное уже не отменить). Сессию НЕ создаёт и НЕ закрывает —
         её lifecycle за ``db_session_dependency``.
+
+        Scenarios:
+            - любой use case, который работает с базой через UnitOfWork
         """
         try:
             yield
@@ -51,10 +54,11 @@ class BaseUnitOfWork:
         """
         Доступ к async-сессии для интеграций, требующих raw-сессии.
 
-        Главный потребитель — ``SessionBoundTaskBusPort`` (atomic defer
-        procrastinate-таски в той же транзакции, что и pending writes).
         Не использовать в обычной бизнес-логике — все DB-операции должны
         идти через репозитории.
+
+        Scenarios:
+            - use case, который ставит фоновую задачу атомарно со своими записями
         """
         return self._session
 
@@ -69,6 +73,9 @@ class BaseUnitOfWork:
         flush SQLAlchemy не гарантирует, а relationship между ними ради ordering'а
         мы намеренно не заводим. Изменения остаются невидимыми другим транзакциям
         до ``commit()``.
+
+        Scenarios:
+            - use case, который в одной транзакции вставляет родителя и ссылающуюся на него запись
         """
         await self._session.flush()
 

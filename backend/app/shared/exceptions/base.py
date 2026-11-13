@@ -1,16 +1,17 @@
-"""Базовые исключения для доменов."""
+"""Базовые исключения приложения."""
 
+from datetime import timedelta
 from enum import Enum
 from typing import ClassVar
 
 from app.shared.types import OptionalDict
 
 
-class ErrorCategory(Enum):
+class ErrorCategoryEnum(Enum):
     """
-    Транспортно-нейтральная категория доменной ошибки.
+    Транспортно-нейтральная категория ошибки приложения.
 
-    Домен классифицирует род сбоя в собственных терминах и НЕ знает про HTTP,
+    Бросающий код классифицирует род сбоя в собственных терминах и НЕ знает про HTTP,
     gRPC и прочие транспорты. Перевод категории в конкретный код транспорта —
     забота адаптера (HTTP-handler, будущий gRPC-handler и т.д.).
     """
@@ -23,18 +24,32 @@ class ErrorCategory(Enum):
     GONE = "gone"
     UNPROCESSABLE = "unprocessable"
     RATE_LIMITED = "rate_limited"
+    TEMPORARY = "temporary"
     INTERNAL = "internal"
 
+    @property
+    def is_server_fault(self) -> bool:
+        """
+        Сбой на нашей стороне, а не ошибка в запросе клиента.
 
-class BaseDomainError(Exception):
+        Scenarios:
+            - ответ на ошибку через любой транспорт: у серверного сбоя наружу не уходят детали
+
+        Returns:
+            True для временного сбоя зависимости и внутренней ошибки
+        """
+        return self in {ErrorCategoryEnum.TEMPORARY, ErrorCategoryEnum.INTERNAL}
+
+
+class AppError(Exception):
     """
-    Базовое исключение для всех доменных ошибок.
+    Базовое исключение для ошибок приложения, у которых есть категория.
 
-    Все доменные исключения должны наследоваться от этого класса.
+    От него наследуются ошибки доменов и инфраструктурных адаптеров.
     Дочерние классы могут задать атрибуты класса `category`, `code` и `message`
     для дефолтных значений.
 
-    Поле `category` несёт транспортно-нейтральный род ошибки (см. `ErrorCategory`):
+    Поле `category` несёт транспортно-нейтральный род ошибки (см. `ErrorCategoryEnum`):
     адаптер транспорта переводит его в свой код (HTTP-статус и т.п.).
     Поле `code` — стабильный машинно-читаемый идентификатор ошибки для клиента
     (часть API-контракта). Поле `details` несёт дополнительную метаинформацию
@@ -44,13 +59,14 @@ class BaseDomainError(Exception):
     инстанс-атрибут `details`.
     """
 
-    category: ErrorCategory = ErrorCategory.INTERNAL
+    category: ErrorCategoryEnum = ErrorCategoryEnum.INTERNAL
     code: str = "unknown_error"
     message: str = "Произошла ошибка"
     default_details: ClassVar[OptionalDict] = None
 
     def __init__(
         self,
+        *,
         message: str | None = None,
         code: str | None = None,
         details: OptionalDict = None,
@@ -70,73 +86,114 @@ class BaseDomainError(Exception):
         self.details = details
 
 
-class InvalidInputError(BaseDomainError):
+class InvalidInputError(AppError):
     """Базовое исключение для ошибок валидации и некорректного ввода."""
 
-    category = ErrorCategory.INVALID_INPUT
+    category = ErrorCategoryEnum.INVALID_INPUT
     code = "invalid_input"
     message = "Некорректный запрос"
 
 
-class UnauthenticatedError(BaseDomainError):
+class UnauthenticatedError(AppError):
     """Базовое исключение для ошибок аутентификации."""
 
-    category = ErrorCategory.UNAUTHENTICATED
+    category = ErrorCategoryEnum.UNAUTHENTICATED
     code = "unauthenticated"
     message = "Требуется авторизация"
 
 
-class PermissionDeniedError(BaseDomainError):
+class PermissionDeniedError(AppError):
     """Базовое исключение для ошибок доступа."""
 
-    category = ErrorCategory.PERMISSION_DENIED
+    category = ErrorCategoryEnum.PERMISSION_DENIED
     code = "permission_denied"
     message = "Доступ запрещен"
 
 
-class NotFoundError(BaseDomainError):
+class NotFoundError(AppError):
     """Базовое исключение для ошибок "ресурс не найден"."""
 
-    category = ErrorCategory.NOT_FOUND
+    category = ErrorCategoryEnum.NOT_FOUND
     code = "not_found"
     message = "Ресурс не найден"
 
 
-class ConflictError(BaseDomainError):
+class ConflictError(AppError):
     """Базовое исключение для конфликтов данных."""
 
-    category = ErrorCategory.CONFLICT
+    category = ErrorCategoryEnum.CONFLICT
     code = "conflict"
     message = "Конфликт данных"
 
 
-class GoneError(BaseDomainError):
+class GoneError(AppError):
     """Базовое исключение для ресурсов, которые когда-то были и истекли."""
 
-    category = ErrorCategory.GONE
+    category = ErrorCategoryEnum.GONE
     code = "gone"
     message = "Ресурс больше недоступен"
 
 
-class UnprocessableError(BaseDomainError):
+class UnprocessableError(AppError):
     """Базовое исключение для ошибок обработки корректно сформированной сущности."""
 
-    category = ErrorCategory.UNPROCESSABLE
+    category = ErrorCategoryEnum.UNPROCESSABLE
     code = "unprocessable"
     message = "Невозможно обработать запрос"
 
 
-class RateLimitedError(BaseDomainError):
+class RateLimitedError(AppError):
     """Базовое исключение для ошибок превышения лимита запросов."""
 
-    category = ErrorCategory.RATE_LIMITED
+    category = ErrorCategoryEnum.RATE_LIMITED
     code = "rate_limited"
     message = "Превышен лимит запросов"
 
 
-class InternalError(BaseDomainError):
+class TemporaryError(AppError):
+    """
+    Базовое исключение для временного сбоя зависимости: повтор той же операции позже может пройти.
+
+    От него наследуется временный сбой любого внешнего вызова, постоянный — от `InternalError`.
+    Фоновые задачи повторяются по этому классу, не перечисляя провайдеров.
+    Поле `retry_after` — через сколько зависимость просит повторить; `None`, если она этого не сказала.
+    """
+
+    category = ErrorCategoryEnum.TEMPORARY
+    code = "temporary"
+    message = "Не удалось выполнить запрос, повторите попытку позже"
+
+    def __init__(
+        self,
+        *,
+        message: str | None = None,
+        code: str | None = None,
+        details: OptionalDict = None,
+        retry_after: timedelta | None = None,
+    ) -> None:
+        super().__init__(message=message, code=code, details=details)
+        self.retry_after = retry_after
+
+
+class InternalError(AppError):
     """Базовое исключение для внутренних ошибок сервера."""
 
-    category = ErrorCategory.INTERNAL
+    category = ErrorCategoryEnum.INTERNAL
     code = "internal"
     message = "Внутренняя ошибка сервера"
+
+
+class InvariantViolationError(Exception):
+    """
+    Наш код обнаружил, что его собственное допущение ложно.
+
+    Корень вне дерева `AppError`: это не ответ клиенту, а повод для алерта и разбора, поэтому
+    у него нет категории и `code`. Через HTTP он даёт общий 500, в лог — ERROR с трейсбеком.
+    Наследник задаёт `message`; переданные именованные значения дописываются к нему в текст.
+    """
+
+    message: ClassVar[str] = "Нарушен инвариант"
+
+    def __init__(self, **context: object) -> None:
+        pairs = ", ".join(f"{name}={value!r}" for name, value in context.items())
+        super().__init__(f"{self.message}: {pairs}" if pairs else self.message)

@@ -1,10 +1,9 @@
 {
-  // Playwright-спеки. Отдельный проект, потому что у них своя среда: Node + API
-  // `@playwright/test`, без DOM-либы приложения и без `vite/client`.
+  // Playwright specs. A separate project because they have their own environment: Node + the
+  // `@playwright/test` API, without the app's DOM lib and without `vite/client`.
   //
-  // Заведён после того, как выяснилось, что `e2e/` не входил НИ В ОДИН tsconfig:
-  // `npm run typecheck` их не видел, а Playwright типы просто стирает при запуске.
-  // Из-за этого сломанные редизайном селекторы и URL-ассерты дожили до прогона молча.
+  // Needed because `e2e/` must be in a tsconfig: `npm run typecheck` would not see it, and
+  // Playwright simply strips types at run time.
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
     "target": "es2023",

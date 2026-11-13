@@ -43,7 +43,7 @@ describe("JourneysLegendCard", () => {
   });
 
   it("стартует свёрнутой, если пользователь сворачивал легенду ранее (localStorage)", () => {
-    // Флаг ставим напрямую, чтобы тест начального состояния не зависел от setLegendCollapsed.
+    // Set the flag directly so the initial-state test does not depend on setLegendCollapsed.
     localStorage.setItem("journeys-legend-collapsed", "1");
     renderWithProviders(<JourneysLegendCard />);
 

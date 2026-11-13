@@ -1,3 +1,3 @@
-from app.geo.domain.value_objects.place_names import PlaceNames
+from app.geo.domain.value_objects.localized_names import LocalizedNames
 
-__all__ = ["PlaceNames"]
+__all__ = ["LocalizedNames"]

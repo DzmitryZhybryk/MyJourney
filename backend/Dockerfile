@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.14-slim-bookworm@sha256:86f975aca15cf04a40b399eebede9aea7c82eae084d1f1a0a6ef6bcaae871a30 AS base
-COPY --from=ghcr.io/astral-sh/uv:0.9.9@sha256:f6e3549ed287fee0ddde2460a2a74a2d74366f84b04aaa34c1f19fec40da8652 /uv /uvx /bin/
+FROM python:3.14-slim-bookworm@sha256:516b51cb9db2ef061e465c803e50f64361b82cefd91e525b889b967b83e83527 AS base
+COPY --from=ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONFAULTHANDLER=1 \
@@ -19,33 +19,50 @@ RUN groupadd --system nonroot \
     && chown -R nonroot:nonroot /src /opt/venv
 
 # -----------------------------------------------------------------------------
-# deps: install locked dependencies only — cached separately from app code
+# deps: install locked runtime dependencies only — cached separately from app code
 # -----------------------------------------------------------------------------
 FROM base AS deps
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable
+    uv sync --locked --no-install-project --no-dev --no-editable
 
 # -----------------------------------------------------------------------------
-# dev: used by docker-compose; source tree is volume-mounted at runtime,
-# so we stop after deps and let uvicorn --reload pick up changes live.
+# source: project files the dev and prod installs both build from
+# -----------------------------------------------------------------------------
+FROM deps AS source
+
+COPY pyproject.toml uv.lock README.md alembic.ini ./
+COPY ./app ./app
+COPY ./migrations ./migrations
+
+# -----------------------------------------------------------------------------
+# dev: editable install with the dev group. Compose bind-mounts ./backend over
+# /src, and the editable install points there, so uvicorn --reload sees changes.
+# The dev group is installed before the code is copied, so a code change only
+# re-runs the editable install of the project itself.
 # -----------------------------------------------------------------------------
 FROM deps AS dev
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project
+
+COPY --from=source /src /src
+COPY ./devtools ./devtools
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked
 
 # -----------------------------------------------------------------------------
 # builder: install the project itself into /opt/venv
 # -----------------------------------------------------------------------------
-FROM deps AS builder
-
-COPY ./app ./app
-COPY ./migrations ./migrations
-COPY ./alembic.ini ./alembic.ini
-COPY pyproject.toml uv.lock README.md ./
+FROM source AS builder
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable
+    uv sync --locked --no-dev --no-editable
 
 # -----------------------------------------------------------------------------
 # final: minimal production image
@@ -56,6 +73,5 @@ COPY --from=builder --chown=nonroot:nonroot /opt/venv /opt/venv
 COPY --from=builder --chown=nonroot:nonroot /src/app ./app
 COPY --from=builder --chown=nonroot:nonroot /src/migrations ./migrations
 COPY --from=builder --chown=nonroot:nonroot /src/alembic.ini ./alembic.ini
-COPY --from=builder --chown=nonroot:nonroot /src/pyproject.toml ./pyproject.toml
 
 USER nonroot

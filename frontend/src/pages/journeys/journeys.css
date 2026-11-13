@@ -1,5 +1,5 @@
-/* ---- Плавающие карточки раздела ------------------------------------------ */
-/* Общий «стеклянный» слой панели и легенды: фон, рамка, тень, blur. */
+/* ---- Floating section cards ------------------------------------------ */
+/* Shared "glass" layer of the panel and legend: background, border, shadow, blur. */
 .journeys-card {
   border-radius: 16px;
   background: var(--surface-card);
@@ -9,21 +9,42 @@
 }
 
 /*
- * Десктоп: раздел Journeys — экран фиксированной высоты без прокрутки (карта-фон +
- * плавающие панель/легенда). height:100vh + overflow:hidden убирают любой остаточный
- * скролл (иначе прозрачная sticky-шапка просвечивает наезжающим баннером при скролле),
- * а stage (flex:1) сам ужимается под доступную высоту, и карта вписывается целиком.
- * На мобиле (<md) правило не действует — там шелл стекается и нормально скроллится.
+ * Desktop: the Journeys section is a fixed-height screen with no scrolling (background map +
+ * floating panel/legend). height:100vh + overflow:hidden remove any residual scroll (otherwise
+ * the transparent sticky header shows a banner sliding under it while scrolling), and the stage
+ * (flex:1) shrinks to the available height so the map fits whole. When the email banner closes the
+ * stage grows at once and useBannerCloseGlide plays that jump as a glide.
+ * On mobile (<md) the rule does not apply: the shell stacks and scrolls normally.
  */
 @media (min-width: 62em) {
   .journeys-shell {
     height: 100vh;
     overflow: hidden;
   }
+
+  /*
+   * Add journey: the globe in the column is the app-global `PersistentGlobeHost`, a fixed layer
+   * UNDER the shell. The shell is transparent: the host holds the night backdrop (the tokens
+   * `--app-page-bg` and `--night-bg` match, so there is no seam). Events pass through the empty
+   * slot to the sphere via the `data-globe-passthrough` / `data-globe-slot` contract
+   * (persistent-globe.css).
+   *
+   * Desktop only: below 62em the globe column is hidden and the host hides with its night, so the
+   * shell must hold the background itself, otherwise a flat `body` shows under it.
+   */
+  .app-shell.journeys-shell--globe {
+    background: transparent;
+  }
 }
 
-/* ---- Карта во всю ширину + плавающая панель ------------------------------ */
+/* ---- Full-width map + floating panel ------------------------------ */
 .journeys-stage {
+  /* Left column width: the navigation panel and the movements filter card share one width. */
+  --journeys-column-width: 260px;
+  /* How the shared map and a tab's content fade in and out: the pace of the map's frame flight
+     (600 ms ease-in-out cubic in useViewTransition), so content and map arrive together. */
+  --journeys-fade: 0.6s;
+  --journeys-fade-ease: cubic-bezier(0.65, 0, 0.35, 1);
   position: relative;
   flex: 1;
   display: flex;
@@ -31,27 +52,100 @@
 }
 
 /*
- * Карта отступает сверху, оставляя навигации чистую «полосу неба» — разделение
- * делается воздухом, а не сменой фона общей шапки. Океан в SVG прозрачен, так
- * что карта мягко растворяется в том же градиенте, что и на главной.
+ * The map is inset from the top, leaving the navigation a clean "strip of sky": separation comes
+ * from air, not from changing the shared header background. The ocean in the SVG is transparent,
+ * so the map dissolves softly into the same gradient as on home.
  */
 .journeys-map {
   position: absolute;
   inset: 0;
-  /* Карта — фоновый слой; панель и легенда лежат поверх (у них z-index выше). */
+  /* The map is a background layer; the panel and legend sit above (higher z-index). */
   z-index: 1;
-  /* padding-bottom = bottom легенды (24px): низ Антарктиды (она почти у нижнего
-     края viewBox) доходит до нижней границы карточки легенды, не «висит». */
+  /* padding-bottom = the legend's bottom (24px): the bottom of Antarctica (almost at the bottom
+     edge of the viewBox) reaches the legend card's lower edge instead of hanging. */
   padding: var(--content-offset-top) 48px 24px;
-  /* Лёгкий сдвиг вправо, чтобы Аляска не залезала под панель: размер карты не
-     меняем — просто двигаем, пустой океан справа уходит за край stage. */
+  /* A slight shift right so Alaska does not slip under the panel: the map size is unchanged, it
+     just moves, and the empty ocean on the right goes past the stage edge. */
   transform: translateX(72px);
+  transition:
+    opacity var(--journeys-fade) var(--journeys-fade-ease),
+    visibility 0s;
+}
+
+/* Background behind a tab's content (the feed): gestures go to the content, the map is not zoomed. */
+.journeys-map--background {
+  pointer-events: none;
 }
 
 /*
- * Оверлей состояния карты (загрузка / ошибка) — по центру области карты, поверх неё.
- * Контейнер прозрачен для кликов (pointer-events:none), чтобы карта под ним оставалась
- * живой; интерактивные дети (кнопка «повторить») кликабельны (pointer-events:auto).
+ * A screen without a map (wishlist, add): the shared map fades out but stays mounted, so coming
+ * back shows the same instance. Clicks stop at once; `visibility` flips after the fade, which also
+ * takes the map out of hit testing for the globe under the shell on /journeys/add.
+ */
+.journeys-map--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--journeys-fade) var(--journeys-fade-ease),
+    visibility 0s var(--journeys-fade);
+}
+
+/* ---- Movements map: route arcs and city dots over countries ----------- */
+.movement-line {
+  fill: none;
+  stroke: var(--movement-line);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* Hovering a route thickens all its pieces at once (an arc across the world edge is two). The arrow
+   keeps its size: its marker is in canvas units, independent of the stroke width. */
+.movement-route .movement-line {
+  transition: stroke-width var(--dur-fast) ease;
+}
+
+.movement-route:hover .movement-line {
+  stroke-width: 3;
+}
+
+/* The overlay ignores the mouse so the map beneath stays live; only this wide transparent stroke
+   catches it. Its width is in screen pixels (non-scaling-stroke). While a drag is in progress
+   useMapZoom holds the pointer on the canvas, so the route is not hovered mid-pan. */
+.movement-route__hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  stroke-linecap: round;
+  pointer-events: stroke;
+}
+
+.movement-arrow {
+  fill: var(--movement-line);
+}
+
+/* A background-coloured stroke separates the dot from the lines meeting at it. */
+.movement-dot {
+  fill: var(--movement-line);
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+/* City name: a background-coloured stroke under the text (paint-order) keeps it readable over
+   lines and country borders. The component sets the size and stroke width: they depend on zoom. */
+.movement-label {
+  fill: var(--text);
+  stroke: var(--surface);
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+/*
+ * Map state overlay (loading / error): centered over the map area. The container ignores clicks
+ * (pointer-events:none) so the map beneath stays live; interactive children (the retry button)
+ * are clickable (pointer-events:auto).
  */
 .journeys-map-status {
   position: absolute;
@@ -71,26 +165,26 @@
 
 .journeys-panel {
   position: absolute;
-  /* Единый отступ под шапкой (тот же токен у padding-top карты) — верх меню на
-     одной линии с верхней границей области карты. */
+  /* Shared offset under the header (the same token as the map's padding-top): the menu top lines
+     up with the top edge of the map area. */
   top: var(--content-offset-top);
   left: 32px;
   z-index: 2;
-  width: 260px;
+  width: var(--journeys-column-width);
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* Тот же padding, что у карточки формы → заголовки панели и формы на одной линии. */
+  /* Same padding as the form card, so panel and form headings share a line. */
   padding: 24px;
 }
 
-/* Заголовок панели — тот же стиль, что у заголовка формы (.add-journey__title). */
+/* Panel title: the same style as the form title (.add-journey__title). */
 .journeys-panel__label {
   font: 600 var(--fs-16)/1.2 var(--font-display);
   color: var(--text);
 }
 
-/* ---- Под-навигация раздела (Карта / Все / Добавить) --------------------- */
+/* ---- Section sub-navigation (Map / All / Add) --------------------- */
 .journeys-nav {
   display: flex;
   flex-direction: column;
@@ -118,8 +212,8 @@
   font-weight: 600;
 }
 
-/* Неактивный пункт под-навигации (раздел ещё не реализован): приглушён, без
-   hover-фона, с бейджем «Soon» у правого края. */
+/* Inactive sub-navigation item (section not implemented yet): muted, no hover background, with a
+   "Soon" badge at the right edge. */
 .journeys-nav__item--soon {
   display: flex;
   align-items: center;
@@ -132,8 +226,8 @@
   background: none;
 }
 
-/* «Добавить» — первичное действие раздела: тот же закатный акцент и та же тёмная
-   метка, что у кнопок auth и лендинга. Одно действие — один вид на весь продукт. */
+/* "Add" is the section's primary action: the same sunset accent and dark label as the auth and
+   landing buttons. One action, one look across the product. */
 .journeys-nav__add {
   display: block;
   margin-top: 4px;
@@ -155,9 +249,8 @@
   background: var(--accent-deep);
 }
 
-/* «Добавить место» — вторичное действие (ghost), пока не реализовано: disabled,
-   тонкая рамка вместо заливки — визуально ниже основного «Добавить путешествие»,
-   бейдж «Soon» по центру рядом с текстом. */
+/* "Add place" is a secondary (ghost) action, not implemented yet: disabled, a thin outline instead
+   of a fill, visually below the primary "Add journey", with a "Soon" badge centered by the text. */
 .journeys-nav__add-place {
   display: flex;
   align-items: center;
@@ -176,15 +269,243 @@
 }
 
 .journeys-nav__add-place:disabled {
-  /* Явно фиксируем вид disabled — браузерный дефолт кнопки не осветляет текст/рамку. */
+  /* Pin the disabled look: the browser default for a button does not lighten text/border. */
   opacity: 1;
 }
 
-/* ---- Легенда карты — сворачиваемый блок в нижнем-правом углу ------------- */
+/* ---- City name attribution (CC BY 4.0): small, bottom-left corner -------- */
+.journeys-map-attribution {
+  position: absolute;
+  bottom: 8px;
+  left: 32px;
+  z-index: 2;
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.journeys-map-attribution a {
+  color: inherit;
+}
+
+/* ---- Movements map filters: a card in the bottom corner ----------- */
+/* By default the bottom-left corner above the GeoNames credit. The user can drag the card anywhere
+   by its handle (useDraggableCard sets left/top inline). */
+.movements-controls {
+  position: absolute;
+  bottom: 32px;
+  left: 32px;
+  z-index: 3;
+  /* Same width as the navigation panel: the card sits in the same column. */
+  width: var(--journeys-column-width);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 14px 12px;
+}
+
+.movements-controls__single-year {
+  font: 500 var(--fs-11) / 1 var(--font-mono);
+  color: var(--text-muted);
+}
+
+.movements-controls__transport {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A selected chip shows by outline and fill; a tick would only bloat the row. The selected
+   padding equals the normal one, otherwise the chip would change width on click. */
+.movements-controls__chip .mantine-Chip-iconWrapper {
+  display: none;
+}
+
+/* Transport types are icons only: three chips share the row evenly, the icon centered. */
+.movements-controls__chip .mantine-Chip-label {
+  --chip-padding: 0;
+  --chip-checked-padding: 0;
+  width: 100%;
+  justify-content: center;
+  /* Mantine trims the line to cap height (text-box-trim) to center text, but there is no text here
+     and the trim pushed the icon up. */
+  text-box-trim: none;
+}
+
+.movements-controls__icon {
+  display: block;
+}
+
+/* The car in Noto emoji "stands on the ground": the drawing's center is 17% below the square's
+   center (measured via getBBox: 85.8 of 128; plane and ship are nearly centered). Lift it by that much. */
+.movements-controls__icon--land {
+  transform: translateY(-17%);
+}
+
+/* Touch targets >= 44px are for fingers only: with a mouse, small controls are more precise and compact. */
+/*
+ * Year window slider: a thin track, the selected segment in the route colour, compact thumbs.
+ * A background-coloured ring separates the thumb from the track; the glow responds to hover and grab.
+ * A released thumb glides to its year smoothly; while dragged, no delay.
+ */
+.movements-controls__slider {
+  padding-top: 6px;
+}
+
+.movements-controls__slider .mantine-RangeSlider-root {
+  --slider-track-bg: rgb(var(--ink-on-dark-rgb) / 0.12);
+}
+
+.movements-controls__slider .mantine-RangeSlider-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--surface);
+  background-color: var(--movement-line);
+  box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.35);
+  transition:
+    left 180ms ease,
+    box-shadow var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
+}
+
+.movements-controls__slider .mantine-RangeSlider-thumb:hover,
+.movements-controls__slider .mantine-RangeSlider-thumb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 6px rgb(var(--glow-rgb) / 0.18);
+}
+
+.movements-controls__slider .mantine-RangeSlider-thumb[data-dragging] {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 0 0 8px rgb(var(--glow-rgb) / 0.2);
+}
+
+.movements-controls__slider .mantine-RangeSlider-bar {
+  transition:
+    inset-inline-start 180ms ease,
+    width 180ms ease;
+}
+
+/* While a thumb is dragged the glide animation would get in the way: the thumb would lag behind the pointer. */
+.movements-controls__slider:has([data-dragging]) .mantine-RangeSlider-thumb,
+.movements-controls__slider:has([data-dragging]) .mantine-RangeSlider-bar {
+  transition: none;
+}
+
+/* Years are thin ticks on the track, not circles. */
+.movements-controls__slider .mantine-RangeSlider-mark {
+  border: 0;
+  background-color: rgb(var(--ink-rgb) / 0.6);
+  transform: scale(0.5);
+}
+
+/* Years under the thumbs: a layer as wide as the slider, each label centered under its thumb. */
+.movements-controls__years {
+  position: relative;
+  height: 22px;
+  margin-top: 4px;
+}
+
+.movements-controls__year-group {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateX(-50%);
+  /* Larger than the stamp size: small digits got lost next to the transport icons. */
+  font: 600 var(--fs-13) / 1 var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+  /* A released thumb glides to its year; the label travels with it instead of jumping. */
+  transition: left 180ms ease;
+}
+
+.movements-controls__slider:has([data-dragging]) .movements-controls__year-group {
+  transition: none;
+}
+
+/* A year can be typed by hand: on hover it is brighter and underlined, showing that it is clickable. */
+.movements-controls__year {
+  padding: 2px 3px;
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: text;
+}
+
+.movements-controls__year:hover,
+.movements-controls__year:focus-visible {
+  color: var(--text);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.movements-controls__year-input {
+  width: calc(4ch + 8px);
+  border: 1px solid rgb(var(--glow-rgb) / 0.5);
+  background: rgb(var(--ink-rgb) / 0.6);
+  color: var(--text);
+  text-align: center;
+  outline: none;
+}
+
+.movements-controls__year-input:focus {
+  box-shadow: 0 0 0 3px rgb(var(--glow-rgb) / 0.18);
+}
+/*
+ * The tab is a strip of dots in the card's top-right corner, in its top padding (so that is larger
+ * than the bottom one). The card is dragged by it.
+ */
+.movements-controls__handle {
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 16px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: grab;
+  /* A gesture on the tab drags the card, not scrolls the page. */
+  touch-action: none;
+}
+
+.movements-controls__handle:hover,
+.movements-controls__handle:focus-visible {
+  color: var(--text);
+}
+
+.movements-controls__handle:active {
+  cursor: grabbing;
+}
+
+@media (pointer: coarse) {
+  .movements-controls__chip .mantine-Chip-label {
+    min-height: 44px;
+  }
+
+  /* The tab stays small visually, with an invisible 44px zone around it for a finger. */
+  .movements-controls__handle::before {
+    content: "";
+    position: absolute;
+    inset: -14px -6px;
+  }
+
+  .movements-controls__slider .mantine-RangeSlider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ---- Map legend: a collapsible block in the bottom-right corner ------------- */
 .journeys-legend-card {
   position: absolute;
-  /* Правый-нижний угол занимает Новая Зеландия, поэтому легенду опускаем к
-     самому краю — она ложится на Антарктиду (фон), а не перекрывает НЗ. */
+  /* New Zealand occupies the bottom-right corner, so the legend is lowered to the very edge: it
+     lies over Antarctica (background) instead of covering NZ. */
   bottom: 24px;
   right: 32px;
   z-index: 2;
@@ -209,7 +530,7 @@
   color: var(--text-stamp);
 }
 
-/* CSS-шеврон (без icon-зависимостей): вниз = свёрнуто, вверх = развёрнуто. */
+/* CSS chevron (no icon dependencies): down = collapsed, up = expanded. */
 .journeys-legend-card__chevron {
   width: 0;
   height: 0;
@@ -223,7 +544,7 @@
   transform: rotate(180deg);
 }
 
-/* ---- Легенда ------------------------------------------------------------- */
+/* ---- Legend ------------------------------------------------------------- */
 .journeys-legend {
   margin: 0;
   padding: 0;
@@ -255,19 +576,19 @@
   border-radius: 50%;
 }
 
-/* ---- Экран добавления путешествия (split: форма + глобус-герой) ---------- */
+/* ---- Add journey screen (split: form + hero globe) ---------- */
 .add-journey {
   position: absolute;
   inset: 0;
   z-index: 1;
   display: flex;
-  /* Верх формы — на одной линии с верхом левой панели (тот же content-offset-top). */
+  /* The form top lines up with the left panel top (same content-offset-top). */
   align-items: flex-start;
   gap: 24px;
   padding: var(--content-offset-top) 32px 24px;
 }
 
-/* Колонка формы отодвинута от плавающей левой панели (left:32 + width:260). */
+/* The form column is offset from the floating left panel (left:32 + width:260). */
 .add-journey__form-col {
   flex: 0 0 420px;
   max-width: 420px;
@@ -276,7 +597,7 @@
   overflow-y: auto;
 }
 
-/* Глобус занимает остаток ширины и всю высоту stage. */
+/* The globe takes the remaining width and the full stage height. */
 .add-journey__globe-col {
   flex: 1 1 auto;
   align-self: stretch;
@@ -289,7 +610,7 @@
   padding: 24px;
 }
 
-/* Тот же стиль, что у заголовка панели (.journeys-panel__label) — единый вид. */
+/* Same style as the panel title (.journeys-panel__label): one look. */
 .add-journey__title {
   margin: 0 0 2px;
   font: 600 var(--fs-16)/1.2 var(--font-display);
@@ -302,27 +623,35 @@
   color: var(--text-muted);
 }
 
-/* Блок «откуда/куда»: relative-якорь для плавающей кнопки обмена в зазоре полей. */
+/* From/to block: a relative anchor for the floating swap button in the gap between fields. */
 .add-journey__route {
+  --add-journey-swap-inset: 16px;
+  --add-journey-swap-size: 34px;
+
   position: relative;
 }
 
-/* Круглая кнопка «поменять местами» — сидит в зазоре между полями у правого края
-   (как в авиапоиске). Своя разметка, а не Mantine ActionIcon, ради точного вида:
-   кружок приподнятой поверхности с тонкой рамкой под цвет полей. */
+/* A field error ends before the swap button instead of running under it: a long one wraps. */
+.add-journey__route .mantine-InputWrapper-error {
+  padding-right: calc(var(--add-journey-swap-inset) + var(--add-journey-swap-size) + 8px);
+}
+
+/* Round "swap" button sitting in the gap between the fields near the right edge (like a flight
+   search). Own markup, not Mantine ActionIcon, for an exact look: a raised-surface circle with a
+   thin border matching the fields. */
 .add-journey__swap {
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  right: var(--add-journey-swap-inset);
+  transform: translateY(-50%);
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--add-journey-swap-size);
+  height: var(--add-journey-swap-size);
   padding: 0;
   border-radius: 50%;
-  /* Чуть толще кольцо цвета фона вокруг кнопки — она «лежит» на стыке полей, а не висит в воздухе. */
+  /* A slightly thicker background-coloured ring around the button: it "sits" on the field seam instead of hanging in the air. */
   border: 1px solid var(--hairline);
   background: var(--surface-2);
   color: var(--text);
@@ -336,7 +665,7 @@
     border-color var(--dur-fast) ease;
 }
 
-/* Тач-таргет ≥44px без увеличения видимого кружка (34px): невидимая расширенная зона клика. */
+/* A >=44px touch target without enlarging the visible circle (34px): an invisible extended click zone. */
 .add-journey__swap::before {
   content: "";
   position: absolute;
@@ -347,17 +676,17 @@
   height: 44px;
 }
 
-/* Ховер: приподнимаем тенью и доворачиваем стрелки на 180° — жест «обмена». */
+/* Hover: lift with a shadow and turn the arrows 180deg, the "swap" gesture. */
 .add-journey__swap:hover:not(:disabled) {
   border-color: var(--accent);
   box-shadow:
     0 0 0 4px var(--surface),
     0 6px 14px rgb(var(--ink-rgb) / 0.16);
-  transform: translate(-50%, -50%) rotate(180deg);
+  transform: translateY(-50%) rotate(180deg);
 }
 
 .add-journey__swap:active:not(:disabled) {
-  transform: translate(-50%, -50%) scale(0.92);
+  transform: translateY(-50%) scale(0.92);
 }
 
 .add-journey__swap:focus-visible {
@@ -373,12 +702,11 @@
 }
 
 /*
- * ---- Узкие экраны: плавающие absolute-слои → вертикальный поток -----------
- * Десктоп держит карту/форму на весь stage, а панель и легенду — плавающими
- * поверх. На узких это переполняется и режет форму, поэтому раскладываем stage
- * в колонку и возвращаем слои в нормальный поток. Граница <md (61.99em) совпадает
- * с бургером шапки и оставляет десктопный split add-journey только там, где он
- * помещается (≥992px форма 420 + margin 276 + глобус без переполнения).
+ * ---- Narrow screens: floating absolute layers -> vertical flow -----------
+ * Desktop keeps the map/form across the whole stage and the panel and legend floating over it. On
+ * narrow screens that overflows and clips the form, so the stage becomes a column and the layers
+ * return to normal flow. The <md boundary (61.99em) matches the header burger and keeps the
+ * desktop add-journey split only where it fits (>=992px: form 420 + margin 276 + globe without overflow).
  */
 @media (max-width: 61.99em) {
   .journeys-stage {
@@ -388,7 +716,7 @@
     padding: 14px 16px 24px;
   }
 
-  /* Панель из плавающей — блок в потоке сверху. */
+  /* The panel goes from floating to a block in flow at the top. */
   .journeys-panel {
     position: static;
     top: auto;
@@ -397,8 +725,8 @@
     padding: 16px 18px;
   }
 
-  /* Карта из absolute-заливки — блок фиксированной высоты в потоке
-     (SVG height-constrained, лишнее по ширине центр-кропится). */
+  /* The map goes from an absolute fill to a fixed-height block in flow
+     (the SVG is height-constrained, extra width is center-cropped). */
   .journeys-map {
     position: relative;
     inset: auto;
@@ -411,7 +739,17 @@
     overflow: hidden;
   }
 
-  /* Легенда из углового overlay — обычный блок под картой у правого края. */
+  /* Here the map is in flow: a hidden one would leave an empty 58vh block above the content. */
+  .journeys-map--hidden {
+    display: none;
+  }
+
+  /* Attribution goes in a line under the map. */
+  .journeys-map-attribution {
+    position: static;
+  }
+
+  /* The legend goes from a corner overlay to a plain block under the map at the right edge. */
   .journeys-legend-card {
     position: static;
     bottom: auto;
@@ -419,7 +757,37 @@
     align-self: flex-end;
   }
 
-  /* Добавление поездки: форма во всю ширину, декоративный глобус скрыт (как в auth). */
+  /* Movements filters go under the map at full width, not over it; nothing to drag here. */
+  .movements-controls {
+    position: static;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    /* No tab, so the top padding reserved for it is not needed. */
+    padding-top: 12px;
+  }
+
+  .movements-controls__handle {
+    display: none;
+  }
+
+  /* Tap targets >= 44px: transport chips are taller, and a year gets an invisible tap zone extending
+     downward so it does not cover the slider thumbs above it. */
+  .movements-controls__chip .mantine-Chip-label {
+    height: 44px;
+  }
+
+  .movements-controls__year {
+    position: relative;
+  }
+
+  .movements-controls__year::after {
+    content: "";
+    position: absolute;
+    inset: 0 -4px -27px;
+  }
+
+  /* Add journey: full-width form, the decorative globe hidden (as in auth). */
   .add-journey {
     position: static;
     inset: auto;
@@ -439,5 +807,13 @@
 
   .add-journey__globe-col {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journeys-map,
+  .journeys-map--hidden,
+  .movement-route .movement-line {
+    transition: none;
   }
 }
