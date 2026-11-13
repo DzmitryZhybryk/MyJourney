@@ -17,7 +17,7 @@ CHANGELOG остаётся один. Новые записи группирую�
 
 - Роль и тариф разделены: роль — `user` или `admin`, тариф — `free` или `premium` (новая колонка `user_credentials.plan`). Новый аккаунт получает `user` и `free`
 - Access-токен несёт claims `role`, `plan` и `permissions` — список прав, раскрытый из роли и тарифа. У `admin` есть `media.config.edit`, у остальных прав пока нет
-- Маршрут может требовать право; без него — 403 с новым кодом `permission_required`. Токен с испорченным claim'ом прав — 401 `auth.invalid_access_token`
+- Маршрут может требовать право; без него — 403 с новым кодом `permission_required`. Токен без claim'а прав или с испорченным — 401 `auth.invalid_access_token`
 - Access-токен живёт 15 минут вместо 30. Токены, выданные до этой версии (без `plan`), отвечают 401 и обновляются через refresh
 - Первый админ назначается командой `make set-admin-role email=<email>` (на проде — `make prod-set-admin-role`); команда отказывается, если админ уже есть
 

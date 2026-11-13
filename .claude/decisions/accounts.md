@@ -110,8 +110,8 @@
 - Source: role model (#52), 2026-11-12
 
 ## A missing permission is 403 `permission_required`; a malformed permissions claim is 401
-- An absent `permissions` claim (a token issued before permissions existed) means no permissions → 403.
-  A present claim that is not a list of strings is our own issuing bug → `invalid_access_token` 401.
+- Every claim is required: an absent `permissions` claim, or one that is not a list of strings, is
+  `invalid_access_token` 401 like any other broken claim; the frontend refreshes and gets a full token.
 - Why: the route is public in openapi, and the frontend must tell "no right" from "no session" to
   refresh once and retry. A broken claim must be loud, not a quiet 403.
 - Rejected: 404 like someone else's row — that rule hides a row's existence, a route is not secret.

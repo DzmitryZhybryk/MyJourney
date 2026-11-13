@@ -14,6 +14,7 @@ _VALID_CLAIMS: DictStrAny = {
     "role": "user",
     "plan": "free",
     "email_verified": True,
+    "permissions": [],
     "iat": _ISSUED_AT,
     "exp": _FAR_FUTURE,
 }
@@ -34,18 +35,7 @@ def test_decode_access_token_roundtrips_claims(jwt_service: JWTService) -> None:
     assert jwt_service.decode_access_token(token) == claims
 
 
-def test_decode_access_token_without_permissions_claim_has_no_permissions(
-    jwt_service: JWTService,
-    jwt_secret: str,
-    jwt_algorithm: str,
-) -> None:
-    """Токен без claim'а permissions (выпущен до появления прав) → пустой набор прав, а не ошибка."""
-    token = jwt.encode({"sub": str(uuid4()), **_VALID_CLAIMS}, jwt_secret, algorithm=jwt_algorithm)
-
-    assert jwt_service.decode_access_token(token).permissions == frozenset()
-
-
-@pytest.mark.parametrize("permissions", ["media.config.edit", ["media.config.edit", 1], {"a": 1}, None])
+@pytest.mark.parametrize("permissions", ["media.config.edit", ["media.config.edit", 1], {"a": 1}])
 def test_decode_access_token_malformed_permissions_raises(
     jwt_service: JWTService,
     jwt_secret: str,
@@ -69,6 +59,7 @@ def test_decode_access_token_malformed_permissions_raises(
         {"role": None},
         {"plan": None},
         {"email_verified": None},
+        {"permissions": None},
         {"role": 1},
         {"plan": 1},
         {"email_verified": "true"},
@@ -82,7 +73,7 @@ def test_decode_access_token_missing_or_mistyped_claim_raises(
     jwt_algorithm: str,
     broken_claims: DictStrAny,
 ) -> None:
-    """role, plan, email_verified, iat или exp отсутствует или неверного типа → JWTDecodeError."""
+    """role, plan, email_verified, permissions, iat или exp отсутствует или неверного типа → JWTDecodeError."""
     payload = {"sub": str(uuid4()), **_VALID_CLAIMS, **broken_claims}
     payload = {key: value for key, value in payload.items() if value is not None}
     token = jwt.encode(payload, jwt_secret, algorithm=jwt_algorithm)

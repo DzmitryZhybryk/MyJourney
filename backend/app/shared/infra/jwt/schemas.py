@@ -8,8 +8,7 @@ class AccessTokenPayload(BaseModel):
     """
     Payload access-токена в том виде, в каком он лежит в JWT: одна форма и для выпуска, и для разбора.
 
-    Строгий режим: claim неверного типа — ошибка, а не молчаливое приведение. Отсутствующий
-    ``permissions`` (токен выпущен до появления прав) — пустой список.
+    Строгий режим: отсутствующий claim или claim неверного типа — ошибка, а не молчаливое приведение.
     """
 
     model_config = ConfigDict(strict=True, frozen=True)
@@ -19,6 +18,6 @@ class AccessTokenPayload(BaseModel):
     role: str
     plan: str
     email_verified: bool
-    permissions: list[str] = Field(default_factory=list)
+    permissions: list[str]
     iat: int
     exp: int
