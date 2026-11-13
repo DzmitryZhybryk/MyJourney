@@ -53,8 +53,8 @@ A small domain gets the same packages — one layout everywhere is worth more th
 ## Scripts
 
 A command run on the server lives in `app/<domain>/scripts/` and imports its own domain and
-`shared`, never another domain. A tool run only on a developer's machine lives outside the
-application package and the production image; the app never imports it.
+`shared`, never another domain. A local-only tool lives outside the app package and the
+production image; the app never imports it.
 
 ## Domain config
 

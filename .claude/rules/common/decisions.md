@@ -1,8 +1,7 @@
 # Decision records
 
-Settled design decisions live in `.claude/decisions/`, one file per area. Before changing how an
-area below behaves, or proposing an alternative to how it works, read its file: the alternative
-may already have been rejected.
+Settled decisions live in `.claude/decisions/`, one file per area. Before changing an area below
+or proposing an alternative, read its file: the alternative may already have been rejected.
 
 | File | Questions it answers |
 |---|---|
@@ -11,5 +10,6 @@ may already have been rejected.
 | `geo.md` | how a city differs from a place and why they are separate; what a journey stores about a city and where names come from; how gazetteer names are stored per language; where gazetteer data comes from and what a provider must allow |
 | `journeys.md` | what one journey record represents; what date a journey carries |
 | `media.md` | how many storage ports the media buckets get and how code reaches each bucket; which S3 emulator the dev stack and tests use; where emulator bucket setup lives and how production buckets are configured; what counts as a missing object; how the S3 adapter is tested |
+| `scripts.md` | where scripts live and what they may import |
 | `frontend.md` | where icons come from; how a value that can be edited in place is told apart from a read-only one; where dev Vite runs |
 | `backend.md` | how the process reads its settings; whether anything but the settings module may build `Settings`; where the backend version comes from; which changes to `openapi.json` count as a contract change for the backend version; whether the `openapi.json` snapshot carries the backend version; what the exception tree branches on; where a broken own assumption goes; who classifies an external failure and who retries it; how a task honours a dependency's retry delay; what a server-fault response carries; when a 503 carries `Retry-After`; how the log lines of one request are joined; how a handled error reaches the request log line; whether the edge accepts an incoming trace context; which event loop integration tests and their fixtures run in, and how the test Postgres schema is created |
