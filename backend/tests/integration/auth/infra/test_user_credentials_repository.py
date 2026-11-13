@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.auth.domain.enums import UserRoleEnum
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.infra.repositories import UserCredentialsRepository
 from tests.builders import make_user_credentials
 
@@ -25,7 +25,11 @@ async def test_insert_then_find_by_user_id_roundtrip(
     """insert + commit → ``find_user_credentials_by_user_id`` возвращает ту же сущность."""
     user_id = uuid4()
     user_credentials_entity = make_user_credentials(
-        user_id=user_id, email="uc-roundtrip@example.com", username="uc_roundtrip"
+        user_id=user_id,
+        email="uc-roundtrip@example.com",
+        username="uc_roundtrip",
+        role=UserRoleEnum.ADMIN,
+        plan=UserPlanEnum.PREMIUM,
     )
     async with session_factory() as writer:
         await UserCredentialsRepository(session=writer).insert_user_credentials(
@@ -41,7 +45,8 @@ async def test_insert_then_find_by_user_id_roundtrip(
     assert found.email == "uc-roundtrip@example.com"
     assert found.username == "uc_roundtrip"
     assert found.password.hash == user_credentials_entity.password.hash
-    assert found.role is UserRoleEnum.FREE
+    assert found.role is UserRoleEnum.ADMIN
+    assert found.plan is UserPlanEnum.PREMIUM
     assert found.email_verified_at is None
 
 

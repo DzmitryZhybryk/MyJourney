@@ -1,6 +1,6 @@
 [project]
 name = "MyJourney"
-version = "7.4.1"
+version = "7.5.0"
 description = "Personal travel atlas: journeys, cities and routes on a globe"
 authors = [
     { name = "Dzmitry Zhybryk", email = "mr.zhybryk@gmail.com" }
@@ -74,6 +74,7 @@ markers = [
 [tool.coverage.run]
 omit = [
     "app/__main__.py",
+    "app/*/scripts/*",
     "app/geo/infra/datasets/__main__.py",
     "app/geo/infra/datasets/wikidata/__main__.py",
     "app/geo/infra/datasets/wikidata_places/__main__.py",

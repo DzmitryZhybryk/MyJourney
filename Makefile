@@ -1,6 +1,6 @@
 .PHONY: help hooks check test test-back test-front test-integration test-e2e test-e2e-dev e2e-clean test-infra \
-        run watch stop restart logs ps prod-config prod-pull prod-up prod-down \
-        migrate-create migrate-upgrade migrate-downgrade migrate-history migrate-current geo-load
+        run watch stop restart logs ps prod-config prod-pull prod-up prod-down prod-set-admin-role \
+        migrate-create migrate-upgrade migrate-downgrade migrate-history migrate-current geo-load set-admin-role
 
 .DEFAULT_GOAL := help
 
@@ -97,6 +97,10 @@ geo-load: ## Догрузить недостающие датасеты газе
 	@echo "${GREEN}INFO :  ${AZURE}Loading gazetteer datasets${RESET}"
 	@$(COMPOSE) run --rm myjourney_geo_load
 
+set-admin-role: ## Сделать аккаунт первым админом в дев-стеке: make set-admin-role email=<email>
+	@test -n "$(email)" || (echo "usage: make set-admin-role email=<email>" && exit 1)
+	@$(COMPOSE) exec app python -m app.auth.scripts.set_admin_role --email "$(email)"
+
 # --- Prod-стек (образы из GHCR; .env с прод-секретами лежит на сервере) ---
 prod-config: ## Валидация прод-compose (раскрытие anchor + проверка)
 	$(COMPOSE_PROD) config
@@ -109,6 +113,10 @@ prod-up: ## Поднять прод-стек (one-shot миграции прог
 
 prod-down: ## Остановить прод-стек (тома/данные сохраняются)
 	$(COMPOSE_PROD) down --remove-orphans
+
+prod-set-admin-role: ## Сделать аккаунт первым админом на проде: make prod-set-admin-role email=<email>
+	@test -n "$(email)" || (echo "usage: make prod-set-admin-role email=<email>" && exit 1)
+	@$(COMPOSE_PROD) exec app python -m app.auth.scripts.set_admin_role --email "$(email)"
 
 # --- Git hooks: мерж-гейт покрытия без CI ---
 # Разовая активация pre-commit hook'а (.githooks/pre-commit): блокирует commit при покрытии < 90%.

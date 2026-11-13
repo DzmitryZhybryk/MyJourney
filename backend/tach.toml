@@ -20,6 +20,10 @@ path = "app.auth.exceptions"
 depends_on = ["app.shared"]
 
 [[modules]]
+path = "app.auth.scripts"
+depends_on = ["app.shared"]
+
+[[modules]]
 path = "app.auth.domain"
 depends_on = ["app.auth.exceptions", "app.shared"]
 

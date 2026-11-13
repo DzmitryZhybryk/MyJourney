@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 from procrastinate.jobs import Job
 
 from app.auth.domain.entities import ChallengeEntity, RefreshTokenEntity, UserCredentialsEntity
-from app.auth.domain.enums import ChallengeTypeEnum, UserRoleEnum
+from app.auth.domain.enums import ChallengeTypeEnum, UserPlanEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
 from app.geo.domain.entities import CityEntity
 from app.geo.domain.value_objects import LocalizedNames
@@ -88,7 +88,8 @@ def make_user_credentials(
     email: str = "user@example.com",
     username: str = "user",
     password: Password | None = None,
-    role: UserRoleEnum = UserRoleEnum.FREE,
+    role: UserRoleEnum = UserRoleEnum.USER,
+    plan: UserPlanEnum = UserPlanEnum.FREE,
     email_verified_at: dt.datetime | None = None,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
@@ -99,6 +100,7 @@ def make_user_credentials(
         username=username,
         password=password or make_password(),
         role=role,
+        plan=plan,
         email_verified_at=email_verified_at,
         created_at=created_at,
         updated_at=updated_at,
