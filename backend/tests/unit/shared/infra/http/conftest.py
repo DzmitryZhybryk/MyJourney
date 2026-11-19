@@ -17,20 +17,21 @@ _BASE_URL = "https://api.example.test"
 
 
 @pytest.fixture
-async def make_http_client() -> AsyncIterator[Callable[[], BaseHTTPClient]]:
+async def make_http_client() -> AsyncIterator[Callable[..., BaseHTTPClient]]:
     """
-    Возвращает ``make()`` — фабрику ``BaseHTTPClient`` на тест-``base_url``.
+    Возвращает ``make(client_class=BaseHTTPClient)`` — фабрику клиента на тест-``base_url``.
 
     Каждый созданный клиент регистрируется и закрывается (``aclose``) в teardown,
-    поэтому тесту не нужно звать ``aclose`` вручную.
+    поэтому тесту не нужно звать ``aclose`` вручную. ``client_class`` — подкласс
+    со своими правилами провайдера, если тест проверяет их.
 
     Returns:
-        Callable без аргументов, возвращающий свежий ``BaseHTTPClient``
+        Фабрика, возвращающая свежий клиент
     """
     clients: list[BaseHTTPClient] = []
 
-    def _make() -> BaseHTTPClient:
-        client = BaseHTTPClient(config=HTTPClientConfig(base_url=_BASE_URL))
+    def _make(client_class: type[BaseHTTPClient] = BaseHTTPClient) -> BaseHTTPClient:
+        client = client_class(config=HTTPClientConfig(base_url=_BASE_URL))
         clients.append(client)
         return client
 

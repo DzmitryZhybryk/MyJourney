@@ -45,7 +45,8 @@ def clean_code(code):
             if cleaned.strip().endswith(")"):
                 in_args = False
         else:
-            cleaned_lines.append(cleaned)
+            # Первую строку отступает сам шаблон, остальные операторы тела — здесь.
+            cleaned_lines.append("    " + cleaned if cleaned_lines else cleaned)
 
     # Удаляем пустые строки в конце
     while cleaned_lines and not cleaned_lines[-1].strip():

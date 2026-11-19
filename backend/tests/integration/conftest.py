@@ -3,7 +3,7 @@
 
 **Схема** создаётся из ``BaseDBModel.metadata`` (источник истины; миграция
 ``e00067cc5c0e`` отражает её 1:1 — проверено: партиальный unique-индекс
-challenges, FK-цепочка и unique-констрейнты живут в моделях) **синхронным**
+challenges, FK-цепочка и unique-индексы по ``lower()`` живут в моделях) **синхронным**
 движком на старте сессии — без event loop, чтобы не упираться в loop-scope
 ``pytest-asyncio`` (главная боль session-scoped async-фикстур: psycopg3-async
 соединение привязано к loop'у, в котором создано).
@@ -22,6 +22,7 @@ from uuid import UUID
 
 import pytest
 import sqlalchemy as sa
+from pydantic import SecretStr
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -45,7 +46,16 @@ from tests.builders import make_user_credentials
 
 _POSTGRES_IMAGE = "postgres:17-alpine"
 # Порядок не важен: ``TRUNCATE ... CASCADE`` снимает FK-зависимости разом.
-_ALL_TABLES = ("users", "user_credentials", "refresh_tokens", "challenges", "geo_places", "journeys")
+_ALL_TABLES = (
+    "users",
+    "user_credentials",
+    "refresh_tokens",
+    "challenges",
+    "geo_cities",
+    "geo_places",
+    "geo_dataset_loads",
+    "journeys",
+)
 
 
 @pytest.fixture(scope="session")
@@ -84,7 +94,7 @@ def postgres_settings(_postgres_container: PostgresContainer) -> PostgresSetting
     """``PostgresSettings`` на параметры контейнера — для тестов lifecycle (``SqlAlchemyComponent``)."""
     return PostgresSettings(
         POSTGRES_USER=_postgres_container.username,
-        POSTGRES_PASSWORD=_postgres_container.password,
+        POSTGRES_PASSWORD=SecretStr(_postgres_container.password),
         POSTGRES_DB=_postgres_container.dbname,
         POSTGRES_HOST=_postgres_container.get_container_host_ip(),
         POSTGRES_PORT=int(_postgres_container.get_exposed_port(5432)),

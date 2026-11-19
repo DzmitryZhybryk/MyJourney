@@ -9,9 +9,8 @@ interface AuthCardProps {
 }
 
 /**
- * Стеклянная карточка auth-форм (login/signup) поверх персистентного глобуса.
- * Заголовок карточки — главный заголовок экрана (`h1`): шапка публичной зоны несёт
- * только логотип-ссылку, других заголовков на странице нет.
+ * Glass card for auth forms (login/signup) over the persistent globe. Its title is the screen's
+ * main heading (`h1`): the public header carries only the logo link, no other headings.
  */
 export function AuthCard({ title, subtitle, children }: AuthCardProps) {
   return (

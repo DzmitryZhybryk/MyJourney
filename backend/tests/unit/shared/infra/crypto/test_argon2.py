@@ -1,4 +1,4 @@
-from app.shared.infra.crypto import Argon2SaltedHasher
+from app.shared.infra.crypto.argon2 import Argon2SaltedHasher
 
 
 def test_hash_then_verify_roundtrip(argon2_salted_hasher: Argon2SaltedHasher) -> None:

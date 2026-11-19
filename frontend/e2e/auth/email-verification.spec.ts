@@ -2,17 +2,18 @@ import { expect, test } from "../fixtures";
 import { WEBKIT_SECURE_COOKIE_REASON } from "../helpers/session";
 
 /**
- * E2E: напоминание о верификации email (блок F) — real-stack
- * срез, который MSW-компонентные тесты не достают.
+ * E2E: the email verification reminder (block F), a real-stack slice that MSW component tests
+ * cannot reach.
  *
- * `EmailVerificationBanner.test.tsx` уже кроет рендер/dismiss в одном jsdom-контексте. Здесь —
- * только то, что требует настоящего браузера и бэка: реальный JWT с `email_verified=false`
- * поднимает баннер, а dismiss живёт в sessionStorage конкретной вкладки (переживает reload,
- * но не виден в новой вкладке).
+ * `EmailVerificationBanner.test.tsx` already covers render/dismiss in one jsdom context. Here is
+ * only what needs a real browser and backend: a real JWT with `email_verified=false` raises the
+ * banner, and the dismiss lives in a specific tab's sessionStorage (survives reload but is not
+ * visible in a new tab).
  *
- * Успешная верификация (ввод кода → 204 → баннер исчезает, F6/G3) сознательно НЕ в e2e: код
- * хранится Argon2-хешем (недостижим), а сам флоу покрыт `VerifyEmailDialog.test.tsx`. По той же
- * причине (resend-cooldown от авто-challenge регистрации) тут нет «Send code → stage 2».
+ * Successful verification (enter code -> 204 -> banner disappears, F6/G3) is deliberately NOT in
+ * e2e: the code is stored encrypted with a backend-only key (unreachable) and the flow is covered by
+ * `VerifyEmailDialog.test.tsx`. For the same reason (resend cooldown from the registration
+ * auto-challenge) there is no "Send code -> stage 2" here.
  */
 
 const BANNER_NAME = "Email verification reminder";
@@ -21,7 +22,7 @@ const DISMISS_BUTTON_NAME = "Dismiss reminder for this session";
 
 test.describe("Email verification banner", () => {
   test("F1: после реальной регистрации (email не верифицирован) баннер виден", async ({ authedPage }) => {
-    // Настоящий бэкенд выдаёт токен с email_verified=false → AuthContext поднимает баннер.
+    // The real backend issues a token with email_verified=false, so AuthContext raises the banner.
     await expect(authedPage.getByRole("region", { name: BANNER_NAME })).toBeVisible();
   });
 
@@ -32,8 +33,8 @@ test.describe("Email verification banner", () => {
     await authedPage.getByRole("button", { name: DISMISS_BUTTON_NAME }).click();
     await expect(banner).toBeHidden();
 
-    // sessionStorage переживает reload вкладки, а bootstrap-refresh не считается «логином»
-    // (флаг dismiss не сбрасывается) → баннер остаётся скрыт.
+    // sessionStorage survives a tab reload, and the bootstrap refresh does not count as a "login"
+    // (the dismiss flag is not reset), so the banner stays hidden.
     await authedPage.reload();
     await expect(authedPage.getByRole("button", { name: PROFILE_BUTTON_NAME })).toBeVisible();
     await expect(authedPage.getByRole("region", { name: BANNER_NAME })).toBeHidden();
@@ -44,16 +45,16 @@ test.describe("Email verification banner", () => {
     context,
     browserName,
   }) => {
-    // Новая вкладка поднимает сессию из refresh-cookie (bootstrap) — на webkit cookie по http
-    // недоступна, поэтому тест пропускается (см. WEBKIT_SECURE_COOKIE_REASON).
+    // A new tab restores the session from the refresh cookie (bootstrap); on webkit the cookie over
+    // http is unavailable, so the test is skipped (see WEBKIT_SECURE_COOKIE_REASON).
     test.skip(browserName === "webkit", WEBKIT_SECURE_COOKIE_REASON);
 
-    // Вкладка 1: скрываем баннер.
+    // Tab 1: hide the banner.
     await authedPage.getByRole("button", { name: DISMISS_BUTTON_NAME }).click();
     await expect(authedPage.getByRole("region", { name: BANNER_NAME })).toBeHidden();
 
-    // Новая вкладка: cookie общая (bootstrap поднимает сессию), но sessionStorage свой,
-    // флага dismiss там нет → напоминание снова показывается.
+    // A new tab: the cookie is shared (bootstrap restores the session) but sessionStorage is its own
+    // and has no dismiss flag, so the reminder shows again.
     const newTab = await context.newPage();
     await newTab.goto("/");
     await expect(newTab.getByRole("button", { name: PROFILE_BUTTON_NAME })).toBeVisible();

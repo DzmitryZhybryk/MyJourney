@@ -40,7 +40,7 @@ async def test_sqlalchemy_component_startup_registers_working_sessionmaker(
 async def test_db_session_dependency_yields_working_session(db_engine: AsyncEngine) -> None:
     """``db_session_dependency`` достаёт ``SessionMaker`` из ``request.app.registry`` и отдаёт рабочую сессию."""
     registry = ComponentRegistry()
-    registry.set(SessionMaker, SessionMaker(db_engine, expire_on_commit=False))
+    registry.set(key=SessionMaker, value=SessionMaker(db_engine, expire_on_commit=False))
     scope: dict[str, Any] = {"type": "http", "app": SimpleNamespace(registry=registry)}
     request = Request(scope)
 

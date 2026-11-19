@@ -36,6 +36,12 @@ describe("resolveErrorToken", () => {
     );
   });
 
+  it("подставляет параметры в текст кода бэка", () => {
+    expect(
+      resolveErrorToken(errorCodeToken("auth.challenge_attempts_exceeded_retry"), { minutes: 9 }),
+    ).toBe("Too many attempts. You can request a new code in 9 min");
+  });
+
   it("резолвит токен валидации из namespace auth", () => {
     expect(resolveErrorToken("auth:validation.usernameMin")).toBe(
       "Username must be at least 3 characters",

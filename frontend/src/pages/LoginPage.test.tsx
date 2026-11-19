@@ -5,7 +5,7 @@ import { makeAccessToken, server, TEST_ACCESS_TOKEN } from "../test/handlers";
 import { makeAuthValue, renderRoutes, screen } from "../test/render";
 import { LoginPage } from "./LoginPage";
 
-/** Монтирует LoginPage на /login c landing-маркером "/" для наблюдения навигации. */
+/** Mounts LoginPage at /login with a "/" landing marker to observe navigation. */
 function renderLogin() {
   const authValue = makeAuthValue({ setAccessToken: vi.fn() });
   const view = renderRoutes({
@@ -30,12 +30,30 @@ describe("LoginPage", () => {
     expect(authValue.setAccessToken).toHaveBeenCalledWith(TEST_ACCESS_TOKEN);
   });
 
+  it("логин уходит на бэк без пробелов по краям", async () => {
+    let body: unknown = null;
+    server.use(
+      http.post("/v1/auth/login/", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ accessToken: TEST_ACCESS_TOKEN, tokenType: "bearer" }, { status: 200 });
+      }),
+    );
+    const { user } = renderLogin();
+
+    await user.type(screen.getByLabelText("Username or email"), "  alice  ");
+    await user.type(screen.getByLabelText("Password"), "s3cret-pass");
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+
+    expect(await screen.findByText("home-landing")).toBeInTheDocument();
+    expect(body).toMatchObject({ login: "alice" });
+  });
+
   it("кнопка отправки заблокирована, пока не заполнены оба поля", async () => {
     const { user } = renderLogin();
 
     expect(screen.getByRole("button", { name: "Log in" })).toBeDisabled();
 
-    // Пробелы — не заполненность: `canSubmit` сравнивает login по trim'у.
+    // Spaces do not count as filled: `canSubmit` compares login trimmed.
     await user.type(screen.getByLabelText("Username or email"), "   ");
     expect(screen.getByRole("button", { name: "Log in" })).toBeDisabled();
 

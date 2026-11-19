@@ -50,6 +50,12 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Намеренно запинен на пре-релизе — стабильная линия падает на TypeScript 7
+      # (ts.SyntaxKind отсутствует в нативном компиляторе), см. CLAUDE.md → Codegen
+      # drift gate. Снять игнор вместе со снятием пина, когда TS 7 поедет в стабильном
+      # релизе openapi-ts (проверено эмпирически на 0.97.3/0.99.0 — падают).
+      - dependency-name: "@hey-api/openapi-ts"
 
   # Базовые Docker-образы запинены по digest (supply-chain) — Dependabot поднимает PR при
   # выходе нового digest тега, иначе пины заморозили бы и security-патчи самих образов.
@@ -57,8 +63,34 @@ updates:
     directories:
       - /backend
       - /frontend
-      - /ops
     schedule:
       interval: weekly
     commit-message:
       prefix: chore
+    ignore:
+      # Минор Python в образе обязан совпадать с requires-python в backend/pyproject.toml:
+      # при UV_PYTHON_DOWNLOADS=0 `uv sync --locked` не находит интерпретатор, а CI образ не
+      # собирает и остаётся зелёным. Переход на новый минор — отдельная задача вместе с
+      # requires-python; новые digest текущего минора по-прежнему приходят.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+
+  # Образы сервисов в ops/*.yaml. Экосистема docker читает только Dockerfile — compose-файлы
+  # видит только docker-compose.
+  - package-ecosystem: docker-compose
+    directory: /ops
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    ignore:
+      # Мажор Postgres — это перенос данных (dump/restore или pg_upgrade), а не смена образа;
+      # бэкапер обязан совпадать с сервером по мажору.
+      - dependency-name: "postgres"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "prodrigestivill/postgres-backup-local"
+        update-types:
+          - "version-update:semver-major"

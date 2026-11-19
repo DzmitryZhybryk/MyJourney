@@ -12,8 +12,6 @@ class User(DateTimeMixin, BaseDBModel):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String(50))
-    email: Mapped[str] = mapped_column(String(254), unique=True)
-    display_name: Mapped[str | None] = mapped_column(String(50), default=None)
+    display_name: Mapped[str] = mapped_column(String(50))
     terms_accepted_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
     marketing_emails_consent: Mapped[bool] = mapped_column(default=False)

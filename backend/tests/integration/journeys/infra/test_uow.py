@@ -1,13 +1,10 @@
 """
-Интеграционные тесты ``JourneyUnitOfWork`` против реального Postgres.
+Интеграционный тест сборки ``JourneyUnitOfWork`` против реального Postgres.
 
-Проверяют транзакционную границу create-поездки на живой сессии — то, что фейк UoW
-(``commit = AsyncMock``) проверить не может: ``commit()`` внутри ``transaction()`` фиксирует
-вставку (видна из новой сессии), а выход без commit'а / исключение откатывают её
-(rollback-by-default из ``BaseUnitOfWork``).
+Транзакционная модель проверена в ``tests/integration/shared/infra/postgres/test_uow.py``;
+здесь — только то, что репозиторий UoW работает на его сессии.
 """
 
-import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -18,10 +15,10 @@ from tests.builders import make_journey
 _COUNT_JOURNEYS = sa.select(sa.func.count()).select_from(Journey)
 
 
-async def test_transaction_commit_persists_journey(
+async def test_journey_repository_write_is_persisted_by_uow_commit(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """``commit()`` внутри ``transaction()`` фиксирует поездку — она видна из новой сессии."""
+    """Запись через ``uow.journey_repository`` фиксирует ``uow.commit()`` — она видна из новой сессии."""
     journey_entity = make_journey()
     async with session_factory() as session:
         uow = JourneyUnitOfWork(session=session)
@@ -33,40 +30,3 @@ async def test_transaction_commit_persists_journey(
         count = (await reader.execute(_COUNT_JOURNEYS)).scalar_one()
 
     assert count == 1
-
-
-async def test_transaction_without_commit_rolls_back(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """Выход из ``transaction()`` без ``commit()`` откатывает вставку — новая сессия её не видит."""
-    journey_entity = make_journey()
-    async with session_factory() as session:
-        uow = JourneyUnitOfWork(session=session)
-        async with uow.transaction():
-            await uow.journey_repository.insert_journey(journey_entity=journey_entity)
-            # commit() намеренно не вызываем → выход из transaction() откатывает
-
-    async with session_factory() as reader:
-        count = (await reader.execute(_COUNT_JOURNEYS)).scalar_one()
-
-    assert count == 0
-
-
-async def test_exception_in_transaction_rolls_back(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """Исключение внутри ``transaction()`` пробрасывается и откатывает незакоммиченную вставку."""
-    journey_entity = make_journey()
-    async with session_factory() as session:
-        uow = JourneyUnitOfWork(session=session)
-        # PT012: блок намеренно составной — проверяем, что исключение проходит сквозь
-        # transaction() (и откатывает), поэтому raise обязан быть внутри async with.
-        with pytest.raises(RuntimeError, match="boom"):  # noqa: PT012
-            async with uow.transaction():
-                await uow.journey_repository.insert_journey(journey_entity=journey_entity)
-                raise RuntimeError("boom")
-
-    async with session_factory() as reader:
-        count = (await reader.execute(_COUNT_JOURNEYS)).scalar_one()
-
-    assert count == 0

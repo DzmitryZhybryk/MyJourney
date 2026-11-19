@@ -1,118 +1,113 @@
 ---
 name: style-audit
-description: Audit MindTrace frontend files (.tsx, .css, index.html) against the project's design-token policy and report (or fix) deviations. Use when the user asks to check style consistency, audit colors/fonts/sizes, verify design-token compliance, or align stray literal values to tokens.
+description: Audit MyJourney frontend files (.tsx, .css, index.html) against the project's design-token policy and report (or fix) deviations. Use when the user asks to check style consistency, audit colors/fonts/sizes, verify design-token compliance, or align stray literal values to tokens.
 ---
 
 # Style audit
 
-Проверяет визуальные файлы `frontend/` на соблюдение токен-политики. Отчёт, а при явной
-просьбе — правки.
+Checks the visual files of `frontend/` against the token policy. Produces a report; edits only on
+explicit request.
 
-> **Главное правило скилла: он НЕ перечисляет значения.**
-> Предыдущая версия держала таблицу из 24 хексов и списка кеглей — и сгнила целиком:
-> после редизайна 14 из 24 цветов не встречались в коде ни разу, а правило «Title в auth
-> использует `c="slate.8"`» дожило до продакшена и дало заголовок с контрастом 1.29:1 на
-> тёмном фоне. Список значений, поддерживаемый вручную, всегда отстаёт от кода.
-> Поэтому источник истины — `frontend/src/index.css` (`:root`) и `frontend/src/theme.ts`,
-> а скилл проверяет **форму** («значение задано токеном»), а не конкретные числа.
+> **The skill does NOT list values** — a list kept by hand falls behind the code. The source of
+> truth is `frontend/src/index.css` (`:root`) and `frontend/src/theme.ts`; the skill checks the
+> **form** ("the value comes from a token"), not specific numbers.
 
 ## Scope
 
-Аудируем:
+Audited:
 
 - `frontend/src/**/*.tsx`
 - `frontend/src/**/*.css`
 - `frontend/index.html`
 
-Вне скоупа:
+Out of scope:
 
 - `frontend/node_modules/**`, `frontend/dist/**`, `frontend/coverage/**`
-- внутренние классы Mantine (`.m_*`, хэшированные)
-- комментарии, alt-тексты, консольные сообщения
-- `src/assets/textures/**` (бинарные текстуры глобуса)
+- Mantine internal classes (`.m_*`, hashed)
+- comments, alt texts, console messages
+- `src/assets/textures/**` (binary globe textures)
 
-## Слои токенов
+## Token layers
 
-`index.css` держит **два слоя**, и это не косметика:
+`index.css` holds **two layers**, and the split is not cosmetic:
 
-1. **Палитра** — имена по тому, ЧТО это: `--ink`, `--ink-2`, `--ink-deep`, `--ink-on-dark`,
+1. **Palette** — named for WHAT it is: `--ink`, `--ink-2`, `--ink-deep`, `--ink-on-dark`,
    `--sun`, `--sun-deep`, `--glow`, `--on-sun`, `--sky`, `--sky-bright`, `--muted-on-dark`.
-   Плюс канальные варианты `--<name>-rgb` для полупрозрачных производных.
-2. **Семантика** — имена по тому, ЗАЧЕМ: `--surface`, `--surface-2`, `--surface-card`,
+   Plus channel variants `--<name>-rgb` for translucent derivatives.
+2. **Semantic** — named for WHY: `--surface`, `--surface-2`, `--surface-card`,
    `--text`, `--text-muted`, `--text-stamp`, `--text-error`, `--hairline`, `--accent`,
    `--accent-deep`, `--on-accent`.
 
-**UI обязан пользоваться ТОЛЬКО семантическим слоем.** Обращение к палитре напрямую из
-компонента (`color: var(--ink-on-dark)` вместо `var(--text)`) — нарушение: имя по цвету не
-подсказывает, куда его класть, и `--ink` легко уходит в `color` там, где он на самом деле фон.
+**UI uses the semantic layer only.** Referencing the palette directly from a component
+(`color: var(--ink-on-dark)` instead of `var(--text)`) is a violation: a name by color does not say
+where it belongs, and `--ink` easily ends up in `color` where it is actually a background.
 
-Исключение: сам `index.css`, где семантика и определяется.
+Exception: `index.css` itself, where the semantic layer is defined.
 
-## Что считать нарушением
+## What counts as a violation
 
-### Цвет
+### Color
 
-- Сырой `#hex` или `rgb()/rgba()` в `src/**` вне `index.css` → нарушение.
-  Правильно: `var(--<семантический токен>)`, а для полупрозрачных — `rgb(var(--x-rgb) / α)`.
-- Обращение к палитровому слою из компонента вместо семантического → нарушение (см. выше).
-- Mantine-пропсы `c="slate.N"`, `c="dimmed"`, `c="red"` → нарушение: это вторая, независимая
-  шкала цвета, которая не знает про поверхность продукта. Правильно — `c="var(--text-muted)"`,
-  `c="var(--text-error)"` и т. д.
-- Допустимые исключения (проверить контекст, не флагать вслепую): чистые `#fff`/`#000`
-  и `rgba(255,255,255,·)`/`rgba(0,0,0,·)` в обводках и тенях подписей поверх текстуры глобуса
-  (`globe-label.css`, `journey-globe.css`) — там нужен абсолютный контраст к произвольному фону.
+- A raw `#hex` or `rgb()/rgba()` in `src/**` outside `index.css` → violation.
+  Correct: `var(--<semantic token>)`, and for translucent values `rgb(var(--x-rgb) / α)`.
+- Referencing the palette layer from a component instead of the semantic one → violation (above).
+- Mantine props `c="slate.N"`, `c="dimmed"`, `c="red"` → violation: a second, independent color
+  scale that knows nothing about the product surface. Correct: `c="var(--text-muted)"`,
+  `c="var(--text-error)"` and so on.
+- Allowed exceptions (check the context, do not flag blindly): pure `#fff`/`#000` and
+  `rgba(255,255,255,·)`/`rgba(0,0,0,·)` in outlines and shadows of labels over the globe texture
+  (`globe-label.css`, `globe-route.css`) — they need absolute contrast against an arbitrary
+  background.
 
-### Типографика
+### Typography
 
-- `font-family` литералом → нарушение. Только `var(--font-display)` (Lora, заголовки),
-  `var(--font-body)` (системный sans), `var(--font-mono)` (служебные «штемпели»).
-- `font-size` числом → нарушение. Только ступени шкалы `var(--fs-N)` из `index.css`
-  (на момент написания 10…30, но **сверяйся с файлом, а не с этим списком**).
-  Исключение: `clamp(...)` у плавающих заголовков лендинга.
-- Кегль ошибки не должен отличаться от кегля обычного текста: акцент даётся весом и цветом,
-  не размером (см. правило «UI error display» в `rules/typescript/coding-style.md`).
+- A literal `font-family` → violation. Only `var(--font-display)` (Lora, headings),
+  `var(--font-body)` (system sans), `var(--font-mono)` (utility "stamps").
+- A numeric `font-size` → violation. Only the scale steps `var(--fs-N)` from `index.css` — check
+  the file for the current steps. Exception: `clamp(...)` on the landing's fluid headings.
+- An error's font size matches body text: emphasis comes from weight and color, not size (see
+  `rules/typescript/error-display.md`).
 
-### Прочие оси
+### Other axes
 
-- `transition` с числовой длительностью микро-анимации → `var(--dur-fast)`.
-  Длинные переходы (перелёт камеры, кроссфейд экранов) — своя роль, их не трогаем.
-- `backdrop-filter: blur(Npx)` для «хрома» на стекле → `var(--blur-glass)`.
-- `border-radius` у кнопок-действий → `var(--radius-action)`. Капсулы `999px` допустимы
-  у навигации и бейджей (другая роль), `50%` — у кружков.
-- Брейкпоинты: проект декларирует 320/375/768/1024/1440 (`rules/web/performance.md`).
-  Значения вне этого набора флагать как расхождение и предлагать ближайшее.
+- A `transition` with a numeric micro-animation duration → `var(--dur-fast)`.
+  Long transitions (camera flight, screen crossfade) have their own role; leave them.
+- `backdrop-filter: blur(Npx)` for glass "chrome" → `var(--blur-glass)`.
+- `border-radius` on action buttons → `var(--radius-action)`. `999px` pills are fine on navigation
+  and badges (a different role), `50%` on circles.
+- Breakpoints: there is no fixed set — desktop is the priority and a narrow screen only has to not
+  break (`rules/web/performance.md` → UI quality). Do not flag `@media` thresholds.
 
-### Компонентные соглашения
+### Component conventions
 
-- `autoContrast: true` в `theme.ts` сам выбирает цвет метки на залитой кнопке.
-  Ручной `color=` / `!important` на метке кнопки → нарушение (было причиной того, что
-  auth-кнопка выглядела иначе кнопок journeys).
-- Ошибки форм — только `var(--text-error)`, вес 500, размер как у body.
-- Текст на акцентной заливке — `var(--on-accent)`.
+- `autoContrast: true` in `theme.ts` picks the label color on a filled button by itself.
+  A manual `color=` / `!important` on a button label → violation: that button drops out of the
+  common look of the others.
+- Form errors: only `var(--text-error)`, weight 500, body size.
+- Text on an accent fill: `var(--on-accent)`.
 
-## Процедура
+## Procedure
 
-1. **Собрать** по in-scope файлам:
+1. **Collect** across in-scope files:
    - `#[0-9a-fA-F]{3,8}\b`, `rgb(`/`rgba(`
-   - `font-family`, шорткат `font:`
+   - `font-family`, the `font:` shorthand
    - `font-size`, JSX `fz=`
-   - Mantine `c=` / `color=` со строковым литералом
+   - Mantine `c=` / `color=` with a string literal
    - `border-radius`, JSX `radius=`
-   - `transition` с длительностями, `backdrop-filter: blur(`
-   - `@media` с числовыми порогами
+   - `transition` with durations, `backdrop-filter: blur(`
 
-2. **Сверить с фактическим `:root`**, а не с памятью:
+2. **Check against the actual `:root`**, not memory:
 
    ```bash
    rg -n '^\s*--' frontend/src/index.css
    ```
 
-   Токен, которого там нет, — не токен.
+   A token that is not there is not a token.
 
-3. **Классифицировать**: ✅ токен · ⚠ литерал, но токен очевиден · ❌ литерал без токена
-   (нужно решение: завести токен или привести к существующему).
+3. **Classify**: ✅ token · ⚠ literal, but the token is obvious · ❌ literal with no token
+   (needs a decision: add a token or move to an existing one).
 
-4. **Отчёт по файлам**, с указанием предлагаемого токена:
+4. **Report by file**, with the proposed token:
 
    ```
    components/foo.css
@@ -122,25 +117,26 @@ description: Audit MindTrace frontend files (.tsx, .css, index.html) against the
      L17  c="dimmed"                → c="var(--text-muted)"
    ```
 
-5. **Правки** — только по явной просьбе. После правок перепроверить затронутые файлы
-   и прогнать `npm run build` из `frontend/`.
+5. **Edits** only on explicit request. Afterwards re-check the touched files and run
+   `npm run build` from `frontend/`.
 
-## Заметки аудитору
+## Notes for the auditor
 
-- **Не расширять скоуп в рефакторинг структуры CSS** — только соответствие токенам.
-- **Массовые regex-замены проверять на самоссылки.** Замена «значение → `var(--x)`» легко
-  задевает собственное определение токена и даёт `--x: var(--x)`; такое свойство молча
-  ломается, при этом сборка и тесты остаются зелёными:
+- **Do not widen the scope into restructuring CSS** — token compliance only.
+- **Check bulk regex replacements for self-references.** Replacing "value → `var(--x)`" easily hits
+  the token's own definition and yields `--x: var(--x)`; such a property breaks silently while the
+  build and tests stay green:
 
   ```bash
   rg --pcre2 -e '--([a-z0-9-]+):\s*var\(--\1\)' frontend/src --glob '*.css'
   ```
 
-- **Замену кеглей делать только в `font-size:` и в размерном слоте шортката `font:`** — те же
-  числа встречаются в `padding`, `width`, `gap`.
-- Если значение встречается ОДИН раз и токена под него нет — это не всегда нарушение.
-  Предложить выбор: завести токен либо оставить с комментарием, почему значение одиночное.
-- `--lp-*` в `landing.css` — **не** дубли, а осознанный слой локальных псевдонимов поверх
-  семантики (см. комментарий в шапке файла). Не флагать как дублирование.
-- Контраст считать, а не оценивать на глаз. Порог AA: 4.5:1 для обычного текста, 3:1 для
-  крупного. Поверхности продукта: `--surface` `#0b1020`, `--surface-card` (стекло поверх неё).
+- **Replace font sizes only in `font-size:` and in the size slot of the `font:` shorthand** — the
+  same numbers appear in `padding`, `width`, `gap`.
+- A value that occurs ONCE with no token for it is not always a violation. Offer the choice: add a
+  token, or keep it with a comment saying why the value is a one-off.
+- `--lp-*` in `landing.css` are **not** duplicates but a deliberate layer of local aliases over the
+  semantic layer (see the comment at the top of that file). Do not flag them as duplication.
+- Compute contrast, do not eyeball it. AA thresholds: 4.5:1 for normal text, 3:1 for large text.
+  Product surfaces: `--surface`, `--surface-card` (glass over it) — read their values from
+  `index.css`.

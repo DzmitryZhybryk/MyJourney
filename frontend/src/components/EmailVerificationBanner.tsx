@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { dismissVerifyBanner, isVerifyBannerDismissed } from "../auth/verifyBannerStorage";
+import { GLIDE_MS } from "./glide";
+
+// Body class for the glide's duration after the banner goes away: the globe on the journey form
+// glides with the page layer instead of snapping (see persistent-globe.css).
+const CLOSING_CLASS = "verify-banner-closing";
+let closingTimer: number | undefined;
 
 interface EmailVerificationBannerProps {
   onVerifyClick: () => void;
@@ -17,12 +23,18 @@ export function EmailVerificationBanner({ onVerifyClick }: EmailVerificationBann
       return;
     }
 
-    // Пока баннер виден, помечаем body. На /home по этому классу глобус-фон опускается и мельчает,
-    // освобождая сверху место под баннер (см. persistent-globe.css); снятие класса при закрытии/
-    // размонтировании возвращает планете полную высоту — приветствие уезжает вверх, глобус растёт.
-    // На других экранах класс безвреден (никто на него не завязан).
+    // Mark body while the banner is visible. On /home this class lowers and shrinks the globe
+    // background to free space for the banner (see persistent-globe.css); removing it on
+    // close/unmount restores the full height. Harmless on other screens.
     document.body.classList.add("has-verify-banner");
-    return () => document.body.classList.remove("has-verify-banner");
+    return () => {
+      // Both classes change in the same style recalculation, so the transition the closing class
+      // turns on also covers the scale the removed `has-verify-banner` changes.
+      document.body.classList.remove("has-verify-banner");
+      document.body.classList.add(CLOSING_CLASS);
+      window.clearTimeout(closingTimer);
+      closingTimer = window.setTimeout(() => document.body.classList.remove(CLOSING_CLASS), GLIDE_MS);
+    };
   }, [dismissed]);
 
   if (dismissed) {
@@ -39,25 +51,24 @@ export function EmailVerificationBanner({ onVerifyClick }: EmailVerificationBann
       aria-label={t("verificationBanner.regionLabel")}
       style={{
         position: "relative",
-        // На /home `.home-main` выведён из потока (position:absolute) и лёг бы ПОВЕРХ баннера,
-        // перехватывая клики по «Подтвердить»/×. z-index поднимает баннер над ним — он всплывает
-        // сверху. На Journeys баннер в потоке, z-index там ни на что не влияет.
+        // On /home `.home-main` is out of flow (position:absolute) and would sit OVER the banner,
+        // stealing clicks on Verify/x; z-index lifts the banner above it. On Journeys the banner
+        // is in flow and z-index has no effect.
         zIndex: 2,
         width: "100%",
-        // Информационная полоса на ночной поверхности: тонированная закатом, а не
-        // залитая светлым. Кремовая заливка светлой схемы читалась ярким слепком
-        // поперёк экрана и спорила с самим сообщением.
+        // Informational strip on the night surface: sunset-tinted, not a light fill (a cream fill
+        // read as a bright slab across the screen and fought the message).
         backgroundColor: "rgba(232, 147, 92, 0.12)",
         borderBottom: "1px solid rgba(232, 147, 92, 0.28)",
-        // Правый паддинг 48px резервирует гаттер под × — центрируемый кластер в него не заезжает.
+        // 48px right padding reserves a gutter for the x so the centered cluster does not overlap it.
         padding: "10px 48px",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
       }}
     >
-      {/* Сообщение + Verify now — кластер по центру. wrap:на узких кнопка переносится
-          под текст (а не режется краем), flexShrink:0 — лейбл кнопки не сжимается. */}
+      {/* Message + Verify now, centered. wrap: on narrow screens the button drops under the text
+          instead of being clipped; flexShrink:0 keeps the button label from shrinking. */}
       <Group gap="sm" align="center" justify="center" wrap="wrap" style={{ rowGap: 8 }}>
         <Text size="sm" ta="center" style={{ color: "var(--text)" }}>
           {t("verificationBanner.message")}
@@ -66,18 +77,18 @@ export function EmailVerificationBanner({ onVerifyClick }: EmailVerificationBann
           size="xs"
           variant="filled"
           onClick={onVerifyClick}
-          // Цвет — акцент темы (primary), метка тёмная: Mantine кладёт её инлайн-переменной,
-          // поэтому задаём конечным свойством, как у кнопки отправки в auth.
+          // Theme accent (primary) with a dark label: Mantine sets the label via an inline
+          // variable, so set the final property, like the auth submit button.
           style={{ flexShrink: 0, color: "var(--on-accent)" }}
         >
           {t("verificationBanner.action")}
         </Button>
       </Group>
-      {/* × — dismiss в правом гаттере (в reserved-паддинге, не наезжает на кластер). */}
+      {/* x dismiss in the right gutter (reserved padding, does not overlap the cluster). */}
       <ActionIcon
         variant="subtle"
         color="gray"
-        // 44px — минимальный тач-таргет (web/performance.md); умещается в 48px-гаттер (right:2).
+        // 44px is the minimum tap target (web/performance.md); fits the 48px gutter (right:2).
         size={44}
         aria-label={t("verificationBanner.dismissLabel")}
         onClick={handleDismiss}

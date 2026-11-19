@@ -26,13 +26,19 @@
     "jsx-a11y/prefer-tag-over-role": "error",
     "require-unicode-regexp": "error"
   },
-  "ignorePatterns": ["dist", "coverage"],
+  "ignorePatterns": ["dist", "coverage", "src/api/generated"],
   "overrides": [
     {
       "files": ["src/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
       "rules": {
         "react/only-export-components": "off",
         "vitest/require-mock-type-parameters": "off"
+      }
+    },
+    {
+      "files": ["scripts/**/*.ts"],
+      "rules": {
+        "no-console": "off"
       }
     }
   ]

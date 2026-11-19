@@ -7,7 +7,7 @@ from app.shared.models import BaseDBModel
 class BaseDBRepository[ModelT: BaseDBModel]:
     """Базовый асинхронный репозиторий поверх SQLAlchemy-сессии."""
 
-    def __init__(self, session: AsyncSession, model: type[ModelT]) -> None:
+    def __init__(self, *, session: AsyncSession, model: type[ModelT]) -> None:
         """
         Инициализирует репозиторий.
 
@@ -18,9 +18,12 @@ class BaseDBRepository[ModelT: BaseDBModel]:
         self._session = session
         self._model = model
 
-    async def _fetch_one(self, query: Select[tuple[ModelT]]) -> ModelT | None:
+    async def _fetch_one(self, query: Select[ModelT]) -> ModelT | None:
         """
         Выполняет запрос и возвращает одну модель или ``None``.
+
+        Scenarios:
+            - поиск одной строки в любом репозитории
 
         Args:
             query: SELECT-запрос, возвращающий не более одной строки
@@ -37,6 +40,9 @@ class BaseDBRepository[ModelT: BaseDBModel]:
 
         Реальная вставка в БД произойдёт на ближайшем flush, а видимой другим
         транзакциям запись станет только после ``commit()`` в UnitOfWork.
+
+        Scenarios:
+            - добавление строки в любом репозитории
 
         Args:
             data: Экземпляр ORM-модели для вставки

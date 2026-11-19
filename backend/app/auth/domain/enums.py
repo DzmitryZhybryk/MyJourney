@@ -1,15 +1,21 @@
 from enum import StrEnum
 
 
-class UserRole(StrEnum):
-    """Роль пользователя, определяющая уровень доступа и привилегии."""
+class UserRoleEnum(StrEnum):
+    """Роль пользователя: что ему разрешено делать в системе."""
 
-    FREE = "free"
-    PREMIUM = "premium"
+    USER = "user"
     ADMIN = "admin"
 
 
-class ChallengeType(StrEnum):
+class UserPlanEnum(StrEnum):
+    """Тариф пользователя: за что он платит. Независим от роли."""
+
+    FREE = "free"
+    PREMIUM = "premium"
+
+
+class ChallengeTypeEnum(StrEnum):
     """
     Тип challenge'а — discriminator для одной записи `challenge` на разные сценарии.
 

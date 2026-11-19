@@ -5,6 +5,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
+from app.shared.exceptions.openapi import rewrite_validation_responses
+from app.shared.types import DictStrAny
+
 if TYPE_CHECKING:
     from app.shared.infra.di.base import BaseComponent
     from app.shared.infra.di.registry import ComponentRegistry
@@ -13,6 +16,21 @@ if TYPE_CHECKING:
 class BFastAPI(FastAPI):
     components: Sequence[BaseComponent]
     registry: ComponentRegistry
+
+    def openapi(self) -> DictStrAny:
+        """
+        Возвращает OpenAPI-документ, приведённый к фактическому контракту ошибок.
+
+        Scenarios:
+            - сборка OpenAPI-документа: ``/docs``, снапшот контракта и генерация клиента фронта
+
+        Returns:
+            OpenAPI-схема приложения
+        """
+        schema = super().openapi()
+        rewrite_validation_responses(schema)
+
+        return schema
 
 
 class CamelModel(BaseModel):

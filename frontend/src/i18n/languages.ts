@@ -1,14 +1,11 @@
 /**
- * Реестр поддерживаемых языков — ЕДИНСТВЕННОЕ место, которое нужно тронуть
- * при добавлении нового языка.
+ * Registry of supported languages: the ONLY place to touch when adding a language.
  *
- * Чтобы добавить язык:
- *   1. добавить объект `{ code, nativeName }` в `SUPPORTED_LANGUAGES`;
- *   2. создать папку `src/locales/<code>/` с теми же namespace-файлами,
- *      что и у остальных языков (`common.json`, `auth.json`, `errors.json`).
+ * To add one:
+ *   1. add `{ code, nativeName }` to `SUPPORTED_LANGUAGES`;
+ *   2. create `src/locales/<code>/` with the same namespace files as the other languages.
  *
- * Тип `LanguageCode` выводится из массива автоматически (`as const`),
- * поэтому отдельно его править не нужно — он расширится сам.
+ * `LanguageCode` is derived from the array (`as const`) and widens by itself.
  */
 
 export interface LanguageMeta {
@@ -21,13 +18,13 @@ export const SUPPORTED_LANGUAGES = [
   { code: "ru", nativeName: "Русский" },
 ] as const satisfies readonly LanguageMeta[];
 
-/** Union кодов поддерживаемых языков, выведенный из реестра. */
+/** Union of supported language codes, derived from the registry. */
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]["code"];
 
-/** Язык-фоллбэк, если детект не дал поддерживаемого значения. */
+/** Fallback when detection yields no supported language. */
 export const DEFAULT_LANGUAGE: LanguageCode = "en";
 
-/** Плоский список кодов — для `supportedLngs` и переключателя. */
+/** Flat list of codes, for `supportedLngs` and the switcher. */
 export const SUPPORTED_LANGUAGE_CODES: readonly LanguageCode[] = SUPPORTED_LANGUAGES.map(
   (language) => language.code,
 );

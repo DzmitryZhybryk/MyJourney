@@ -10,7 +10,9 @@ Unit-тест lifecycle ``ResendComponent``.
 from pydantic import SecretStr
 
 from app.shared.infra.di.registry import ComponentRegistry
-from app.shared.infra.email import EmailTransportPort, ResendClient, ResendComponent
+from app.shared.infra.email import EmailTransportPort
+from app.shared.infra.email.component import ResendComponent
+from app.shared.infra.email.resend_client import ResendClient
 from app.shared.settings import ResendSettings
 
 

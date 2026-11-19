@@ -1,15 +1,13 @@
 """
-Интеграционные тесты ``AuthUnitOfWork`` против реального Postgres.
+Интеграционные тесты сборки ``AuthUnitOfWork`` против реального Postgres.
 
-Проверяют транзакционную модель (Option A) на живой сессии — то, что фейк UoW
-(``commit = AsyncMock``) проверить не может: ``commit()`` внутри ``transaction()``
-делает запись видимой другим сессиям, а выход без commit'а / исключение —
-откатывают (rollback-by-default).
+Транзакционная модель проверена в ``tests/integration/shared/infra/postgres/test_uow.py``;
+здесь — то, что репозитории UoW работают на его сессии, и порядок вставок по FK внутри одной
+транзакции.
 """
 
 from uuid import uuid4
 
-import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.infra.repositories import RefreshTokenRepository, UserCredentialsRepository
@@ -17,10 +15,10 @@ from app.auth.infra.uow import AuthUnitOfWork
 from tests.builders import make_refresh_token, make_user_credentials
 
 
-async def test_transaction_commit_persists_across_sessions(
+async def test_user_credentials_repository_write_is_persisted_by_uow_commit(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """``commit()`` внутри ``transaction()`` фиксирует запись — она видна из новой сессии."""
+    """Запись через ``uow.user_credentials_repository`` фиксирует ``uow.commit()`` — она видна из новой сессии."""
     user_id = uuid4()
     user_credentials_entity = make_user_credentials(
         user_id=user_id, email="uow-commit@example.com", username="uow_commit"
@@ -38,60 +36,6 @@ async def test_transaction_commit_persists_across_sessions(
 
     assert found is not None
     assert found.user_id == user_id
-
-
-async def test_transaction_without_commit_rolls_back(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """Выход из ``transaction()`` без ``commit()`` откатывает запись — новая сессия её не видит."""
-    user_id = uuid4()
-    user_credentials_entity = make_user_credentials(
-        user_id=user_id, email="uow-nocommit@example.com", username="uow_nocommit"
-    )
-    async with session_factory() as session:
-        uow = AuthUnitOfWork(session=session)
-        async with uow.transaction():
-            await uow.user_credentials_repository.insert_user_credentials(
-                user_credentials_entity=user_credentials_entity
-            )
-            # commit() намеренно не вызываем → выход из transaction() откатывает
-
-    async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
-
-    assert found is None
-
-
-async def test_exception_in_transaction_rolls_back(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """Исключение внутри ``transaction()`` пробрасывается и откатывает незакоммиченную запись."""
-    user_id = uuid4()
-    user_credentials_entity = make_user_credentials(
-        user_id=user_id, email="uow-error@example.com", username="uow_error"
-    )
-    async with session_factory() as session:
-        uow = AuthUnitOfWork(session=session)
-        # PT012: блок намеренно составной — проверяем, что исключение проходит сквозь
-        # transaction() (и откатывает), поэтому raise обязан быть внутри async with.
-        with pytest.raises(RuntimeError, match="boom"):  # noqa: PT012
-            async with uow.transaction():
-                await uow.user_credentials_repository.insert_user_credentials(
-                    user_credentials_entity=user_credentials_entity
-                )
-                raise RuntimeError("boom")
-
-    async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
-
-    assert found is None
-
-
-async def test_session_property_returns_underlying_session(db_session: AsyncSession) -> None:
-    """``session``-property отдаёт ту же сессию — шов для atomic-defer (``task_bus.bind_to(uow.session)``)."""
-    uow = AuthUnitOfWork(session=db_session)
-
-    assert uow.session is db_session
 
 
 async def test_transaction_flush_orders_credentials_before_dependent_refresh_token(

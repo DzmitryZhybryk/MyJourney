@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.infra.postgres.uow import BaseUnitOfWork
-from app.users.application.ports import UserRepositoryPort, UserUnitOfWorkPort
+from app.users.application.ports.unit_of_work import UserUnitOfWorkPort
+from app.users.application.ports.user_repository import UserRepositoryPort
 from app.users.infra.repositories import UserRepository
 
 

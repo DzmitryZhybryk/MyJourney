@@ -4,7 +4,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.infra.postgres.dependency import db_session_dependency
-from app.users.application.services import UserService
+from app.users.application.services.user import UserService
 from app.users.infra.uow import UserUnitOfWork
 
 

@@ -1,20 +1,12 @@
 /**
- * Флаг «плашка о подтверждении email скрыта» живёт в sessionStorage — dismiss
- * действует в пределах вкладки. Чтобы он не утекал между аккаунтами (sessionStorage
- * переживает logout и регистрацию нового пользователя в той же вкладке), вход и
- * регистрация сбрасывают флаг через `resetVerifyBannerDismissed`. Поэтому новый
- * пользователь всегда видит напоминание, даже если в этой вкладке плашку уже
- * скрывали для прежней сессии.
+ * The "email verification banner dismissed" flag lives in sessionStorage, so a dismiss lasts for
+ * the tab. sessionStorage survives logout and a new signup in the same tab, so login and signup
+ * reset the flag (`resetVerifyBannerDismissed`) to keep it from leaking between accounts.
  */
 
 const DISMISS_STORAGE_KEY = "verify-banner-dismissed";
 
-/**
- * Проверяет, скрыта ли плашка в текущей сессии вкладки.
-
- * Returns:
- *     `True`, если пользователь скрыл плашку и её не нужно показывать.
- */
+/** Whether the banner was dismissed in this tab's session. */
 export function isVerifyBannerDismissed(): boolean {
   try {
     return sessionStorage.getItem(DISMISS_STORAGE_KEY) === "1";
@@ -23,20 +15,20 @@ export function isVerifyBannerDismissed(): boolean {
   }
 }
 
-/** Помечает плашку как скрытую на текущую сессию вкладки. */
+/** Marks the banner as dismissed for this tab's session. */
 export function dismissVerifyBanner(): void {
   try {
     sessionStorage.setItem(DISMISS_STORAGE_KEY, "1");
   } catch {
-    // sessionStorage недоступен (приватный режим / отключён) — скрываем только локально.
+    // sessionStorage unavailable (private mode / disabled): the dismiss is not persisted.
   }
 }
 
-/** Сбрасывает флаг скрытия — вызывается при входе/регистрации (новая сессия). */
+/** Clears the dismissed flag; called on login/signup (a new session). */
 export function resetVerifyBannerDismissed(): void {
   try {
     sessionStorage.removeItem(DISMISS_STORAGE_KEY);
   } catch {
-    // sessionStorage недоступен — сбрасывать нечего.
+    // sessionStorage unavailable: nothing to clear.
   }
 }

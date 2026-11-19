@@ -19,7 +19,58 @@
   "map": {
     "loading": "Loading your map…",
     "error": "Couldn't load your journeys",
-    "retry": "Try again"
+    "retry": "Try again",
+    "attribution": "City names ©"
+  },
+  "movements": {
+    "empty": "No journeys yet — add one and your routes will show up here",
+    "controls": "Movements filters",
+    "yearFrom": "From year",
+    "yearTo": "To year",
+    "move": "Drag to move · double-click to reset",
+    "transport": "Transport",
+    "noTransport": "Choose at least one transport"
+  },
+  "all": {
+    "filters": "Journey filters",
+    "feed": "Journeys by year",
+    "years": "Years",
+    "transport": "Transport",
+    "routeTo": "to",
+    "loading": "Loading your journeys…",
+    "error": "Couldn't load your journeys",
+    "loadMoreError": "Couldn't load more journeys",
+    "retry": "Try again",
+    "empty": "No journeys yet",
+    "addFirst": "Add your first journey",
+    "noMatches": "No journeys match these filters",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "dragHandle": "Drag to reorder",
+    "dnd": {
+      "instructions": "To reorder a journey, press Space, move it with the arrow keys, then press Space again to drop it or Escape to cancel.",
+      "start": "Picked up {{route}}",
+      "over": "Over {{route}}, year {{year}}",
+      "end": "{{route}} dropped into {{year}}",
+      "cancel": "Moving {{route}} cancelled"
+    }
+  },
+  "card": {
+    "back": "All journeys",
+    "saved": "Saved",
+    "undo": "Undo",
+    "undone": "Change undone",
+    "menu": "More actions",
+    "deleteJourney": "Delete journey",
+    "deleteTitle": "Delete this journey?",
+    "deleteBody": "{{route}} will disappear from the feed and the maps. This can't be undone.",
+    "transport": "Transport",
+    "year": "Year",
+    "distance": "Distance",
+    "photos": "Photo report",
+    "photosSoon": "Photos from the trip will live here",
+    "impressions": "Impressions",
+    "impressionsSoon": "What you liked and what you didn't"
   },
   "addJourney": {
     "title": "New journey",
@@ -27,7 +78,7 @@
     "origin": { "label": "From", "placeholder": "City of departure" },
     "destination": { "label": "To", "placeholder": "Destination city" },
     "swap": "Swap origin and destination",
-    "place": {
+    "city": {
       "hintEmpty": "Nothing found — try another spelling or the English name."
     },
     "transport": {
@@ -39,11 +90,7 @@
     },
     "date": {
       "legend": "When was it?",
-      "yearPlaceholder": "Select year",
-      "addMonth": "Specify month",
-      "addDay": "Specify day",
-      "monthPlaceholder": "Select month",
-      "dayPlaceholder": "Select day"
+      "yearPlaceholder": "Select year"
     },
     "submit": "Add journey",
     "validation": {
@@ -51,9 +98,7 @@
       "destinationRequired": "Choose the destination city",
       "sameCity": "Departure and destination must differ",
       "transportRequired": "Choose a transport type",
-      "yearRequired": "Choose a year",
-      "monthRequired": "Choose a month",
-      "dayRequired": "Choose a day"
+      "yearRequired": "Choose a year"
     }
   }
 }

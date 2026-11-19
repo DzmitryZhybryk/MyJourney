@@ -20,8 +20,8 @@ describe("RootErrorFallback", () => {
 
   it("клик по кнопке вызывает window.location.reload", async () => {
     const reload = vi.fn();
-    // MemoryRouter не читает window.location, поэтому замена объекта целиком безопасна;
-    // afterEach возвращает оригинал, чтобы не протекло в другие тесты.
+    // MemoryRouter does not read window.location, so replacing the whole object is safe; afterEach
+    // restores the original so it does not leak into other tests.
     Object.defineProperty(window, "location", { configurable: true, value: { reload } });
     const { user } = renderWithProviders(<RootErrorFallback />);
 

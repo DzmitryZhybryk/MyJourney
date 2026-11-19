@@ -1,26 +1,24 @@
 import type { WorldMapTone } from "../../components/WorldMap";
 
 /*
- * Палитра статусов карты на ночной поверхности.
+ * Map status palette on the night surface.
  *
- * Главное правило здесь — про ПЛОЩАДЬ, а не про оттенок: заливка страны занимает
- * пол-экрана, поэтому берётся приглушённой. Чистый `--sun` (#e8935c) остаётся за
- * мелкими элементами — кнопками и активными состояниями; если залить им континенты,
- * акцент перестаёт быть акцентом и кричит на весь экран. Посещённое поэтому взято
- * глубокой терракотой: заметно светлее суши, но заметно тише кнопки.
+ * The key rule is about AREA, not hue: a country fill covers half the screen, so it is muted. Pure
+ * `--sun` (#e8935c) stays for small elements (buttons, active states); flooding continents with it
+ * stops it being an accent. Visited is therefore a deep terracotta: clearly lighter than land,
+ * clearly quieter than buttons.
  *
- * Статусы разведены по смыслу палитры: посещённое — тёплое, «освещённое»; списки
- * желаний — перивинкл, который в палитре и заведён как «холодная даль». Пара
- * различается и по тону, и по светлоте, поэтому читается при дальтонизме — прежняя
- * emerald/amber при дейтеранопии сходилась в один жёлто-бурый.
+ * Statuses are separated by palette meaning: visited is warm and "lit"; wishlist is periwinkle,
+ * the palette's "cold distance". The pair differs in both hue and lightness, so it reads under
+ * colour blindness (the earlier emerald/amber converged to one yellow-brown in deuteranopia).
  *
- * Значения — литералы, а не `var(--…)`: цвета уходят в атрибуты `fill`/`stroke`
- * SVG, где CSS-переменные не работают.
+ * Values are literals, not `var(--...)`: the colours go into SVG `fill`/`stroke` attributes where
+ * CSS variables do not work.
  */
 export const MAP_TONE: WorldMapTone = {
-  land: "#2b3147", // суша поднимается над ночью, но остаётся фоном
-  border: "#3d4560", // контур на ступень светлее суши
-  visited: "#b2703f", // приглушённая терракота — тише кнопок, светлее суши
-  wishlist: "#5b6ea6", // приглушённый перивинкл — «холодная даль»
-  cityDot: "#f4ede2", // светлая точка читается и на суше, и на посещённой стране
+  land: "#2b3147", // land rises above the night but stays background
+  border: "#3d4560", // outline one step lighter than land
+  visited: "#b2703f", // muted terracotta: quieter than buttons, lighter than land
+  wishlist: "#5b6ea6", // muted periwinkle: "cold distance"
+  cityDot: "#f4ede2", // a light dot reads on both land and a visited country
 };

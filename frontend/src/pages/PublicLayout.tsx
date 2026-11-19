@@ -3,23 +3,23 @@ import { PublicCrossfade } from "./PublicCrossfade";
 import "./public-layout.css";
 
 /**
- * Каркас публичной зоны: общая шапка + контент через `<Outlet/>` (кросс-фейдом).
+ * Public zone shell: shared header + content via `<Outlet/>` (cross-faded).
  *
- * Глобус-фон здесь БОЛЬШЕ НЕ монтируется — он поднят на корень приложения
- * (`PersistentGlobeHost` в `App`), общий для публичной и авторизованной зон, и переживает
- * навигацию между ними (в т.ч. login → home), поэтому WebGL не перезагружается. Контент этой
- * зоны прозрачен и лежит НАД фиксированным глобусом (z-index в `public-layout.css`).
+ * The globe background is NOT mounted here: it lives at the app root (`PersistentGlobeHost` in
+ * `App`), shared by the public and authorized zones, and survives navigation between them
+ * (login -> home included), so WebGL is not reloaded. This zone's content is transparent and sits
+ * ABOVE the fixed globe (z-index in `public-layout.css`).
  *
- * Контент идёт через `PublicCrossfade`, а не напрямую через `<Outlet/>`: он держит уходящий
- * экран смонтированным на время фейда и несёт собственный `Suspense`, чтобы загрузка чанка
- * соседней страницы не размонтировала лейаут.
+ * Content goes through `PublicCrossfade`, not straight through `<Outlet/>`: it keeps the leaving
+ * screen mounted during the fade and has its own `Suspense` so loading a neighbouring page's
+ * chunk does not unmount the layout.
  */
 export function PublicLayout() {
   return (
     <div className="public-layout">
       <PublicHeader />
-      {/* Ландмарк `main`: обёртка одна на все три экрана, поэтому во время кросс-фейда двух
-          `main` в документе не возникает. */}
+      {/* `main` landmark: one wrapper for all three screens, so there are never two `main`
+          elements in the document during a cross-fade. */}
       <main className="public-layout__content">
         <PublicCrossfade />
       </main>

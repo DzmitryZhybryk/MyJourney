@@ -20,6 +20,9 @@ def render_verification_email(*, email: str, code: str) -> EmailMessage:
     """
     Рендерит письмо с одноразовым кодом подтверждения email.
 
+    Scenarios:
+        - фоновая отправка письма с кодом: после регистрации и по кнопке в диалоге «Подтвердите email»
+
     Args:
         email: Email-адрес получателя
         code: Plaintext-код подтверждения, который покажем пользователю

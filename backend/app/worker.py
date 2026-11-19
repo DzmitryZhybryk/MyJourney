@@ -2,81 +2,60 @@
 Worker entrypoint для procrastinate-задач.
 
 Поднимает только те компоненты, которые нужны исполнителю tasks:
-``ResendComponent`` (даёт ``EmailTransportPort``) и ``ProcrastinateComponent``
+``ResendComponent`` (даёт ``EmailTransportPort``), ``MediaStorageComponent``
+(хранилища бакетов media) и ``ProcrastinateComponent``
 (App + подключённые blueprint'ы доменов). ``SqlAlchemyComponent`` намеренно
-отсутствует — текущая task ``send_verification_email`` БД не трогает,
-рендерит письмо и зовёт provider.
+отсутствует — текущая task ``send_verification_email`` БД не трогает:
+расшифровывает код ключом из настроек, рендерит письмо и зовёт provider.
 
-Schema procrastinate применяется здесь же при старте: API схему не трогает,
-в проде она придёт через alembic-миграцию (отдельная задача — см. план).
+Таски получают зависимости из реестра компонентов: он целиком лежит в
+``additional_context`` под ``WORKER_REGISTRY_KEY``.
+
+Schema procrastinate worker не трогает: её применяет шаг миграции
+(``python -m app.shared.infra.procrastinate`` после ``alembic upgrade head``).
 
 Процесс блокируется в ``run_worker_async`` до SIGTERM/SIGINT; procrastinate
-сам graceful-shutdown'ит in-flight jobs, после чего освобождаем ресурсы
-компонентов (psycopg-пул, httpx-пул) в обратном порядке.
+сам graceful-shutdown'ит in-flight jobs, после чего ``run_components``
+освобождает ресурсы компонентов (psycopg-пул, httpx-пул, клиент S3) в обратном порядке.
 """
 
 import asyncio
 
-from app.auth.infra import auth_blueprint
+from app.blueprints import TASK_BLUEPRINTS
+from app.media.infra.component import MediaStorageComponent
 from app.shared.enums import AppEnvEnum
 from app.shared.infra.di.base import BaseComponent
+from app.shared.infra.di.lifecycle import run_components
 from app.shared.infra.di.registry import ComponentRegistry
-from app.shared.infra.email import EmailTransportPort, ResendComponent
-from app.shared.infra.procrastinate import ProcrastinateApp, ProcrastinateComponent
+from app.shared.infra.email.component import ResendComponent
+from app.shared.infra.procrastinate.component import WORKER_REGISTRY_KEY, ProcrastinateApp, ProcrastinateComponent
 from app.shared.logging import configure_logging, get_logger
 from app.shared.settings import settings
 
 logger = get_logger(__name__)
 
 
-async def _ensure_procrastinate_schema(procrastinate_app: ProcrastinateApp) -> None:
-    """
-    Применяет procrastinate-схему, если её ещё нет.
-
-    ``apply_schema_async()`` не идемпотентен: schema.sql использует
-    ``CREATE TABLE`` без ``IF NOT EXISTS``, повторный вызов на уже
-    мигрированной БД упадёт на дублирующих CREATE TABLE. Проверяем
-    наличие ключевой таблицы ``procrastinate_jobs`` через ``to_regclass``
-    и применяем схему только если её нет.
-
-    Args:
-        procrastinate_app: Открытый ``ProcrastinateApp`` (после ``open_async``)
-    """
-    result = await procrastinate_app.connector.execute_query_one_async(
-        "SELECT to_regclass('public.procrastinate_jobs') AS table_oid",
-    )
-    if result["table_oid"] is None:
-        await procrastinate_app.schema_manager.apply_schema_async()
-        logger.info("worker.schema.applied")
-    else:
-        logger.info("worker.schema.already_applied")
-
-
 async def run_worker() -> None:  # pragma: no cover — entry-point обвязка (компоненты+run), не unit-тестируется
-    """Поднимает компоненты, применяет schema и запускает procrastinate-worker."""
+    """
+    Поднимает компоненты и запускает procrastinate-worker.
+
+    Scenarios:
+        - запуск воркера фоновых задач
+    """
     configure_logging(include_debug=settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
 
     registry = ComponentRegistry()
     components: list[BaseComponent] = [
         ResendComponent(settings=settings),
-        ProcrastinateComponent(settings=settings, blueprints=[auth_blueprint]),
+        MediaStorageComponent(settings=settings),
+        ProcrastinateComponent(settings=settings, blueprints=TASK_BLUEPRINTS),
     ]
-    for component in components:
-        await component.startup(registry)
-
-    procrastinate_app = registry.get(ProcrastinateApp)
-    email_transport = registry.get(EmailTransportPort)
-
-    try:
-        await _ensure_procrastinate_schema(procrastinate_app=procrastinate_app)
+    async with run_components(components=components, registry=registry):
         logger.info("worker.starting", concurrency=settings.PROCRASTINATE_WORKER_CONCURRENCY)
-        await procrastinate_app.run_worker_async(
+        await registry.get(ProcrastinateApp).run_worker_async(
             concurrency=settings.PROCRASTINATE_WORKER_CONCURRENCY,
-            additional_context={"email_transport": email_transport},
+            additional_context={WORKER_REGISTRY_KEY: registry},
         )
-    finally:
-        for component in reversed(components):
-            await component.shutdown()
 
 
 if __name__ == "__main__":  # pragma: no cover

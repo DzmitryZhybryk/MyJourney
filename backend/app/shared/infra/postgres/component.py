@@ -21,7 +21,7 @@ class SqlAlchemyComponent(BaseComponent):
         self._session_maker = SessionMaker(self._engine, **settings.sessionmaker_kwargs)
 
     async def startup(self, registry: ComponentRegistry) -> None:
-        registry.set(SessionMaker, self._session_maker)
+        registry.set(key=SessionMaker, value=self._session_maker)
 
     async def shutdown(self) -> None:
         await self._engine.dispose()

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Response, status
 health_router = APIRouter(tags=["health"])
 
 
-@health_router.get("/healthz")
+@health_router.get("/healthz/")
 async def healthz() -> Response:
     """
     Liveness-проба для контейнерного healthcheck и reverse-proxy.

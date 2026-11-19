@@ -1,0 +1,91 @@
+/* ---- Route end pins ------------------------------------------------- */
+/* A zero-size anchor: three-globe puts its origin exactly on the coordinate. The dot is centered
+   on it, the label is absolute at the side and does not shift the dot. */
+.globe-route-pin {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.globe-route-pin__dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 3px rgb(var(--sun-rgb) / 0.28);
+}
+
+.globe-route-pin__name {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  white-space: nowrap;
+  font: 600 var(--fs-12)/1 var(--font-body);
+  color: var(--text);
+  background: rgb(var(--ink-rgb) / 0.78);
+  padding: 3px 7px;
+  border-radius: 7px;
+  backdrop-filter: blur(4px);
+}
+
+/* Label left of the dot (when the route goes right) so it does not cover the arc. */
+.globe-route-pin--left .globe-route-pin__name {
+  left: auto;
+  right: 12px;
+  transform-origin: right center;
+}
+
+/* ---- Vehicle travelling along the route --------------------------------------- */
+/* The outer container is positioned (and centered via inline translate(-50%,-50%)) by three-globe's
+   CSS2D renderer; the heading rotation is on the nested icon, whose transform rAF writes. */
+.globe-route-vehicle {
+  pointer-events: none;
+}
+
+.globe-route-vehicle__icon {
+  width: 28px;
+  height: 28px;
+  transform-origin: center;
+  will-change: transform;
+  /* A white halo separates the coloured icon from the dark ocean, plus a light shadow for volume. */
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 1px 3px rgba(2, 6, 23, 0.5));
+}
+
+.globe-route-vehicle__icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Route fade-out when leaving the form for /home. Fade the CHILDREN, not the wrapper: globe.gl
+ * writes the wrappers' inline styles (CSS2D renderer position, far-side occlusion). 0.7s =
+ * ROUTE_FADE_MS in route.ts; the trail fades in routeScene.ts via its colour's alpha.
+ */
+.globe-route-pin__dot,
+.globe-route-pin__name,
+.globe-route-vehicle__icon img {
+  transition: opacity 0.7s ease;
+}
+
+.globe-canvas--route-fading .globe-route-pin__dot,
+.globe-canvas--route-fading .globe-route-pin__name,
+.globe-canvas--route-fading .globe-route-vehicle__icon img {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globe-route-pin__dot,
+  .globe-route-pin__name,
+  .globe-route-vehicle__icon img {
+    transition: none;
+  }
+}

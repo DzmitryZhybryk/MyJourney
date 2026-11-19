@@ -1,11 +1,10 @@
 /*
- * Кросс-фейд экранов публичной зоны. Уходящий и входящий экраны гаснут и
- * проявляются ОДНОВРЕМЕННО, стартуя
- * на 0.3s позже камеры: сначала планета трогается с места, и только потом меняется
- * текст. Якорь для позиционирования — `.public-layout__content` (position: relative).
+ * Cross-fade of public zone screens. The leaving and incoming screens fade out and in
+ * SIMULTANEOUSLY, starting 0.3s after the camera: the planet moves first and only then does the
+ * text change. The positioning anchor is `.public-layout__content` (position: relative).
  *
- * Анимации, а не transition'ы: входящий экран только что смонтирован, и интерполировать
- * transition'у не от чего.
+ * Animations, not transitions: the incoming screen has just mounted and a transition has nothing
+ * to interpolate from.
  */
 
 .public-crossfade__screen {
@@ -18,14 +17,14 @@
 }
 
 /*
- * Уходящий экран выведен из потока, иначе он толкал бы входящий вниз. `fixed`, а не
- * `absolute`: у лендинга высота во весь документ, и абсолютный блок такой высоты
- * растянул бы область прокрутки — страница не сжалась бы под короткую входящую форму.
- * Фиксированный слой в прокрутке не участвует вовсе.
+ * The leaving screen is taken out of flow, otherwise it would push the incoming one down. `fixed`,
+ * not `absolute`: the landing is as tall as the document, and an absolute block of that height
+ * would stretch the scroll area, so the page would not shrink to a short incoming form. A fixed
+ * layer takes no part in scrolling at all.
  *
- * `top` приходит инлайном как `-scrollY`: когда документ сжимается под входящий экран,
- * браузер обрезает прокрутку к нулю, и без сдвига уходящий лендинг прыгнул бы к своему
- * началу — гасло бы уже не то содержимое, которое видел пользователь.
+ * `top` arrives inline as `-scrollY`: when the document shrinks to the incoming screen the browser
+ * clamps scroll to zero, and without the offset the leaving landing would jump to its start, so
+ * the content fading out would not be what the user saw.
  */
 .public-crossfade__screen--leaving {
   position: fixed;

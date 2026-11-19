@@ -9,8 +9,8 @@ interface JourneysLegendProps {
 const ITEM_KEYS = ["visited", "wishlist", "notVisited", "city"] as const;
 
 /**
- * Легенда карты. Цвета берёт из переданного тона, поэтому swatch'и всегда
- * совпадают с тем, чем реально залита карта.
+ * Map legend. Colours come from the passed tone, so swatches always match what the map is
+ * actually filled with.
  */
 export function JourneysLegend({ tone }: JourneysLegendProps) {
   const { t } = useTranslation("journeys");
