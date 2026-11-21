@@ -23,7 +23,10 @@ paths:
 | Page | JS | CSS |
 |---|---|---|
 | Landing | < 200 kb | < 25 kb |
-| App page | < 300 kb | < 30 kb |
+| App page | < 310 kb | < 30 kb |
+
+App JS went 300 → 310 when the media config endpoints pushed the feed page to 301: the generated SDK
+validates every endpoint and loads on every page. Splitting it by domain is backlog #62.
 
 The numbers are a working agreement set by measurement, not a physical limit. Exceeding one is a
 reason to look at what grew, not an alarm: if nothing removable is found, raise the limit **and

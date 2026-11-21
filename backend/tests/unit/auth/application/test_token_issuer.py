@@ -6,8 +6,8 @@ import pytest
 from app.auth.application.schemas.metadata import ClientMetadata
 from app.auth.application.services.token_issuer import TokenIssuer
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
-from app.auth.domain.permissions import MEDIA_CONFIG_EDIT
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
+from app.shared.infra.jwt import PermissionEnum
 from app.shared.infra.jwt.service import JWTService
 from tests.builders import make_user_credentials
 
@@ -78,7 +78,7 @@ def test_build_token_pair_access_token_decodes_back_to_user(
     ("role", "plan", "expected_permissions"),
     [
         (UserRoleEnum.USER, UserPlanEnum.FREE, frozenset()),
-        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({MEDIA_CONFIG_EDIT})),
+        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({PermissionEnum.MEDIA_CONFIG_EDIT})),
     ],
 )
 def test_build_token_pair_access_token_carries_role_plan_and_expanded_permissions(

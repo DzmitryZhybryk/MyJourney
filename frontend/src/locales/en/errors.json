@@ -28,6 +28,8 @@
     "invalid_year_range": "The first year can't be later than the last one"
   },
   "invalid_cursor": "The list is out of date. Please reload it",
+  "permission_required": "You don't have access to this action",
+  "config_version_conflict": "Someone saved these rules while you were editing. The latest version is loaded; your changes were discarded",
   "validation_error": "Please check the entered data and try again",
   "network": "Network error. Please try again.",
   "temporary": "Couldn't complete the request. Please try again a bit later.",

@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createJourney, deleteJourney, estimateJourneyDistance, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMovementsMap, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, verifyEmail } from '../sdk.gen';
-import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
+import { createJourney, deleteJourney, estimateJourneyDistance, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMediaConfig, getMovementsMap, getUploadRules, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, updateMediaConfig, verifyEmail } from '../sdk.gen';
+import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMediaConfigData, GetMediaConfigError, GetMediaConfigResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, GetUploadRulesData, GetUploadRulesError, GetUploadRulesResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, UpdateMediaConfigData, UpdateMediaConfigError, UpdateMediaConfigResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
   Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -397,6 +397,23 @@ export const getMovementsMapOptions = (options?: Options<GetMovementsMapData>) =
   queryKey: getMovementsMapQueryKey(options)
 });
 
+export const getUploadRulesQueryKey = (options?: Options<GetUploadRulesData>) => createQueryKey('getUploadRules', options);
+
+/**
+ * Get Upload Rules
+ *
+ * Текущие правила загрузки каждого вида файла: размер, форматы, минимальная сторона. Без авторизации.
+ */
+export const getUploadRulesOptions = (options?: Options<GetUploadRulesData>) => queryOptions<GetUploadRulesResponse, GetUploadRulesError, GetUploadRulesResponse, ReturnType<typeof getUploadRulesQueryKey>>({
+  queryFn: async ({ queryKey, signal }) => await getUploadRules({
+    ...options,
+    ...queryKey[0],
+    signal,
+    throwOnError: true
+  }),
+  queryKey: getUploadRulesQueryKey(options)
+});
+
 export const getCurrentUserQueryKey = (options?: Options<GetCurrentUserData>) => createQueryKey('getCurrentUser', options);
 
 /**
@@ -418,6 +435,39 @@ export const getCurrentUserOptions = (options?: Options<GetCurrentUserData>) => 
 export const updateCurrentUserMutation = (options?: Partial<Options<UpdateCurrentUserData>>): UseMutationOptions<UpdateCurrentUserResponse, UpdateCurrentUserError, Options<UpdateCurrentUserData>> => {
   const mutationOptions: UseMutationOptions<UpdateCurrentUserResponse, UpdateCurrentUserError, Options<UpdateCurrentUserData>> = {
     mutationFn: async (fnOptions) => await updateCurrentUser({
+      ...options,
+      ...fnOptions,
+      throwOnError: true
+    })
+  };
+  return mutationOptions;
+};
+
+export const getMediaConfigQueryKey = (options?: Options<GetMediaConfigData>) => createQueryKey('getMediaConfig', options);
+
+/**
+ * Get Media Config
+ *
+ * Последняя версия конфига для правки. Нужно право `media.config.edit`.
+ */
+export const getMediaConfigOptions = (options?: Options<GetMediaConfigData>) => queryOptions<GetMediaConfigResponse, GetMediaConfigError, GetMediaConfigResponse, ReturnType<typeof getMediaConfigQueryKey>>({
+  queryFn: async ({ queryKey, signal }) => await getMediaConfig({
+    ...options,
+    ...queryKey[0],
+    signal,
+    throwOnError: true
+  }),
+  queryKey: getMediaConfigQueryKey(options)
+});
+
+/**
+ * Update Media Config
+ *
+ * Записывает конфиг новой версией. `editedVersion` не последняя — 409. Нужно право `media.config.edit`.
+ */
+export const updateMediaConfigMutation = (options?: Partial<Options<UpdateMediaConfigData>>): UseMutationOptions<UpdateMediaConfigResponse, UpdateMediaConfigError, Options<UpdateMediaConfigData>> => {
+  const mutationOptions: UseMutationOptions<UpdateMediaConfigResponse, UpdateMediaConfigError, Options<UpdateMediaConfigData>> = {
+    mutationFn: async (fnOptions) => await updateMediaConfig({
       ...options,
       ...fnOptions,
       throwOnError: true

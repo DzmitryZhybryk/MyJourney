@@ -6,6 +6,8 @@ import { AuthProvider } from "./auth/AuthContext";
 import { DocumentTitle } from "./components/DocumentTitle";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GlobeSceneProvider } from "./components/globe/GlobeSceneProvider";
+import { AdminRoute } from "./admin/AdminRoute";
+import { ADMIN_SECTIONS } from "./admin/adminSections";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicOnlyRoute } from "./components/PublicOnlyRoute";
 import { CurrentUserProvider } from "./user/CurrentUserContext";
@@ -39,6 +41,10 @@ const AllJourneysView = lazy(() =>
 );
 const ProfilePage = lazy(() =>
   import("./pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
+const AdminLayout = lazy(() => import("./admin/AdminLayout").then((m) => ({ default: m.AdminLayout })));
+const MediaConfigPage = lazy(() =>
+  import("./admin/media-config/MediaConfigPage").then((m) => ({ default: m.MediaConfigPage })),
 );
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("./pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
@@ -137,6 +143,18 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* Admin section: shared shell with the section menu; /admin opens the first section. */}
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AdminLayout />
+                    </AdminRoute>
+                  }
+                >
+                  <Route index element={<Navigate to={ADMIN_SECTIONS[0].path} replace />} />
+                  <Route path="media-config" element={<MediaConfigPage />} />
+                </Route>
                 {/*
                  * Journeys section: shared shell (header + panel) with sub-tabs via <Outlet/>.
                  * The index route is the map, "movements" the movements map, "all" the feed of all

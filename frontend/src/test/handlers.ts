@@ -17,8 +17,31 @@ import type {
   CurrentAccountResponse,
   CurrentUserResponse,
   JourneyFeedEntry,
+  MediaConfigResponse,
   MovementsMapResponse,
+  UploadRulesResponse,
 } from "../api/sdk";
+
+const MEGABYTE = 1024 * 1024;
+
+/** Media config version 1, as the deploy seed writes it (no author). */
+export const TEST_MEDIA_CONFIG: MediaConfigResponse = {
+  version: 1,
+  createdAt: "2026-11-19T11:00:00Z",
+  createdBy: null,
+  snapshot: {
+    avatar: { maxSizeBytes: 30 * MEGABYTE, formats: ["image/jpeg", "image/png"], minSide: 512 },
+    journeyPhoto: { maxSizeBytes: 30 * MEGABYTE, formats: ["image/jpeg"], minSide: 1280 },
+    journeyVideo: { maxSizeBytes: 200 * MEGABYTE, formats: ["video/mp4"] },
+  },
+};
+
+/** Public upload rules matching `TEST_MEDIA_CONFIG`, with the side axis from backend code. */
+export const TEST_UPLOAD_RULES: UploadRulesResponse = {
+  avatar: { ...TEST_MEDIA_CONFIG.snapshot.avatar, minSideAxis: "short" },
+  journeyPhoto: { ...TEST_MEDIA_CONFIG.snapshot.journeyPhoto, minSideAxis: "long" },
+  journeyVideo: TEST_MEDIA_CONFIG.snapshot.journeyVideo,
+};
 
 /**
  * Minimal gazetteer for autocomplete component tests (`/v1/geo/cities/search/`). Names are already
@@ -246,6 +269,10 @@ export const handlers = [
     return HttpResponse.json({ ...TEST_CURRENT_USER, ...body });
   }),
   http.get("/v1/auth/me/", () => HttpResponse.json(TEST_CURRENT_ACCOUNT)),
+  // Media config: the admin reads version 1 written by deploy; a save is 204 (a test overrides for 409).
+  http.get("/v1/admin/media/config/", () => HttpResponse.json(TEST_MEDIA_CONFIG)),
+  http.put("/v1/admin/media/config/", () => new HttpResponse(null, { status: 204 })),
+  http.get("/v1/media/config/", () => HttpResponse.json(TEST_UPLOAD_RULES)),
 ];
 
 export const server = setupServer(...handlers);

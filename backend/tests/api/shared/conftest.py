@@ -21,7 +21,7 @@ from structlog.typing import Processor
 
 from app.shared.exceptions import InternalError, NotFoundError, TemporaryError
 from app.shared.exceptions.handlers import register_exception_handlers
-from app.shared.infra.jwt import AccessTokenClaims
+from app.shared.infra.jwt import AccessTokenClaims, PermissionEnum
 from app.shared.infra.jwt.dependency import current_user_id_dependency
 from app.shared.infra.jwt.permission_checker import PermissionChecker
 from app.shared.infra.telemetry import get_api_telemetry_config
@@ -86,13 +86,13 @@ def middleware_app() -> BFastAPI:
 
 
 @pytest.fixture
-def guarded_permission() -> str:
+def guarded_permission() -> PermissionEnum:
     """Право, которого требует маршрут ``/guarded/`` в ``guarded_app``."""
-    return "test.guarded"
+    return PermissionEnum.MEDIA_CONFIG_EDIT
 
 
 @pytest.fixture
-def guarded_app(middleware_app: BFastAPI, guarded_permission: str) -> BFastAPI:
+def guarded_app(middleware_app: BFastAPI, guarded_permission: PermissionEnum) -> BFastAPI:
     """``middleware_app`` плюс маршрут ``/guarded/``, закрытый правом ``guarded_permission``."""
 
     @middleware_app.get("/guarded/")

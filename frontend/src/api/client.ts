@@ -3,12 +3,25 @@ import { getAccessToken, setAccessToken } from "../auth/tokenStore";
 import { ApiError, type ApiErrorBody } from "./errors";
 
 const INVALID_CREDENTIALS_CODE = "auth.invalid_credentials";
+const PERMISSION_REQUIRED_CODE = "permission_required";
 const REFRESH_PATH = "/v1/auth/refresh/";
 
 let pendingRefresh: Promise<boolean> | null = null;
 
+/**
+ * A 403 for a missing permission is retried once too: the access token lives for minutes, so a
+ * permission granted (or revoked) meanwhile reaches the client only with a fresh token.
+ */
 function shouldRetryAfterRefresh(status: number, code: string, pathname: string): boolean {
-  return status === 401 && code !== INVALID_CREDENTIALS_CODE && pathname !== REFRESH_PATH;
+  if (pathname === REFRESH_PATH) {
+    return false;
+  }
+
+  if (status === 403) {
+    return code === PERMISSION_REQUIRED_CODE;
+  }
+
+  return status === 401 && code !== INVALID_CREDENTIALS_CODE;
 }
 
 /**
@@ -43,7 +56,11 @@ export async function appFetch(input: URL | RequestInfo, init?: RequestInit): Pr
       throw new ApiError(retryResponse.status, await parseErrorBody(retryResponse));
     }
 
-    emit("auth-required", undefined);
+    // A 403 came with a valid access token: a failed refresh (a network blip included) is no reason
+    // to end the session. A dead session will surface as the next 401.
+    if (response.status !== 403) {
+      emit("auth-required", undefined);
+    }
   }
 
   throw new ApiError(response.status, errorBody);

@@ -34,7 +34,7 @@ interface Budget {
 // live in performance.md; change them there and here together.
 const BUDGETS = {
   landing: { js: 200, css: 25 },
-  app: { js: 300, css: 30 },
+  app: { js: 310, css: 30 },
 } satisfies Record<string, Budget>;
 
 interface Page {
@@ -50,6 +50,11 @@ const PAGES: readonly Page[] = [
   { name: "/signup", budget: "app", modules: ["src/pages/PublicLayout.tsx", "src/pages/SignUpPage.tsx"] },
   { name: "/home", budget: "app", modules: ["src/pages/HomePage.tsx"] },
   { name: "/profile", budget: "app", modules: ["src/pages/profile/ProfilePage.tsx"] },
+  {
+    name: "/admin/media-config",
+    budget: "app",
+    modules: ["src/admin/AdminLayout.tsx", "src/admin/media-config/MediaConfigPage.tsx"],
+  },
   // The shared map (country borders) loads lazily from the layout on every tab that shows it, so it
   // is counted there explicitly; /journeys/add never loads it.
   {

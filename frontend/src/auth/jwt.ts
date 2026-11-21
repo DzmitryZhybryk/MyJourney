@@ -4,6 +4,8 @@ const accessTokenClaimsSchema = z.object({
   sub: z.string(),
   email_verified: z.boolean(),
   exp: z.number(),
+  // Optional: a token without the claim decodes as a plain user.
+  role: z._default(z.string(), "user"),
 });
 
 export type AccessTokenClaims = z.infer<typeof accessTokenClaimsSchema>;

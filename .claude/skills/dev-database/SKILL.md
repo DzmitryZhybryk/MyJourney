@@ -29,7 +29,7 @@ worker start. The targets below run a throwaway container of the same service
 
 ```bash
 make migrate-create msg="description"  # autogenerate
-make migrate-upgrade                 # apply, then the procrastinate schema (see below)
+make migrate-upgrade                 # apply, then the procrastinate schema and the media config seed (see below)
 make migrate-downgrade               # roll back one (rev=<revision> for a specific one)
 make migrate-history
 make migrate-current
@@ -42,7 +42,8 @@ The init migration is edited in place while there is no production.
 
 The `procrastinate_*` tables are not in alembic: `python -m app.shared.infra.procrastinate` applies
 them, and the `myjourney_migrate` service runs it right after `alembic upgrade head` in every
-stack. Autogenerate ignores these tables (`include_name` in
+stack, followed by `python -m app.media.scripts.seed_config` (writes the initial `media_config`
+version only into an empty table). Autogenerate ignores these tables (`include_name` in
 `migrations/env.py`), so a new revision never proposes dropping them.
 
 The command only checks that `procrastinate_jobs` exists, not which version of the schema is

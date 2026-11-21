@@ -11,6 +11,8 @@ from app.geo.presentation.routes import geo_router
 from app.health.presentation.routes import health_router
 from app.journeys.presentation.routes import journey_router
 from app.media.infra.component import MediaStorageComponent
+from app.media.presentation.admin.routes import media_admin_router
+from app.media.presentation.routes import media_router
 from app.shared.enums import AppEnvEnum
 from app.shared.exceptions.handlers import register_exception_handlers
 from app.shared.infra.di.base import BaseComponent
@@ -137,6 +139,9 @@ def create_app() -> BFastAPI:
     app.include_router(auth_router, prefix="/v1/auth", tags=["auth"])
     app.include_router(geo_router, prefix="/v1/geo", tags=["geo"])
     app.include_router(journey_router, prefix="/v1/journeys", tags=["journeys"])
+    app.include_router(media_router, prefix="/v1/media", tags=["media"])
     app.include_router(users_router, prefix="/v1/users", tags=["users"])
+
+    app.include_router(media_admin_router, prefix="/v1/admin/media", tags=["admin: media"])
 
     return app

@@ -119,12 +119,24 @@ path = "app.media.exceptions"
 depends_on = ["app.shared"]
 
 [[modules]]
-path = "app.media.application"
+path = "app.media.domain"
 depends_on = []
+
+[[modules]]
+path = "app.media.application"
+depends_on = ["app.media.domain", "app.shared"]
 
 [[modules]]
 path = "app.media.infra"
 depends_on = ["app.media.application", "app.media.exceptions", "app.shared"]
+
+[[modules]]
+path = "app.media.scripts"
+depends_on = ["app.media.infra", "app.media.application", "app.shared"]
+
+[[modules]]
+path = "app.media.presentation"
+depends_on = ["app.media.application", "app.media.infra", "app.media.domain", "app.shared"]
 
 [[modules]]
 path = "app.shared"

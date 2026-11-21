@@ -1,7 +1,8 @@
 import pytest
 
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
-from app.auth.domain.permissions import MEDIA_CONFIG_EDIT, PLAN_PERMISSIONS, ROLE_PERMISSIONS, expand_permissions
+from app.auth.domain.permissions import PLAN_PERMISSIONS, ROLE_PERMISSIONS, expand_permissions
+from app.shared.infra.jwt import PermissionEnum
 
 
 @pytest.mark.parametrize(
@@ -9,8 +10,8 @@ from app.auth.domain.permissions import MEDIA_CONFIG_EDIT, PLAN_PERMISSIONS, ROL
     [
         (UserRoleEnum.USER, UserPlanEnum.FREE, frozenset()),
         (UserRoleEnum.USER, UserPlanEnum.PREMIUM, frozenset()),
-        (UserRoleEnum.ADMIN, UserPlanEnum.FREE, frozenset({MEDIA_CONFIG_EDIT})),
-        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({MEDIA_CONFIG_EDIT})),
+        (UserRoleEnum.ADMIN, UserPlanEnum.FREE, frozenset({PermissionEnum.MEDIA_CONFIG_EDIT})),
+        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({PermissionEnum.MEDIA_CONFIG_EDIT})),
     ],
 )
 def test_expand_permissions_by_role_and_plan(

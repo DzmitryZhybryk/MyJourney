@@ -1,0 +1,133 @@
+/*
+ * Upload rules: one glass card like the profile. The version facts, then one hairline-split group per
+ * file kind. A changed value carries the accent until it is saved; the save bar exists only while
+ * the draft differs from the saved config.
+ */
+
+.media-config-card {
+  width: 100%;
+  padding: 32px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  background: var(--surface-card);
+  backdrop-filter: blur(var(--card-blur));
+  box-shadow: var(--card-shadow);
+  color: var(--text);
+}
+
+.media-config-card__loader {
+  display: block;
+  margin: 24px auto;
+}
+
+.media-config-title {
+  margin: 0 0 20px;
+  font: 600 var(--fs-30) / 1.15 var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* ---- Term → value rows, shared by the version facts and every kind ---- */
+
+.media-config-facts {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 14px 24px;
+  margin: 0;
+}
+
+.media-config-fact {
+  display: contents;
+}
+
+.media-config-fact__term {
+  padding-top: 4px;
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+}
+
+.media-config-fact__value {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-15);
+}
+
+/* ---- One group per file kind ---- */
+
+.media-config-kind {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+}
+
+.media-config-kind__title {
+  margin: 0 0 14px;
+  font: 600 var(--fs-17) / 1.3 var(--font-display);
+}
+
+/* ---- Edited values: the accent marks what the next save sends ---- */
+
+.rule-value--changed {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.rule-formats--changed .mantine-Chip-label[data-checked] {
+  border-color: var(--accent);
+}
+
+.rule-number {
+  max-width: 12rem;
+}
+
+.media-config-card .rule-number__input {
+  color: var(--text);
+  background-color: var(--card-input-bg);
+  border-color: var(--card-input-bd);
+}
+
+.media-config-card .rule-number__input:focus {
+  border-color: var(--accent);
+}
+
+.rule-number__unit {
+  font-size: var(--fs-13);
+  color: var(--text-muted);
+}
+
+/* ---- Save bar: sticks to the bottom of the viewport while the card scrolls ---- */
+
+.media-config-savebar {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 12px 16px;
+  border-radius: var(--radius-action);
+  border: 1px solid var(--accent);
+  background: var(--surface-2);
+}
+
+.media-config-savebar__count {
+  font-size: var(--fs-14);
+  color: var(--text);
+}
+
+@media (max-width: 560px) {
+  .media-config-card {
+    padding: 22px 18px;
+  }
+
+  .media-config-facts {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .media-config-fact__value {
+    margin-bottom: 10px;
+  }
+}

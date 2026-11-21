@@ -5,7 +5,8 @@ paths:
 # DTO conventions for layered Python services
 
 > Stated in terms of boundaries, so it fits any layered service. Pairs with `layers.md` (layers,
-> ports). Where a project already has its own answer, the project wins.
+> ports); where a value is validated — `validation.md`. Where a project already has its own answer,
+> the project wins.
 
 ## Naming by boundary
 
@@ -143,33 +144,6 @@ Two exceptions, both narrow:
 - A **mutable local accumulator** (built during a fold, converted to a frozen type before it is
   returned) is legitimate — but say so in its docstring, since a non-frozen transport object
   otherwise reads as an oversight
-
-## Where validation happens
-
-**Everything the request can check by itself is checked in the request schema.** That covers
-form (presence, length, range, pattern), relationships between fields of the same payload
-(`year_from <= year_to`, `origin != destination`) and comparisons with the current time
-("the year is not in the future") — field constraints plus a `model_validator`. Do not move such
-a check inward, and do not add a domain method, value object or service branch whose only job is
-to re-check what the schema could have rejected.
-
-What stays inward is only what the payload cannot answer on its own: rules that need stored
-state (does the place exist, is the email taken, is this row the caller's) or another service.
-
-An entity check earns its place only when it runs on **every** construction of the object,
-including rows read back from the database — then it guards the data the entity holds, and a
-failure signals corrupted data, not a bad request. A check that runs only in the factory for a
-new record (`Entity.create`) protects nothing once the record exists: it is an input check, and
-it belongs in the request schema. Request parameters that are not part of any entity (filters,
-sorting, paging) never get a domain type for the sake of validation either: a value object around
-a filter carries no domain meaning, only a second copy of a schema check.
-
-A schema check fails with the generic validation error (one shared code for every such
-failure). When the client needs to branch on one particular rule, raise a coded exception from
-inside the validator: pydantic v2 wraps only `ValueError`, `AssertionError` and
-`PydanticCustomError`, so any other exception propagates untouched to the app's error handler
-with its own code. Without that need, the generic error is the right answer — a client that
-builds the request itself should not be producing it.
 
 ## Wire casing in exactly one place
 

@@ -1,0 +1,39 @@
+{
+  "title": "Admin",
+  "sections": {
+    "mediaConfig": "Upload rules"
+  },
+  "loadError": "Couldn't load the upload rules. Reload the page.",
+  "version": {
+    "number": "Version",
+    "savedAt": "Saved",
+    "savedBy": "By",
+    "initial": "Initial value"
+  },
+  "kinds": {
+    "avatar": "Avatar",
+    "journeyPhoto": "Journey photos",
+    "journeyVideo": "Journey videos"
+  },
+  "rules": {
+    "maxSize": "Size up to",
+    "formats": "Formats",
+    "minSide": {
+      "short": "Short side from",
+      "long": "Long side from",
+      "any": "Side from"
+    },
+    "positiveNumber": "Enter a number greater than zero"
+  },
+  "units": {
+    "megabytes": "MB",
+    "pixels": "px"
+  },
+  "save": {
+    "region": "Unsaved changes",
+    "pending_one": "{{count}} change not saved",
+    "pending_other": "{{count}} changes not saved",
+    "discard": "Discard",
+    "submit": "Save"
+  }
+}

@@ -39,11 +39,15 @@ import pytest
 from fastapi import APIRouter
 from httpx import ASGITransport, AsyncClient, Response
 
+from app.auth.application.services.token_issuer import TokenIssuer
+from app.auth.domain.entities import UserCredentialsEntity
 from app.main import create_app, create_default_app
 from app.shared.exceptions.handlers import register_exception_handlers
+from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
 from app.shared.infra.jwt import AccessTokenClaims, get_jwt_service
 from app.shared.schemas.base import BFastAPI
 from app.shared.types import DictStrAny
+from tests.builders import make_refresh_token
 
 _BASE_URL = "http://testserver"
 
@@ -158,3 +162,28 @@ def mint_access_token() -> Callable[..., str]:
         )
 
     return _mint
+
+
+@pytest.fixture
+def issue_access_token(deterministic_hasher: Sha256DeterministicHasher) -> Callable[[UserCredentialsEntity], str]:
+    """
+    Access-токен, выпущенный настоящим ``TokenIssuer``: права раскрываются из роли и тарифа, как при входе.
+
+    В отличие от ``mint_access_token`` права здесь не задаются руками, поэтому тест маршрута, закрытого
+    правом, ловит расхождение имени права в маршруте и в карте ролей.
+    """
+    token_issuer = TokenIssuer(
+        deterministic_hasher=deterministic_hasher,
+        access_token_issuer=get_jwt_service(),
+        refresh_token_ttl_days=30,
+    )
+
+    def _issue(user_credentials_entity: UserCredentialsEntity) -> str:
+        token_pair = token_issuer.build_token_pair(
+            user_credentials_entity=user_credentials_entity,
+            refresh_secret="refresh-secret",
+            refresh_token_entity=make_refresh_token(user_id=user_credentials_entity.user_id),
+        )
+        return token_pair.access_token.get_secret_value()
+
+    return _issue
