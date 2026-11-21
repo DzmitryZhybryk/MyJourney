@@ -83,4 +83,37 @@ describe("AppHeader", () => {
 
     expect(await screen.findByText("profile-landing")).toBeInTheDocument();
   });
+
+  it("администратору пункт «Admin» ведёт в админку", async () => {
+    const { user } = renderRoutes({
+      element: <AppHeader />,
+      path: "/home",
+      landings: [{ path: "/admin", label: "admin-landing" }],
+      authValue: makeAuthValue({
+        isAuthenticated: true,
+        emailVerified: true,
+        claims: { sub: "admin-1", email_verified: true, exp: 4_102_444_800, role: "admin" },
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open profile menu" }));
+    await user.click(await findMenuItem("Admin"));
+
+    expect(await screen.findByText("admin-landing")).toBeInTheDocument();
+  });
+
+  it("обычному пользователю пункта «Admin» в меню нет", async () => {
+    const { user } = renderWithProviders(<AppHeader />, {
+      authValue: makeAuthValue({
+        isAuthenticated: true,
+        emailVerified: true,
+        claims: { sub: "user-1", email_verified: true, exp: 4_102_444_800, role: "user" },
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open profile menu" }));
+    const items = await screen.findAllByRole("menuitem");
+
+    expect(items.map((item) => item.textContent)).not.toContain("Admin");
+  });
 });

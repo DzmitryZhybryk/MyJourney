@@ -1810,6 +1810,43 @@
         }
       }
     },
+    "/v1/media/config/": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Get Upload Rules",
+        "description": "Текущие правила загрузки каждого вида файла: размер, форматы, минимальная сторона. Без авторизации.",
+        "operationId": "get_upload_rules",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadRulesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/users/me/": {
       "get": {
         "tags": [
@@ -1962,6 +1999,176 @@
                 "example": {
                   "code": "users.user_deleted",
                   "message": "Пользователь удалён",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/media/config/": {
+      "get": {
+        "tags": [
+          "admin: media"
+        ],
+        "summary": "Get Media Config",
+        "description": "Последняя версия конфига для правки. Нужно право `media.config.edit`.",
+        "operationId": "get_media_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaConfigResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Невалидный или истёкший access-токен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "auth.invalid_access_token",
+                  "message": "Невалидный или истёкший access-токен",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "В токене нет права на правку конфига",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "permission_required",
+                  "message": "Недостаточно прав",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "admin: media"
+        ],
+        "summary": "Update Media Config",
+        "description": "Записывает конфиг новой версией. `editedVersion` не последняя — 409. Нужно право `media.config.edit`.",
+        "operationId": "update_media_config",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMediaConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Невалидный или истёкший access-токен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "auth.invalid_access_token",
+                  "message": "Невалидный или истёкший access-токен",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "В токене нет права на правку конфига",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "permission_required",
+                  "message": "Недостаточно прав",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Правили не последнюю версию конфига — его изменили, пока правили",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "config_version_conflict",
+                  "message": "Конфиг уже изменили — перечитайте его",
                   "timestamp": "2024-01-01T12:00:00Z"
                 }
               }
@@ -2210,6 +2417,82 @@
           "message": "Некорректный запрос",
           "timestamp": "2024-01-01T12:00:00Z"
         }
+      },
+      "ImageFormatEnum": {
+        "type": "string",
+        "enum": [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/heic",
+          "image/heif"
+        ],
+        "title": "ImageFormatEnum",
+        "description": "Форматы картинок, которые умеет обработка; какие из них разрешены сейчас — решает конфиг."
+      },
+      "ImageKindRules": {
+        "properties": {
+          "maxSizeBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Maxsizebytes"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/ImageFormatEnum"
+            },
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "title": "Formats"
+          },
+          "minSide": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Minside"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maxSizeBytes",
+          "formats",
+          "minSide"
+        ],
+        "title": "ImageKindRules",
+        "description": "Изменяемые правила вида-картинки: потолок размера, разрешённые форматы, минимальная сторона в пикселях."
+      },
+      "ImageUploadRules": {
+        "properties": {
+          "maxSizeBytes": {
+            "type": "integer",
+            "title": "Maxsizebytes"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/ImageFormatEnum"
+            },
+            "type": "array",
+            "uniqueItems": true,
+            "title": "Formats"
+          },
+          "minSide": {
+            "type": "integer",
+            "title": "Minside"
+          },
+          "minSideAxis": {
+            "$ref": "#/components/schemas/SideAxisEnum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maxSizeBytes",
+          "formats",
+          "minSide",
+          "minSideAxis"
+        ],
+        "title": "ImageUploadRules",
+        "description": "Правила загрузки вида-картинки; `minSideAxis` — какую сторону сравнивать с `minSide`."
       },
       "JourneyCity": {
         "properties": {
@@ -2486,6 +2769,65 @@
         "title": "MapPoint",
         "description": "Город на глобусе или карте перемещений: его ``cityId`` и координаты, без названия."
       },
+      "MediaConfigResponse": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/MediaConfigSnapshot"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "createdBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdby"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "snapshot",
+          "createdAt",
+          "createdBy"
+        ],
+        "title": "MediaConfigResponse",
+        "description": "Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя)."
+      },
+      "MediaConfigSnapshot": {
+        "properties": {
+          "avatar": {
+            "$ref": "#/components/schemas/ImageKindRules"
+          },
+          "journeyPhoto": {
+            "$ref": "#/components/schemas/ImageKindRules"
+          },
+          "journeyVideo": {
+            "$ref": "#/components/schemas/VideoKindRules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "avatar",
+          "journeyPhoto",
+          "journeyVideo"
+        ],
+        "title": "MediaConfigSnapshot",
+        "description": "Весь изменяемый конфиг media: по полю на каждый вид файла."
+      },
       "MoveJourneyRequest": {
         "properties": {
           "neighborJourneyId": {
@@ -2688,6 +3030,15 @@
         "title": "ResolveCitiesResponse",
         "description": "Названия найденных городов; id, которых нет в газеттире, в ответ не попадают."
       },
+      "SideAxisEnum": {
+        "type": "string",
+        "enum": [
+          "short",
+          "long"
+        ],
+        "title": "SideAxisEnum",
+        "description": "Какую сторону картинки сравнивают с минимальным размером вида.\n\n`SHORT` — для картинки, которую обрезают в квадрат: квадрат не больше короткой стороны, поэтому\n3000×400 при минимуме 512 не пройдёт. `LONG` — для картинки, которую показывают целиком: чёткость\nзадаёт длинная сторона, поэтому узкая панорама 4000×600 при минимуме 1280 пройдёт."
+      },
       "TokenResponse": {
         "properties": {
           "accessToken": {
@@ -2765,6 +3116,47 @@
         "title": "UpdateJourneyRequest",
         "description": "Тело запроса правки поездки: новые значения всех полей."
       },
+      "UpdateMediaConfigRequest": {
+        "properties": {
+          "editedVersion": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Editedversion"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/MediaConfigSnapshot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "editedVersion",
+          "snapshot"
+        ],
+        "title": "UpdateMediaConfigRequest",
+        "description": "Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409."
+      },
+      "UploadRulesResponse": {
+        "properties": {
+          "avatar": {
+            "$ref": "#/components/schemas/ImageUploadRules"
+          },
+          "journeyPhoto": {
+            "$ref": "#/components/schemas/ImageUploadRules"
+          },
+          "journeyVideo": {
+            "$ref": "#/components/schemas/VideoUploadRules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "avatar",
+          "journeyPhoto",
+          "journeyVideo"
+        ],
+        "title": "UploadRulesResponse",
+        "description": "Текущие правила загрузки: по полю на каждый вид файла."
+      },
       "VerifyEmailRequest": {
         "properties": {
           "code": {
@@ -2778,6 +3170,64 @@
           "code"
         ],
         "title": "VerifyEmailRequest"
+      },
+      "VideoFormatEnum": {
+        "type": "string",
+        "enum": [
+          "video/mp4",
+          "video/quicktime"
+        ],
+        "title": "VideoFormatEnum",
+        "description": "Форматы видео, которые умеет обработка; какие из них разрешены сейчас — решает конфиг."
+      },
+      "VideoKindRules": {
+        "properties": {
+          "maxSizeBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Maxsizebytes"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/VideoFormatEnum"
+            },
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "title": "Formats"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "maxSizeBytes",
+          "formats"
+        ],
+        "title": "VideoKindRules",
+        "description": "Изменяемые правила вида-видео: потолок размера и разрешённые форматы."
+      },
+      "VideoUploadRules": {
+        "properties": {
+          "maxSizeBytes": {
+            "type": "integer",
+            "title": "Maxsizebytes"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/VideoFormatEnum"
+            },
+            "type": "array",
+            "uniqueItems": true,
+            "title": "Formats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maxSizeBytes",
+          "formats"
+        ],
+        "title": "VideoUploadRules",
+        "description": "Правила загрузки вида-видео."
       }
     },
     "securitySchemes": {

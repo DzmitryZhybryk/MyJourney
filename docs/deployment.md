@@ -17,7 +17,7 @@
 - **Наружу открыт только Caddy** (80/443). Postgres/Grafana/Loki/app/frontend — без проброса портов,
   доступны лишь внутри docker-сети `myjourney-network`.
 - Образы `myjourney-backend`/`myjourney-frontend` собирает CI и пушит в **GHCR**; сервер их только `pull`-ит.
-- Миграции БД прогоняет one-shot `myjourney_migrate` (`alembic upgrade head` + схема procrastinate) до старта app/worker.
+- Миграции БД прогоняет one-shot `myjourney_migrate` (`alembic upgrade head` + схема procrastinate + начальный конфиг media) до старта app/worker.
 - Газеттир загружает one-shot `myjourney_geo_load` (`python -m app.geo.scripts.load_datasets`) после миграций и до старта app: скачивает датасеты из `manifest.toml` (GitHub Release), проверяет sha256 и пропускает уже загруженные версии.
 
 ## Предпосылки
@@ -214,9 +214,14 @@ make prod-up`) выкатывают прод. Красные тесты → де
 ## 6. Миграции
 
 - Прогоняются автоматически one-shot сервисом `myjourney_migrate` — `app`/`worker`
-  стартуют только после его успешного завершения (`service_completed_successfully`). Он делает два шага:
-  `alembic upgrade head` (таблицы приложения) и `python -m app.shared.infra.procrastinate` (таблицы очереди
-  задач). Без второй схемы не работает ни worker, ни регистрация в app: она кладёт письмо в очередь.
+  стартуют только после его успешного завершения (`service_completed_successfully`). Он делает три шага:
+  `alembic upgrade head` (таблицы приложения), `python -m app.shared.infra.procrastinate` (таблицы очереди
+  задач) и `python -m app.media.scripts.seed_config` (начальные правила загрузки файлов из
+  `backend/app/media/scripts/config_defaults.json`). Без схемы очереди не работает ни worker, ни регистрация
+  в app: она кладёт письмо в очередь.
+- Начальный конфиг media записывается, только если в `media_config` ещё нет ни одной версии: правки
+  администратора деплой не перезаписывает. Изменённый `config_defaults.json` на уже развёрнутую базу не
+  влияет — меняйте правила в админке.
 - Схема procrastinate применяется, только если её ещё нет в базе: версию команда не сверяет. При обновлении
   procrastinate проверь `procrastinate/sql/migrations/` в установленном пакете — файлы новее прежней версии
   нужно применить к базе вручную до деплоя новой версии.

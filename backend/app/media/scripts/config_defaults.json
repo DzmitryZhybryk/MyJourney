@@ -1,0 +1,16 @@
+{
+  "avatar": {
+    "max_size_bytes": 31457280,
+    "formats": ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
+    "min_side": 512
+  },
+  "journey_photo": {
+    "max_size_bytes": 31457280,
+    "formats": ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
+    "min_side": 1280
+  },
+  "journey_video": {
+    "max_size_bytes": 209715200,
+    "formats": ["video/mp4", "video/quicktime"]
+  }
+}

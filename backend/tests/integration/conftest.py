@@ -38,6 +38,7 @@ from app.auth.infra import models as _auth_models  # noqa: F401
 from app.auth.infra.repositories import UserCredentialsRepository
 from app.geo.infra import models as _geo_models  # noqa: F401
 from app.journeys.infra import models as _journey_models  # noqa: F401
+from app.media.infra import models as _media_models  # noqa: F401
 from app.shared.models import BaseDBModel
 from app.shared.settings import PostgresSettings
 from app.users.domain.entities import UserEntity  # noqa: F401 — гарантирует регистрацию users-модели
@@ -55,6 +56,7 @@ _ALL_TABLES = (
     "geo_places",
     "geo_dataset_loads",
     "journeys",
+    "media_config",
 )
 
 

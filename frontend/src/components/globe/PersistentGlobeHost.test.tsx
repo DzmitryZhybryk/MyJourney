@@ -80,7 +80,7 @@ function GoTo({ path }: { path: string }) {
 
 /** AuthContext of a logged-in user with the given `sub` (cities are cached by it). */
 function authedValue(sub: string): AuthContextValue {
-  return makeAuthValue({ isAuthenticated: true, claims: { sub, email_verified: true, exp: 4_102_444_800 } });
+  return makeAuthValue({ isAuthenticated: true, claims: { sub, email_verified: true, exp: 4_102_444_800, role: "user" } });
 }
 
 function screenAttr(container: HTMLElement, attr: string): string | null {

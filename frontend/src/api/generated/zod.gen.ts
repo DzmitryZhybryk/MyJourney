@@ -53,6 +53,30 @@ export const zCurrentUserResponse = z.object({
 });
 
 /**
+ * ImageFormatEnum
+ *
+ * Форматы картинок, которые умеет обработка; какие из них разрешены сейчас — решает конфиг.
+ */
+export const zImageFormatEnum = z.enum([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif'
+]);
+
+/**
+ * ImageKindRules
+ *
+ * Изменяемые правила вида-картинки: потолок размера, разрешённые форматы, минимальная сторона в пикселях.
+ */
+export const zImageKindRules = z.strictObject({
+  maxSizeBytes: z.int().check(z.gt(0)),
+  formats: z.array(zImageFormatEnum).check(z.minLength(1)),
+  minSide: z.int().check(z.gt(0))
+});
+
+/**
  * JourneyCity
  *
  * Город поездки: его ``cityId``, страна и координаты, без названия.
@@ -255,6 +279,29 @@ export const zResolveCitiesResponse = z.object({
 });
 
 /**
+ * SideAxisEnum
+ *
+ * Какую сторону картинки сравнивают с минимальным размером вида.
+ *
+ * `SHORT` — для картинки, которую обрезают в квадрат: квадрат не больше короткой стороны, поэтому
+ * 3000×400 при минимуме 512 не пройдёт. `LONG` — для картинки, которую показывают целиком: чёткость
+ * задаёт длинная сторона, поэтому узкая панорама 4000×600 при минимуме 1280 пройдёт.
+ */
+export const zSideAxisEnum = z.enum(['short', 'long']);
+
+/**
+ * ImageUploadRules
+ *
+ * Правила загрузки вида-картинки; `minSideAxis` — какую сторону сравнивать с `minSide`.
+ */
+export const zImageUploadRules = z.object({
+  maxSizeBytes: z.int(),
+  formats: z.array(zImageFormatEnum),
+  minSide: z.int(),
+  minSideAxis: zSideAxisEnum
+});
+
+/**
  * TokenResponse
  */
 export const zTokenResponse = z.object({
@@ -339,6 +386,77 @@ export const zUpdateJourneyRequest = z.object({
  */
 export const zVerifyEmailRequest = z.object({
   code: z.string().check(z.regex(/^\d{6}$/))
+});
+
+/**
+ * VideoFormatEnum
+ *
+ * Форматы видео, которые умеет обработка; какие из них разрешены сейчас — решает конфиг.
+ */
+export const zVideoFormatEnum = z.enum(['video/mp4', 'video/quicktime']);
+
+/**
+ * VideoKindRules
+ *
+ * Изменяемые правила вида-видео: потолок размера и разрешённые форматы.
+ */
+export const zVideoKindRules = z.strictObject({
+  maxSizeBytes: z.int().check(z.gt(0)),
+  formats: z.array(zVideoFormatEnum).check(z.minLength(1))
+});
+
+/**
+ * MediaConfigSnapshot
+ *
+ * Весь изменяемый конфиг media: по полю на каждый вид файла.
+ */
+export const zMediaConfigSnapshot = z.strictObject({
+  avatar: zImageKindRules,
+  journeyPhoto: zImageKindRules,
+  journeyVideo: zVideoKindRules
+});
+
+/**
+ * MediaConfigResponse
+ *
+ * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
+ */
+export const zMediaConfigResponse = z.object({
+  version: z.int(),
+  snapshot: zMediaConfigSnapshot,
+  createdAt: z.iso.datetime(),
+  createdBy: z.nullable(z.uuid())
+});
+
+/**
+ * UpdateMediaConfigRequest
+ *
+ * Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409.
+ */
+export const zUpdateMediaConfigRequest = z.strictObject({
+  editedVersion: z.int().check(z.gte(1)),
+  snapshot: zMediaConfigSnapshot
+});
+
+/**
+ * VideoUploadRules
+ *
+ * Правила загрузки вида-видео.
+ */
+export const zVideoUploadRules = z.object({
+  maxSizeBytes: z.int(),
+  formats: z.array(zVideoFormatEnum)
+});
+
+/**
+ * UploadRulesResponse
+ *
+ * Текущие правила загрузки: по полю на каждый вид файла.
+ */
+export const zUploadRulesResponse = z.object({
+  avatar: zImageUploadRules,
+  journeyPhoto: zImageUploadRules,
+  journeyVideo: zVideoUploadRules
 });
 
 /**
@@ -497,6 +615,11 @@ export const zGetMovementsMapResponse = zMovementsMapResponse;
 /**
  * Successful Response
  */
+export const zGetUploadRulesResponse = zUploadRulesResponse;
+
+/**
+ * Successful Response
+ */
 export const zGetCurrentUserResponse = zCurrentUserResponse;
 
 export const zUpdateCurrentUserBody = zUpdateCurrentUserRequest;
@@ -505,3 +628,15 @@ export const zUpdateCurrentUserBody = zUpdateCurrentUserRequest;
  * Successful Response
  */
 export const zUpdateCurrentUserResponse = zCurrentUserResponse;
+
+/**
+ * Successful Response
+ */
+export const zGetMediaConfigResponse = zMediaConfigResponse;
+
+export const zUpdateMediaConfigBody = zUpdateMediaConfigRequest;
+
+/**
+ * Successful Response
+ */
+export const zUpdateMediaConfigResponse = z.void();

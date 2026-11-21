@@ -3,17 +3,16 @@ from types import MappingProxyType
 from typing import Final
 
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
+from app.shared.infra.jwt import PermissionEnum
 
-MEDIA_CONFIG_EDIT: Final[str] = "media.config.edit"
-
-ROLE_PERMISSIONS: Final[Mapping[UserRoleEnum, frozenset[str]]] = MappingProxyType(
+ROLE_PERMISSIONS: Final[Mapping[UserRoleEnum, frozenset[PermissionEnum]]] = MappingProxyType(
     {
         UserRoleEnum.USER: frozenset(),
-        UserRoleEnum.ADMIN: frozenset({MEDIA_CONFIG_EDIT}),
+        UserRoleEnum.ADMIN: frozenset({PermissionEnum.MEDIA_CONFIG_EDIT}),
     },
 )
 
-PLAN_PERMISSIONS: Final[Mapping[UserPlanEnum, frozenset[str]]] = MappingProxyType(
+PLAN_PERMISSIONS: Final[Mapping[UserPlanEnum, frozenset[PermissionEnum]]] = MappingProxyType(
     {
         UserPlanEnum.FREE: frozenset(),
         UserPlanEnum.PREMIUM: frozenset(),
@@ -21,7 +20,7 @@ PLAN_PERMISSIONS: Final[Mapping[UserPlanEnum, frozenset[str]]] = MappingProxyTyp
 )
 
 
-def expand_permissions(*, role: UserRoleEnum, plan: UserPlanEnum) -> frozenset[str]:
+def expand_permissions(*, role: UserRoleEnum, plan: UserPlanEnum) -> frozenset[PermissionEnum]:
     """
     Раскрывает роль и тариф в итоговый набор прав: права роли плюс права тарифа.
 

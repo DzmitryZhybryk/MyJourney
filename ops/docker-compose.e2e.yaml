@@ -104,6 +104,24 @@ services:
       retries: 20
       start_period: 3s
 
+  # Админ для e2e админки: регистрация через API, роль — боевым скриптом первого админа (в
+  # одноразовой базе админа ещё нет). Учётные данные повторяет frontend/e2e/helpers/admin.ts.
+  myjourney_e2e_admin:
+    <<: *e2e-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    env_file: .env
+    command: >-
+      sh -c "python -m devtools.e2e_admin --api-url http://app:8000
+      --username e2e_admin --email e2e-admin@example.com --password e2e-Admin-Password-1
+      && python -m app.auth.scripts.set_admin_role --email e2e-admin@example.com"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: "no"
+
   # Единственный проброшенный наружу порт (5273 ≠ дев-5173). Playwright бьёт сюда (E2E_BASE_URL),
   # /v1 проксируется на app внутри сети проекта. dev-CMD сам делает npm install (named-volume
   # node_modules на первом старте пуст — см. frontend/Dockerfile).
@@ -140,6 +158,8 @@ services:
     depends_on:
       app:
         condition: service_healthy
+      myjourney_e2e_admin:
+        condition: service_completed_successfully
 
 volumes:
   frontend_e2e_node_modules:

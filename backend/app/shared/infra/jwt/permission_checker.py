@@ -4,13 +4,14 @@ from fastapi import Depends
 
 from app.shared.infra.jwt.dependency import current_user_claims_dependency
 from app.shared.infra.jwt.exceptions import PermissionRequiredError
+from app.shared.infra.jwt.permissions import PermissionEnum
 from app.shared.infra.jwt.ports import AccessTokenClaims
 
 
 class PermissionChecker:
     """Зависимость маршрута: пропускает запрос, только если в access-токене есть право ``permission``."""
 
-    def __init__(self, permission: str) -> None:
+    def __init__(self, permission: PermissionEnum) -> None:
         self.permission = permission
 
     async def __call__(

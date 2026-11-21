@@ -22,6 +22,8 @@ from app.journeys.application.ports.cities_client import CityLocationResponse
 from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.domain.value_objects import GeoPoint
+from app.media.application.ports.media_config_repository import ImageKindRules, MediaConfigSnapshot, VideoKindRules
+from app.media.domain.enums import ImageFormatEnum, VideoFormatEnum
 from app.shared.types import DictStrAny
 from app.users.domain.entities import UserEntity
 
@@ -236,4 +238,18 @@ def make_job(
         queueing_lock=None,
         task_name=task_name,
         task_kwargs=task_kwargs or {},
+    )
+
+
+def make_media_config_snapshot(
+    *,
+    avatar_max_size_bytes: int = 31_457_280,
+    avatar_min_side: int = 512,
+) -> MediaConfigSnapshot:
+    """Валидный конфиг media: все форматы разрешены; аватар переопределяется для проверки изменений."""
+    image_formats = frozenset(ImageFormatEnum)
+    return MediaConfigSnapshot(
+        avatar=ImageKindRules(max_size_bytes=avatar_max_size_bytes, formats=image_formats, min_side=avatar_min_side),
+        journey_photo=ImageKindRules(max_size_bytes=31_457_280, formats=image_formats, min_side=1280),
+        journey_video=VideoKindRules(max_size_bytes=209_715_200, formats=frozenset(VideoFormatEnum)),
     )

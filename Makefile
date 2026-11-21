@@ -78,8 +78,8 @@ migrate-create: ## Создать миграцию (make migrate-create msg="des
 	echo "${GREEN}INFO :  ${AZURE}Creating migration: ${PURPLE}$$msg${RESET}"; \
 	$(COMPOSE) run --rm myjourney_migrate alembic revision --autogenerate -m "$$msg"
 
-migrate-upgrade: ## Накатить миграции и схему procrastinate
-	@echo "${GREEN}INFO :  ${AZURE}Applying migrations and procrastinate schema${RESET}"
+migrate-upgrade: ## Накатить миграции, схему procrastinate и начальный конфиг media
+	@echo "${GREEN}INFO :  ${AZURE}Applying migrations, procrastinate schema and media config seed${RESET}"
 	@$(COMPOSE) run --rm myjourney_migrate
 
 migrate-downgrade: ## Откатить одну миграцию или до ревизии (make migrate-downgrade [rev=<revision>])
@@ -165,11 +165,11 @@ test-e2e: ## Frontend e2e (Playwright; сам собирает образы, п�
 	@echo "${GREEN}INFO :  ${AZURE}Up ephemeral e2e stack (${PURPLE}ops/docker-compose.e2e.yaml${AZURE})${RESET}"
 	@$(COMPOSE_E2E) down -v --remove-orphans 2>/dev/null || true
 	@{ $(COMPOSE_E2E) up -d --build --wait frontend myjourney_worker && \
-	   E2E_BASE_URL=http://localhost:5273 $(MAKE) -C frontend test-e2e; }; \
+	   E2E_BASE_URL=http://localhost:5273 E2E_HAS_ADMIN=1 $(MAKE) -C frontend test-e2e; }; \
 	status=$$?; \
 	if [ $$status -ne 0 ]; then \
 		echo "${GREEN}INFO :  ${AZURE}e2e failed (exit $$status) — tail логов сервисов перед сносом${RESET}"; \
-		$(COMPOSE_E2E) logs --tail=50 myjourney_migrate myjourney_geo_load myjourney_s3 myjourney_s3_bootstrap myjourney_worker app frontend 2>/dev/null || true; \
+		$(COMPOSE_E2E) logs --tail=50 myjourney_migrate myjourney_geo_load myjourney_s3 myjourney_s3_bootstrap myjourney_e2e_admin myjourney_worker app frontend 2>/dev/null || true; \
 	fi; \
 	echo "${GREEN}INFO :  ${AZURE}Tearing down ephemeral e2e stack (containers + network + volumes)${RESET}"; \
 	$(COMPOSE_E2E) down -v --remove-orphans; \
