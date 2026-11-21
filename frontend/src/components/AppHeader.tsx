@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 
 import { getCurrentAccountOptions, logout } from "../api/sdk";
+import { useIsAdmin } from "../auth/roles";
 import { useAuth } from "../auth/useAuth";
 import { useCurrentUser } from "../user/useCurrentUser";
 import { AvatarSilhouette } from "./AvatarSilhouette";
@@ -34,6 +35,7 @@ export function AppHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { isAuthenticated, emailVerified, clearSession, openVerifyDialog } = useAuth();
+  const isAdmin = useIsAdmin();
   const currentUser = useCurrentUser();
   const { data: account } = useQuery({ ...getCurrentAccountOptions(), enabled: isAuthenticated });
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
@@ -115,6 +117,11 @@ export function AppHeader() {
                 </Menu.Item>
                 {!emailVerified && (
                   <Menu.Item onClick={openVerifyDialog}>{t("profile.verifyEmail")}</Menu.Item>
+                )}
+                {isAdmin && (
+                  <Menu.Item component={Link} to="/admin">
+                    {t("admin:title")}
+                  </Menu.Item>
                 )}
                 <Menu.Divider />
                 <Menu.Item color="var(--text-error)"onClick={handleLogout}>

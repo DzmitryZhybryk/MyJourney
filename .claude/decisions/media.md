@@ -66,3 +66,13 @@
 - Rejected: a hand-written fake client — describes S3 as we imagine it and drifts from the real API.
 - Rejected: `moto` — a second emulator beside RustFS, with divergences of its own.
 - Source: plan media-storage-adapter (#27), 2026-10-30
+
+## The media config is an object with a field per file kind; fixed facts of a kind live in code
+- `MediaConfigSnapshot(avatar, journey_photo, journey_video)`: size ceiling and formats per kind, a minimum
+  side for images. Which side the minimum applies to (`SideAxisEnum`) is a code spec per kind
+  (`kind_specs.py`), joined in for the public rules; video has no code spec.
+- Why: a field per kind makes the shape the check — a missing or duplicated kind cannot be stored, with no
+  validators; what an admin must not change cannot drift if it is not in the database.
+- Rejected: a list of rules keyed by a kind enum — needs validators for coverage and duplicates.
+- Rejected: the side axis in the stored config — an admin could flip what the upload flow is built around.
+- Source: #51, 2026-11-19

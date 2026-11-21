@@ -52,6 +52,21 @@ _.exception_type
 _.PRODUCTION
 _.PREMIUM
 _.ADMIN
+# Форматы файлов: pydantic выбирает их по строке из конфига в БД и из тела запроса.
+_.JPEG
+_.PNG
+_.WEBP
+_.HEIC
+_.HEIF
+_.MP4
+_.QUICKTIME
+
+# SQLAlchemy TypeDecorator (PydanticJSONB): атрибуты и хуки, которые вызывает SQLAlchemy.
+_.impl
+_.cache_ok
+_.process_bind_param
+_.process_result_value
+_.dialect
 
 # Приватные атрибуты, читаемые внутри методов того же класса
 # (vulture не всегда отслеживает self.* через цепочку вызовов).
@@ -79,6 +94,3 @@ _.exp
 # ВРЕМЕННО, не false positive: порт хранилища media появился раньше потока загрузки, который его вызывает.
 # Удалить вместе с появлением вызывающего.
 _.sign_upload
-
-# ВРЕМЕННО — удалить с первым вызывающим (#51): проверка прав появилась раньше первого маршрута с ней.
-_.PermissionChecker

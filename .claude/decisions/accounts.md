@@ -84,8 +84,10 @@
 
 ## Role, plan and expanded permissions travel in the access token; routes check permissions only
 - `auth` expands role ∪ plan into a `permissions` list (`auth/domain/permissions.py`, the only copy of
-  the map) and signs it into the token. A route declares `PermissionChecker("<permission>")`; it never
-  reads role or plan. `plan` stays a claim only for future numeric limits a permission cannot express.
+  the map) and signs it into the token. A route declares `PermissionChecker(PermissionEnum.<…>)`; it never
+  reads role or plan. Permission names are the token's contract, so they live in `shared/infra/jwt`
+  (`PermissionEnum`), not in `auth.domain`, which other domains may not import. `plan` stays a claim
+  only for future numeric limits a permission cannot express.
 - Access TTL is 15 minutes: a demotion or an expired plan lives until the token expires.
 - Why: no DB and no network on a guarded route — after the split every such check would otherwise be a
   call to `auth`. New roles, plan rights or per-user grants change only `auth`.
@@ -96,6 +98,8 @@
 - Rejected: role in the token plus the map copied into `shared` — every service carries a copy, any role
   change redeploys all.
 - Rejected: a separate `require_plan` guard — plan rights expand into permissions, one mechanism.
+- Rejected: a permission name as a string literal in each route (until 2026-11-21) — a copy per route, a
+  typo caught only by an api test; `PermissionEnum` makes it a type error.
 - Revisit when: the permission list reaches hundreds (header size) — then the token carries role + plan
   and services cache the map from `auth`; routes do not change.
 - Source: role model (#52), 2026-11-12

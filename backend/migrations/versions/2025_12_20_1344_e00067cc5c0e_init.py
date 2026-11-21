@@ -1,6 +1,6 @@
 """
 Migration name: initial schema — users, user_credentials, refresh_tokens, challenges, geo_cities,
-geo_places, geo_dataset_loads, journeys
+geo_places, geo_dataset_loads, journeys, media_config
 
 Revision ID: e00067cc5c0e
 Revises: None
@@ -13,6 +13,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "e00067cc5c0e"
 down_revision: str | None = None
@@ -197,9 +198,18 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("deleted_at IS NULL"),
     )
+    op.create_table(
+        "media_config",
+        sa.Column("version", sa.Integer(), autoincrement=False, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_by", sa.Uuid(), nullable=True),
+        sa.Column("config", postgresql.JSONB(none_as_null=True), nullable=False),
+        sa.PrimaryKeyConstraint("version"),
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("media_config")
     # journeys и таблицы geo создаются последними в upgrade — дропаются первыми.
     op.drop_index("ix_journeys_active_user_id_year_sort_key", table_name="journeys")
     op.drop_table("journeys")

@@ -4,8 +4,8 @@ import * as z from 'zod/mini';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateJourneyData, CreateJourneyErrors, CreateJourneyResponses, DeleteJourneyData, DeleteJourneyErrors, DeleteJourneyResponses, EstimateJourneyDistanceData, EstimateJourneyDistanceErrors, EstimateJourneyDistanceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetJourneysGlobeData, GetJourneysGlobeErrors, GetJourneysGlobeResponses, GetJourneysMapData, GetJourneysMapErrors, GetJourneysMapResponses, GetJourneyYearsData, GetJourneyYearsErrors, GetJourneyYearsResponses, GetMovementsMapData, GetMovementsMapErrors, GetMovementsMapResponses, HealthzData, HealthzResponses, ListJourneysData, ListJourneysErrors, ListJourneysResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MoveJourneyData, MoveJourneyErrors, MoveJourneyResponses, RefreshData, RefreshErrors, RefreshResponses, RegisterData, RegisterErrors, RegisterResponses, ResolveCitiesData, ResolveCitiesErrors, ResolveCitiesResponses, SearchCitiesData, SearchCitiesErrors, SearchCitiesResponses, SendEmailVerificationData, SendEmailVerificationErrors, SendEmailVerificationResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateJourneyData, UpdateJourneyErrors, UpdateJourneyResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
-import { zCreateJourneyBody, zDeleteJourneyPath, zDeleteJourneyResponse, zEstimateJourneyDistanceQuery, zEstimateJourneyDistanceResponse, zGetCurrentAccountResponse, zGetCurrentUserResponse, zGetJourneysGlobeResponse, zGetJourneysMapResponse, zGetJourneyYearsResponse, zGetMovementsMapQuery, zGetMovementsMapResponse, zListJourneysQuery, zListJourneysResponse, zLoginBody, zLoginResponse, zLogoutResponse, zMoveJourneyBody, zMoveJourneyPath, zMoveJourneyResponse2, zRefreshResponse, zRegisterBody, zRegisterResponse, zResolveCitiesBody, zResolveCitiesResponse2, zSearchCitiesQuery, zSearchCitiesResponse, zUpdateCurrentUserBody, zUpdateCurrentUserResponse, zUpdateJourneyBody, zUpdateJourneyPath, zUpdateJourneyResponse, zVerifyEmailBody, zVerifyEmailResponse } from './zod.gen';
+import type { CreateJourneyData, CreateJourneyErrors, CreateJourneyResponses, DeleteJourneyData, DeleteJourneyErrors, DeleteJourneyResponses, EstimateJourneyDistanceData, EstimateJourneyDistanceErrors, EstimateJourneyDistanceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetJourneysGlobeData, GetJourneysGlobeErrors, GetJourneysGlobeResponses, GetJourneysMapData, GetJourneysMapErrors, GetJourneysMapResponses, GetJourneyYearsData, GetJourneyYearsErrors, GetJourneyYearsResponses, GetMediaConfigData, GetMediaConfigErrors, GetMediaConfigResponses, GetMovementsMapData, GetMovementsMapErrors, GetMovementsMapResponses, GetUploadRulesData, GetUploadRulesErrors, GetUploadRulesResponses, HealthzData, HealthzResponses, ListJourneysData, ListJourneysErrors, ListJourneysResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MoveJourneyData, MoveJourneyErrors, MoveJourneyResponses, RefreshData, RefreshErrors, RefreshResponses, RegisterData, RegisterErrors, RegisterResponses, ResolveCitiesData, ResolveCitiesErrors, ResolveCitiesResponses, SearchCitiesData, SearchCitiesErrors, SearchCitiesResponses, SendEmailVerificationData, SendEmailVerificationErrors, SendEmailVerificationResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateJourneyData, UpdateJourneyErrors, UpdateJourneyResponses, UpdateMediaConfigData, UpdateMediaConfigErrors, UpdateMediaConfigResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
+import { zCreateJourneyBody, zDeleteJourneyPath, zDeleteJourneyResponse, zEstimateJourneyDistanceQuery, zEstimateJourneyDistanceResponse, zGetCurrentAccountResponse, zGetCurrentUserResponse, zGetJourneysGlobeResponse, zGetJourneysMapResponse, zGetJourneyYearsResponse, zGetMediaConfigResponse, zGetMovementsMapQuery, zGetMovementsMapResponse, zGetUploadRulesResponse, zListJourneysQuery, zListJourneysResponse, zLoginBody, zLoginResponse, zLogoutResponse, zMoveJourneyBody, zMoveJourneyPath, zMoveJourneyResponse2, zRefreshResponse, zRegisterBody, zRegisterResponse, zResolveCitiesBody, zResolveCitiesResponse2, zSearchCitiesQuery, zSearchCitiesResponse, zUpdateCurrentUserBody, zUpdateCurrentUserResponse, zUpdateJourneyBody, zUpdateJourneyPath, zUpdateJourneyResponse, zUpdateMediaConfigBody, zUpdateMediaConfigResponse, zVerifyEmailBody, zVerifyEmailResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
   /**
@@ -373,6 +373,23 @@ export const getMovementsMap = <ThrowOnError extends boolean = false>(options?: 
 });
 
 /**
+ * Get Upload Rules
+ *
+ * Текущие правила загрузки каждого вида файла: размер, форматы, минимальная сторона. Без авторизации.
+ */
+export const getUploadRules = <ThrowOnError extends boolean = false>(options?: Options<GetUploadRulesData, ThrowOnError>): RequestResult<GetUploadRulesResponses, GetUploadRulesErrors, ThrowOnError, 'data'> => (options?.client ?? client).get<GetUploadRulesResponses, GetUploadRulesErrors, ThrowOnError, 'data'>({
+  requestValidator: async (data) => await z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+  }).parseAsync(data),
+  responseValidator: async (data) => await zGetUploadRulesResponse.parseAsync(data),
+  responseStyle: 'data',
+  url: '/v1/media/config/',
+  ...options
+});
+
+/**
  * Get Current User
  */
 export const getCurrentUser = <ThrowOnError extends boolean = false>(options?: Options<GetCurrentUserData, ThrowOnError>): RequestResult<GetCurrentUserResponses, GetCurrentUserErrors, ThrowOnError, 'data'> => (options?.client ?? client).get<GetCurrentUserResponses, GetCurrentUserErrors, ThrowOnError, 'data'>({
@@ -401,6 +418,46 @@ export const updateCurrentUser = <ThrowOnError extends boolean = false>(options:
   responseStyle: 'data',
   security: [{ scheme: 'bearer', type: 'http' }],
   url: '/v1/users/me/',
+  ...options,
+  headers: {
+    'Content-Type': 'application/json',
+    ...options.headers
+  }
+});
+
+/**
+ * Get Media Config
+ *
+ * Последняя версия конфига для правки. Нужно право `media.config.edit`.
+ */
+export const getMediaConfig = <ThrowOnError extends boolean = false>(options?: Options<GetMediaConfigData, ThrowOnError>): RequestResult<GetMediaConfigResponses, GetMediaConfigErrors, ThrowOnError, 'data'> => (options?.client ?? client).get<GetMediaConfigResponses, GetMediaConfigErrors, ThrowOnError, 'data'>({
+  requestValidator: async (data) => await z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+  }).parseAsync(data),
+  responseValidator: async (data) => await zGetMediaConfigResponse.parseAsync(data),
+  responseStyle: 'data',
+  security: [{ scheme: 'bearer', type: 'http' }],
+  url: '/v1/admin/media/config/',
+  ...options
+});
+
+/**
+ * Update Media Config
+ *
+ * Записывает конфиг новой версией. `editedVersion` не последняя — 409. Нужно право `media.config.edit`.
+ */
+export const updateMediaConfig = <ThrowOnError extends boolean = false>(options: Options<UpdateMediaConfigData, ThrowOnError>): RequestResult<UpdateMediaConfigResponses, UpdateMediaConfigErrors, ThrowOnError, 'data'> => (options.client ?? client).put<UpdateMediaConfigResponses, UpdateMediaConfigErrors, ThrowOnError, 'data'>({
+  requestValidator: async (data) => await z.object({
+    body: zUpdateMediaConfigBody,
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+  }).parseAsync(data),
+  responseValidator: async (data) => await zUpdateMediaConfigResponse.parseAsync(data),
+  responseStyle: 'data',
+  security: [{ scheme: 'bearer', type: 'http' }],
+  url: '/v1/admin/media/config/',
   ...options,
   headers: {
     'Content-Type': 'application/json',

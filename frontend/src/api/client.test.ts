@@ -107,6 +107,28 @@ describe("appFetch", () => {
     expect(await retried.text()).toBe(JSON.stringify({ a: 1 }));
   });
 
+  it("на 403 permission_required делает один refresh и повторяет запрос со свежим токеном", async () => {
+    // The access token lives for minutes: a right granted meanwhile reaches the client only with a new token.
+    setAccessToken("token-without-right");
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(403, { code: "permission_required", message: "x" }))
+      .mockResolvedValueOnce(jsonResponse(200, { accessToken: "token-with-right" }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+
+    const response = await appFetch(`${ORIGIN}/v1/admin/x/`);
+
+    expect(await response.json()).toEqual({ ok: true });
+    expect(refreshCallCount(fetchMock)).toBe(1);
+    expect(requestAt(fetchMock, 2).headers.get("Authorization")).toBe("Bearer token-with-right");
+  });
+
+  it("на прочий 403 не делает refresh и бросает ApiError", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(403, { code: "permission_denied", message: "x" }));
+
+    await expect(appFetch(`${ORIGIN}/v1/x/`)).rejects.toMatchObject({ status: 403, code: "permission_denied" });
+    expect(refreshCallCount(fetchMock)).toBe(0);
+  });
+
   it("повтор после refresh уходит с НОВЫМ токеном, а не с протухшим", async () => {
     setAccessToken("stale-token");
     fetchMock

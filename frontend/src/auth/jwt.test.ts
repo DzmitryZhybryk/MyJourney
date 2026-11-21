@@ -16,14 +16,21 @@ function makeToken(payload: Record<string, unknown>): string {
 }
 
 describe("decodeAccessTokenClaims", () => {
-  it("декодирует валидный access-токен в claims", () => {
+  it("декодирует валидный access-токен в claims, без роли — обычный пользователь", () => {
     const token = makeToken({ sub: "user-1", email_verified: true, exp: 1_700_000_000 });
 
     expect(decodeAccessTokenClaims(token)).toEqual({
       sub: "user-1",
       email_verified: true,
       exp: 1_700_000_000,
+      role: "user",
     });
+  });
+
+  it("читает роль из токена", () => {
+    const token = makeToken({ sub: "admin-1", email_verified: true, exp: 1_700_000_000, role: "admin" });
+
+    expect(decodeAccessTokenClaims(token)?.role).toBe("admin");
   });
 
   it("возвращает null для токена не из трёх частей", () => {

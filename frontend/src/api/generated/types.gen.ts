@@ -152,6 +152,54 @@ export type ErrorResponse = {
 };
 
 /**
+ * ImageFormatEnum
+ *
+ * Форматы картинок, которые умеет обработка; какие из них разрешены сейчас — решает конфиг.
+ */
+export type ImageFormatEnum = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/heic' | 'image/heif';
+
+/**
+ * ImageKindRules
+ *
+ * Изменяемые правила вида-картинки: потолок размера, разрешённые форматы, минимальная сторона в пикселях.
+ */
+export type ImageKindRules = {
+  /**
+   * Maxsizebytes
+   */
+  maxSizeBytes: number;
+  /**
+   * Formats
+   */
+  formats: Array<ImageFormatEnum>;
+  /**
+   * Minside
+   */
+  minSide: number;
+};
+
+/**
+ * ImageUploadRules
+ *
+ * Правила загрузки вида-картинки; `minSideAxis` — какую сторону сравнивать с `minSide`.
+ */
+export type ImageUploadRules = {
+  /**
+   * Maxsizebytes
+   */
+  maxSizeBytes: number;
+  /**
+   * Formats
+   */
+  formats: Array<ImageFormatEnum>;
+  /**
+   * Minside
+   */
+  minSide: number;
+  minSideAxis: SideAxisEnum;
+};
+
+/**
  * JourneyCity
  *
  * Город поездки: его ``cityId``, страна и координаты, без названия.
@@ -350,6 +398,38 @@ export type MapPoint = {
 };
 
 /**
+ * MediaConfigResponse
+ *
+ * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
+ */
+export type MediaConfigResponse = {
+  /**
+   * Version
+   */
+  version: number;
+  snapshot: MediaConfigSnapshot;
+  /**
+   * Createdat
+   */
+  createdAt: string;
+  /**
+   * Createdby
+   */
+  createdBy: string | null;
+};
+
+/**
+ * MediaConfigSnapshot
+ *
+ * Весь изменяемый конфиг media: по полю на каждый вид файла.
+ */
+export type MediaConfigSnapshot = {
+  avatar: ImageKindRules;
+  journeyPhoto: ImageKindRules;
+  journeyVideo: VideoKindRules;
+};
+
+/**
  * MoveJourneyRequest
  *
  * Куда перенести поездку: после или перед поездкой-соседом.
@@ -471,6 +551,17 @@ export type ResolveCitiesResponse = {
 };
 
 /**
+ * SideAxisEnum
+ *
+ * Какую сторону картинки сравнивают с минимальным размером вида.
+ *
+ * `SHORT` — для картинки, которую обрезают в квадрат: квадрат не больше короткой стороны, поэтому
+ * 3000×400 при минимуме 512 не пройдёт. `LONG` — для картинки, которую показывают целиком: чёткость
+ * задаёт длинная сторона, поэтому узкая панорама 4000×600 при минимуме 1280 пройдёт.
+ */
+export type SideAxisEnum = 'short' | 'long';
+
+/**
  * TokenResponse
  */
 export type TokenResponse = {
@@ -532,6 +623,30 @@ export type UpdateJourneyRequest = {
 };
 
 /**
+ * UpdateMediaConfigRequest
+ *
+ * Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409.
+ */
+export type UpdateMediaConfigRequest = {
+  /**
+   * Editedversion
+   */
+  editedVersion: number;
+  snapshot: MediaConfigSnapshot;
+};
+
+/**
+ * UploadRulesResponse
+ *
+ * Текущие правила загрузки: по полю на каждый вид файла.
+ */
+export type UploadRulesResponse = {
+  avatar: ImageUploadRules;
+  journeyPhoto: ImageUploadRules;
+  journeyVideo: VideoUploadRules;
+};
+
+/**
  * VerifyEmailRequest
  */
 export type VerifyEmailRequest = {
@@ -539,6 +654,45 @@ export type VerifyEmailRequest = {
    * Code
    */
   code: string;
+};
+
+/**
+ * VideoFormatEnum
+ *
+ * Форматы видео, которые умеет обработка; какие из них разрешены сейчас — решает конфиг.
+ */
+export type VideoFormatEnum = 'video/mp4' | 'video/quicktime';
+
+/**
+ * VideoKindRules
+ *
+ * Изменяемые правила вида-видео: потолок размера и разрешённые форматы.
+ */
+export type VideoKindRules = {
+  /**
+   * Maxsizebytes
+   */
+  maxSizeBytes: number;
+  /**
+   * Formats
+   */
+  formats: Array<VideoFormatEnum>;
+};
+
+/**
+ * VideoUploadRules
+ *
+ * Правила загрузки вида-видео.
+ */
+export type VideoUploadRules = {
+  /**
+   * Maxsizebytes
+   */
+  maxSizeBytes: number;
+  /**
+   * Formats
+   */
+  formats: Array<VideoFormatEnum>;
 };
 
 /**
@@ -1317,6 +1471,31 @@ export type GetMovementsMapResponses = {
 
 export type GetMovementsMapResponse = GetMovementsMapResponses[keyof GetMovementsMapResponses];
 
+export type GetUploadRulesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/v1/media/config/';
+};
+
+export type GetUploadRulesErrors = {
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type GetUploadRulesError = GetUploadRulesErrors[keyof GetUploadRulesErrors];
+
+export type GetUploadRulesResponses = {
+  /**
+   * Successful Response
+   */
+  200: UploadRulesResponse;
+};
+
+export type GetUploadRulesResponse = GetUploadRulesResponses[keyof GetUploadRulesResponses];
+
 export type GetCurrentUserData = {
   body?: never;
   path?: never;
@@ -1394,3 +1573,77 @@ export type UpdateCurrentUserResponses = {
 };
 
 export type UpdateCurrentUserResponse = UpdateCurrentUserResponses[keyof UpdateCurrentUserResponses];
+
+export type GetMediaConfigData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/v1/admin/media/config/';
+};
+
+export type GetMediaConfigErrors = {
+  /**
+   * Невалидный или истёкший access-токен
+   */
+  401: ErrorResponse;
+  /**
+   * В токене нет права на правку конфига
+   */
+  403: ErrorResponse;
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type GetMediaConfigError = GetMediaConfigErrors[keyof GetMediaConfigErrors];
+
+export type GetMediaConfigResponses = {
+  /**
+   * Successful Response
+   */
+  200: MediaConfigResponse;
+};
+
+export type GetMediaConfigResponse = GetMediaConfigResponses[keyof GetMediaConfigResponses];
+
+export type UpdateMediaConfigData = {
+  body: UpdateMediaConfigRequest;
+  path?: never;
+  query?: never;
+  url: '/v1/admin/media/config/';
+};
+
+export type UpdateMediaConfigErrors = {
+  /**
+   * Невалидный или истёкший access-токен
+   */
+  401: ErrorResponse;
+  /**
+   * В токене нет права на правку конфига
+   */
+  403: ErrorResponse;
+  /**
+   * Правили не последнюю версию конфига — его изменили, пока правили
+   */
+  409: ErrorResponse;
+  /**
+   * Ошибка валидации запроса
+   */
+  422: ErrorResponse;
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type UpdateMediaConfigError = UpdateMediaConfigErrors[keyof UpdateMediaConfigErrors];
+
+export type UpdateMediaConfigResponses = {
+  /**
+   * Successful Response
+   */
+  204: void;
+};
+
+export type UpdateMediaConfigResponse = UpdateMediaConfigResponses[keyof UpdateMediaConfigResponses];

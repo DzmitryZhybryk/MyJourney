@@ -54,6 +54,8 @@ from tests.fakes import (  # noqa: E402
     FakeGeoUnitOfWork,
     FakeJourneyRepository,
     FakeJourneyUnitOfWork,
+    FakeMediaConfigRepository,
+    FakeMediaUnitOfWork,
     FakeRefreshTokenRepository,
     FakeSaltedHasher,
     FakeTaskBus,
@@ -203,6 +205,16 @@ def fake_city_repository() -> FakeCityRepository:
 @pytest.fixture
 def fake_geo_uow(fake_city_repository: FakeCityRepository) -> FakeGeoUnitOfWork:
     return FakeGeoUnitOfWork(city_repository=fake_city_repository)
+
+
+@pytest.fixture
+def fake_media_config_repository() -> FakeMediaConfigRepository:
+    return FakeMediaConfigRepository()
+
+
+@pytest.fixture
+def fake_media_uow(fake_media_config_repository: FakeMediaConfigRepository) -> FakeMediaUnitOfWork:
+    return FakeMediaUnitOfWork(media_config_repository=fake_media_config_repository)
 
 
 @pytest.fixture

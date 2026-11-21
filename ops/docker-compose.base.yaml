@@ -25,12 +25,12 @@ services:
       retries: 10
       start_period: 10s
 
-  # Одноразовый прогон миграций перед стартом app/worker: таблицы приложения (alembic) и схема
-  # procrastinate (её ждёт и worker, и app — register кладёт письмо в procrastinate_jobs). Гейт
-  # service_completed_successfully гарантирует, что обе схемы накатаны до старта приложения.
+  # Одноразовый прогон перед стартом app/worker: таблицы приложения (alembic), схема procrastinate
+  # (её ждёт и worker, и app — register кладёт письмо в procrastinate_jobs) и начальный конфиг media,
+  # если его ещё нет. Гейт service_completed_successfully гарантирует, что всё это готово до старта.
   myjourney_migrate:
     <<: *backend
-    command: sh -c "alembic upgrade head && python -m app.shared.infra.procrastinate"
+    command: sh -c "alembic upgrade head && python -m app.shared.infra.procrastinate && python -m app.media.scripts.seed_config"
     depends_on:
       myjourney_pg:
         condition: service_healthy

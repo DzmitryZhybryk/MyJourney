@@ -73,8 +73,7 @@ Frontend — из `frontend/`: `make lint | typecheck | test | coverage | check 
 
 ## Карта: что где лежит
 
-Правила по путям подгружаются сами — пути заданы в `paths:` их frontmatter. Раздел CLAUDE.md не дублирует их;
-при конфликте с правилом побеждает более специфичный источник — само правило.
+Раздел не дублирует правила; при конфликте побеждает более специфичный источник — само правило.
 
 ### Всегда в контексте
 
@@ -96,7 +95,10 @@ Frontend — из `frontend/`: `make lint | typecheck | test | coverage | check 
 | `python/soft-delete.md` | чтение soft-deleted строк: точечный поиск без предиката, списки с фильтром в SQL |
 | `python/use-case-helpers.md` | когда кусок use case выносится из тела, куда (domain, приватный метод, модуль, `shared/utils`) и как назвать |
 | `python/docstring-scenarios.md` | секция `Scenarios:` в докстринге: в каких сценариях нужна функция |
-| `python/dto.md` | `*Command`/`*Result`/`*Request`/`*Response`, роли параметров use case (actor/target/payload/metadata), объекты портов (`*Scope`/`*Filters`), pydantic vs dataclass, типы коллекций, где валидация |
+| `python/dto.md` | `*Command`/`*Result`/`*Request`/`*Response`, роли параметров use case (actor/target/payload/metadata), объекты портов (`*Scope`/`*Filters`), pydantic vs dataclass, типы коллекций |
+| `python/admin-routes.md` | админские роуты |
+| `python/tach.md` | правка `tach.toml`: связи только по образцу |
+| `python/validation.md` | где проверяется ввод |
 | `python/shared-infrastructure.md` | вертикали `shared/`, исключения, паттерны composition root, `TaskBusPort` |
 | `python/imports.md` | откуда импортировать из shared-пакета; `TYPE_CHECKING` в портах |
 | `python/component-lifecycle.md` | component+registry против `@cache`-фабрики |
