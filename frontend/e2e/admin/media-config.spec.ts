@@ -23,9 +23,11 @@ test.describe("Admin: upload rules", () => {
     await expect(page.getByRole("heading", { name: "Upload rules", level: 1 })).toBeVisible();
 
     const versionBefore = Number(await page.getByText(/^\d+$/u).first().textContent());
-    const newSize = String(10 + (Date.now() % 50));
     const avatar = page.getByRole("region", { name: "Avatar" });
-    await avatar.getByRole("button", { name: /^Size up to:/u }).click();
+    const sizeButton = avatar.getByRole("button", { name: /^Size up to:/u });
+    const sizeBefore = Number(/\d+/u.exec((await sizeButton.textContent()) ?? "")?.[0]);
+    const newSize = String(sizeBefore + 1);
+    await sizeButton.click();
     const field = avatar.getByRole("textbox", { name: "Size up to" });
     await field.fill(newSize);
     await page.getByRole("button", { name: "Save" }).click();

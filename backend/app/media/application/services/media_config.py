@@ -113,7 +113,7 @@ class MediaConfigService:
 
     async def update_media_config(self, *, user_id: UUID, command: UpdateMediaConfigCommand) -> None:
         """
-        Записывает новый конфиг следующей версией, если правили последнюю.
+        Записывает новый конфиг следующей версией, если правили последнюю; конфиг без изменений не пишется.
 
         Scenarios:
             - администратор сохраняет конфиг media
@@ -131,11 +131,15 @@ class MediaConfigService:
             if latest_media_config is None:
                 raise ConfigMissingError(domain="media")
 
+            version = next_config_version(
+                latest_version=latest_media_config.version,
+                edited_version=command.edited_version,
+            )
+            if command.snapshot == latest_media_config.snapshot:
+                return
+
             await self._uow.media_config_repository.insert_media_config(
-                version=next_config_version(
-                    latest_version=latest_media_config.version,
-                    edited_version=command.edited_version,
-                ),
+                version=version,
                 snapshot=command.snapshot,
                 created_by=user_id,
             )

@@ -53,6 +53,23 @@ describe("MediaConfigPage", () => {
     });
   });
 
+  it("пока поле пустое, сохранить нельзя — черновик держит прошлое значение, а не видимое", async () => {
+    const { user } = renderPage();
+
+    const avatar = await screen.findByRole("region", { name: "Avatar" });
+    await user.click(within(avatar).getByRole("button", { name: "Size up to: 30 MB" }));
+    const field = within(avatar).getByRole("textbox", { name: "Size up to" });
+    await user.clear(field);
+    await user.type(field, "5");
+    await user.clear(field);
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    await user.type(field, "6");
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  });
+
   it("снятый формат попадает в черновик, «Discard» возвращает сохранённый конфиг", async () => {
     const { user } = renderPage();
 

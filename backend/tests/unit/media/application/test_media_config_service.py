@@ -131,6 +131,25 @@ async def test_update_media_config_latest_version_writes_next_version_by_admin(
     fake_media_uow.commit_mock.assert_awaited_once()
 
 
+async def test_update_media_config_unchanged_snapshot_writes_no_version(
+    media_config_service: MediaConfigService,
+    fake_media_config_repository: FakeMediaConfigRepository,
+    fake_media_uow: FakeMediaUnitOfWork,
+) -> None:
+    """Сохранение без изменений не плодит версию и не переписывает автора последней правки."""
+    await fake_media_config_repository.insert_media_config(
+        version=1, snapshot=make_media_config_snapshot(), created_by=None
+    )
+
+    await media_config_service.update_media_config(
+        user_id=ADMIN_ID,
+        command=UpdateMediaConfigCommand(edited_version=1, snapshot=make_media_config_snapshot()),
+    )
+
+    assert list(fake_media_config_repository.versions) == [1]
+    fake_media_uow.commit_mock.assert_not_awaited()
+
+
 @pytest.mark.parametrize("edited_version", [1, 3], ids=["stale", "future"])
 async def test_update_media_config_not_latest_version_raises_conflict(
     media_config_service: MediaConfigService,

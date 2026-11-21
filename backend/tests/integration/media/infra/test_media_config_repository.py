@@ -1,11 +1,15 @@
 """
 Интеграционные тесты версий конфига media против реального Postgres: JSONB-снапшот туда и обратно,
-последняя версия по номеру, повтор номера как конфликт и seed поверх уже записанного конфига.
+последняя версия по номеру, повтор номера как конфликт, seed поверх уже записанного конфига и seed поверх
+строки, которую код уже не читает.
 """
 
+import json
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.media.application.schemas.commands import SeedMediaConfigCommand
@@ -66,3 +70,28 @@ async def test_seed_media_config_second_run_keeps_edited_config(
 
     assert latest is not None
     assert (latest.version, latest.snapshot.avatar.max_size_bytes) == (1, 1_000)
+
+
+async def test_seed_media_config_latest_row_of_old_shape_fails_and_writes_nothing(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Строка формы, которую код уже не читает, останавливает seed, а не затирается начальными значениями."""
+    old_shape_snapshot = make_media_config_snapshot().model_dump(mode="json")
+    del old_shape_snapshot["avatar"]["min_side"]
+    async with session_factory() as session:
+        await session.execute(
+            text("INSERT INTO media_config (version, created_at, config) VALUES (1, now(), CAST(:config AS jsonb))"),
+            {"config": json.dumps(old_shape_snapshot)},
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        with pytest.raises(ValidationError):
+            await MediaConfigService(uow=MediaUnitOfWork(session=session)).seed_media_config(
+                SeedMediaConfigCommand(snapshot=make_media_config_snapshot())
+            )
+
+    async with session_factory() as reader:
+        versions = (await reader.scalars(text("SELECT version FROM media_config"))).all()
+
+    assert versions == [1]

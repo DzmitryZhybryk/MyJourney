@@ -2776,7 +2776,7 @@
             "title": "Version"
           },
           "snapshot": {
-            "$ref": "#/components/schemas/MediaConfigSnapshot"
+            "$ref": "#/components/schemas/SavedMediaConfig"
           },
           "createdAt": {
             "type": "string",
@@ -3029,6 +3029,78 @@
         ],
         "title": "ResolveCitiesResponse",
         "description": "Названия найденных городов; id, которых нет в газеттире, в ответ не попадают."
+      },
+      "SavedImageKindRules": {
+        "properties": {
+          "maxSizeBytes": {
+            "type": "integer",
+            "title": "Maxsizebytes"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/ImageFormatEnum"
+            },
+            "type": "array",
+            "uniqueItems": true,
+            "title": "Formats"
+          },
+          "minSide": {
+            "type": "integer",
+            "title": "Minside"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maxSizeBytes",
+          "formats",
+          "minSide"
+        ],
+        "title": "SavedImageKindRules",
+        "description": "Сохранённые правила вида-картинки: только форма, без пределов формы правки."
+      },
+      "SavedMediaConfig": {
+        "properties": {
+          "avatar": {
+            "$ref": "#/components/schemas/SavedImageKindRules"
+          },
+          "journeyPhoto": {
+            "$ref": "#/components/schemas/SavedImageKindRules"
+          },
+          "journeyVideo": {
+            "$ref": "#/components/schemas/SavedVideoKindRules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "avatar",
+          "journeyPhoto",
+          "journeyVideo"
+        ],
+        "title": "SavedMediaConfig",
+        "description": "Сохранённый конфиг media как он лежит в хранилище: по полю на каждый вид файла."
+      },
+      "SavedVideoKindRules": {
+        "properties": {
+          "maxSizeBytes": {
+            "type": "integer",
+            "title": "Maxsizebytes"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/VideoFormatEnum"
+            },
+            "type": "array",
+            "uniqueItems": true,
+            "title": "Formats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maxSizeBytes",
+          "formats"
+        ],
+        "title": "SavedVideoKindRules",
+        "description": "Сохранённые правила вида-видео: только форма, без пределов формы правки."
       },
       "SideAxisEnum": {
         "type": "string",

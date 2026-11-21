@@ -279,6 +279,17 @@ export const zResolveCitiesResponse = z.object({
 });
 
 /**
+ * SavedImageKindRules
+ *
+ * Сохранённые правила вида-картинки: только форма, без пределов формы правки.
+ */
+export const zSavedImageKindRules = z.object({
+  maxSizeBytes: z.int(),
+  formats: z.array(zImageFormatEnum),
+  minSide: z.int()
+});
+
+/**
  * SideAxisEnum
  *
  * Какую сторону картинки сравнивают с минимальным размером вида.
@@ -396,6 +407,39 @@ export const zVerifyEmailRequest = z.object({
 export const zVideoFormatEnum = z.enum(['video/mp4', 'video/quicktime']);
 
 /**
+ * SavedVideoKindRules
+ *
+ * Сохранённые правила вида-видео: только форма, без пределов формы правки.
+ */
+export const zSavedVideoKindRules = z.object({
+  maxSizeBytes: z.int(),
+  formats: z.array(zVideoFormatEnum)
+});
+
+/**
+ * SavedMediaConfig
+ *
+ * Сохранённый конфиг media как он лежит в хранилище: по полю на каждый вид файла.
+ */
+export const zSavedMediaConfig = z.object({
+  avatar: zSavedImageKindRules,
+  journeyPhoto: zSavedImageKindRules,
+  journeyVideo: zSavedVideoKindRules
+});
+
+/**
+ * MediaConfigResponse
+ *
+ * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
+ */
+export const zMediaConfigResponse = z.object({
+  version: z.int(),
+  snapshot: zSavedMediaConfig,
+  createdAt: z.iso.datetime(),
+  createdBy: z.nullable(z.uuid())
+});
+
+/**
  * VideoKindRules
  *
  * Изменяемые правила вида-видео: потолок размера и разрешённые форматы.
@@ -414,18 +458,6 @@ export const zMediaConfigSnapshot = z.strictObject({
   avatar: zImageKindRules,
   journeyPhoto: zImageKindRules,
   journeyVideo: zVideoKindRules
-});
-
-/**
- * MediaConfigResponse
- *
- * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
- */
-export const zMediaConfigResponse = z.object({
-  version: z.int(),
-  snapshot: zMediaConfigSnapshot,
-  createdAt: z.iso.datetime(),
-  createdBy: z.nullable(z.uuid())
 });
 
 /**

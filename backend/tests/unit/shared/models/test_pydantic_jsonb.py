@@ -9,10 +9,6 @@ class _Limits(BaseModel):
     tags: frozenset[str]
 
 
-class _Other(BaseModel):
-    size: int
-
-
 _DIALECT = postgresql.dialect()
 
 
@@ -33,10 +29,3 @@ def test_pydantic_jsonb_none_passes_through_both_ways() -> None:
 
     assert column_type.process_bind_param(None, _DIALECT) is None
     assert column_type.process_result_value(None, _DIALECT) is None
-
-
-def test_pydantic_jsonb_equality_follows_model_class() -> None:
-    """Колонки с разными моделями различаются, иначе кэш SQLAlchemy разобрал бы одну чужой моделью."""
-    assert PydanticJSONB(_Limits) == PydanticJSONB(_Limits)
-    assert hash(PydanticJSONB(_Limits)) == hash(PydanticJSONB(_Limits))
-    assert PydanticJSONB(_Limits) != PydanticJSONB(_Other)

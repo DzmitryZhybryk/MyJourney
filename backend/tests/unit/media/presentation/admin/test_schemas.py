@@ -4,6 +4,7 @@
 Файл начальных значений пишет конфиг в обход HTTP, поэтому его прогоняет через ту же request-схему тест.
 """
 
+import datetime as dt
 from pathlib import Path
 from typing import Final
 
@@ -11,15 +12,19 @@ import pytest
 from pydantic import ValidationError
 
 from app.media.application.ports.media_config_repository import MediaConfigSnapshot as StoredSnapshot
-from app.media.presentation.admin.schemas import MediaConfigSnapshot, UpdateMediaConfigRequest
+from app.media.application.schemas.results import MediaConfigResult
+from app.media.presentation.admin.schemas import MediaConfigResponse, MediaConfigSnapshot, UpdateMediaConfigRequest
 from app.shared.types import DictStrAny
+from tests.builders import make_media_config_snapshot
 
 _DEFAULTS_PATH: Final[Path] = Path(__file__).resolve().parents[5] / "app" / "media" / "scripts" / "config_defaults.json"
 
 
 def test_config_defaults_file_passes_admin_request_schema() -> None:
-    """Начальные значения деплоя подчиняются тем же пределам, что и правка администратором."""
-    MediaConfigSnapshot.model_validate_json(_DEFAULTS_PATH.read_text(encoding="utf-8"))
+    """Начальные значения деплоя читаются так же, как их читает сид, и подчиняются пределам правки."""
+    stored_snapshot = StoredSnapshot.model_validate_json(_DEFAULTS_PATH.read_text(encoding="utf-8"))
+
+    MediaConfigSnapshot.model_validate(stored_snapshot.model_dump(mode="json"))
 
 
 def test_update_media_config_request_valid_body_accepted(update_media_config_body: DictStrAny) -> None:
@@ -84,6 +89,20 @@ def test_update_media_config_request_missing_kind_rejected(update_media_config_b
 
     with pytest.raises(ValidationError):
         UpdateMediaConfigRequest.model_validate(update_media_config_body)
+
+
+def test_media_config_response_saved_value_below_edit_limits_rendered() -> None:
+    """Ответ отдаёт сохранённое как есть: пределы правки, ужесточённые позже, не превращают чтение в 500."""
+    result = MediaConfigResult(
+        version=1,
+        snapshot=make_media_config_snapshot(avatar_min_side=0),
+        created_at=dt.datetime(2026, 11, 21, tzinfo=dt.UTC),
+        created_by=None,
+    )
+
+    response = MediaConfigResponse.model_validate(result, from_attributes=True)
+
+    assert response.snapshot.avatar.min_side == 0
 
 
 def test_stored_snapshot_extra_key_ignored_on_read() -> None:

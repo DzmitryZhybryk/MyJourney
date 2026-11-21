@@ -12,6 +12,8 @@ interface RuleNumberProps {
   isInteger: boolean;
   isChanged: boolean;
   onChange: (value: number) => void;
+  /** The draft keeps the last valid value, so the page must not save while the field shows something else. */
+  onValidityChange: (isValid: boolean) => void;
 }
 
 /**
@@ -19,7 +21,15 @@ interface RuleNumberProps {
  * to the draft at once, so Save is reachable without leaving the field; Enter or leaving it closes the
  * field, Escape restores the value it opened with. Nothing is sent until the whole config is saved.
  */
-export function RuleNumber({ label, value, unit, isInteger, isChanged, onChange }: RuleNumberProps) {
+export function RuleNumber({
+  label,
+  value,
+  unit,
+  isInteger,
+  isChanged,
+  onChange,
+  onValidityChange,
+}: RuleNumberProps) {
   const { t } = useTranslation("admin");
   const [isEditing, setIsEditing] = useState(false);
   const [input, setInput] = useState<string | number>(value);
@@ -50,6 +60,7 @@ export function RuleNumber({ label, value, unit, isInteger, isChanged, onChange 
   const changeInput = (next: string | number) => {
     setInput(next);
     const parsed = parsePositive(next);
+    onValidityChange(parsed !== null);
     if (parsed !== null) {
       setHasError(false);
       onChange(parsed);
@@ -67,6 +78,7 @@ export function RuleNumber({ label, value, unit, isInteger, isChanged, onChange 
 
   const cancel = () => {
     onChange(initialValue);
+    onValidityChange(true);
     setIsEditing(false);
   };
 

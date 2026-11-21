@@ -56,7 +56,11 @@ export async function appFetch(input: URL | RequestInfo, init?: RequestInit): Pr
       throw new ApiError(retryResponse.status, await parseErrorBody(retryResponse));
     }
 
-    emit("auth-required", undefined);
+    // A 403 came with a valid access token: a failed refresh (a network blip included) is no reason
+    // to end the session. A dead session will surface as the next 401.
+    if (response.status !== 403) {
+      emit("auth-required", undefined);
+    }
   }
 
   throw new ApiError(response.status, errorBody);

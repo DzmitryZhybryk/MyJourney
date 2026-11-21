@@ -11,9 +11,10 @@ class PydanticJSONB[T: BaseModel](TypeDecorator[T]):
     """
     Колонка JSONB, типизированная pydantic-моделью: на запись — ``model_dump``, на чтение — ``model_validate``.
 
-    ``none_as_null=True`` пишет Python ``None`` как SQL ``NULL``, а не JSON ``null``. ``__eq__``/``__hash__``
-    включают класс модели в ключ statement cache SQLAlchemy: без них две колонки с разными моделями
-    получили бы один ключ, и результат одной разбирался бы моделью другой.
+    ``none_as_null=True`` пишет Python ``None`` как SQL ``NULL``, а не JSON ``null``. Атрибут ``model``
+    назван как аргумент ``__init__`` намеренно: только такие атрибуты SQLAlchemy кладёт в ключ statement
+    cache. С приватным именем один и тот же SQL, прочитанный разными моделями, получил бы один ключ,
+    и результат разбирался бы моделью первого запроса.
     """
 
     impl = JSONB(none_as_null=True)
@@ -21,13 +22,7 @@ class PydanticJSONB[T: BaseModel](TypeDecorator[T]):
 
     def __init__(self, model: type[T]) -> None:
         super().__init__()
-        self._model = model
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, PydanticJSONB) and self._model is other._model
-
-    def __hash__(self) -> int:
-        return hash((self.__class__, self._model))
+        self.model = model
 
     def process_bind_param(self, value: T | None, dialect: Any) -> OptionalDict:
         if value is None:
@@ -39,4 +34,4 @@ class PydanticJSONB[T: BaseModel](TypeDecorator[T]):
         if value is None:
             return None
 
-        return self._model.model_validate(value)
+        return self.model.model_validate(value)

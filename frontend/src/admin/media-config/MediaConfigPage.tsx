@@ -40,7 +40,9 @@ type KindKey = keyof MediaConfigSnapshot;
  */
 export function MediaConfigPage() {
   const { t } = useTranslation("admin");
-  const config = useQuery(getMediaConfigOptions());
+  // No background refetch: a newer version would remount the editor and drop the draft silently.
+  // Someone else's save surfaces as 409 on Save, which drops the draft with a message.
+  const config = useQuery({ ...getMediaConfigOptions(), staleTime: Infinity });
   // Only for the side axis: which side `minSide` is compared with is fixed in backend code.
   const uploadRules = useQuery(getUploadRulesOptions());
   const [noticeToken, setNoticeToken] = useState<string | null>(null);
@@ -85,11 +87,22 @@ function MediaConfigEditor({ config, uploadRules, onNotice }: MediaConfigEditorP
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<MediaConfigSnapshot>(config.snapshot);
   const [errorToken, setErrorToken] = useState<string | null>(null);
+  const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(new Set());
   const update = useMutation(updateMediaConfigMutation());
   const changedCount = countChangedRules(config.snapshot, draft);
 
   const updateKind = <K extends KindKey>(kind: K, rules: MediaConfigSnapshot[K]) => {
     setDraft((current) => ({ ...current, [kind]: rules }));
+  };
+
+  const trackValidity = (field: string, isValid: boolean) => {
+    setInvalidFields((current) => {
+      if (isValid === !current.has(field)) return current;
+      const next = new Set(current);
+      if (isValid) next.delete(field);
+      else next.add(field);
+      return next;
+    });
   };
 
   const save = async () => {
@@ -122,6 +135,7 @@ function MediaConfigEditor({ config, uploadRules, onNotice }: MediaConfigEditorP
         draft={draft.avatar}
         formats={IMAGE_FORMATS}
         sideAxis={uploadRules?.avatar.minSideAxis}
+        onValidityChange={(field, isValid) => trackValidity(`avatar.${field}`, isValid)}
         onChange={(rules) => updateKind("avatar", rules as MediaConfigSnapshot["avatar"])}
       />
       <KindSection
@@ -130,6 +144,7 @@ function MediaConfigEditor({ config, uploadRules, onNotice }: MediaConfigEditorP
         draft={draft.journeyPhoto}
         formats={IMAGE_FORMATS}
         sideAxis={uploadRules?.journeyPhoto.minSideAxis}
+        onValidityChange={(field, isValid) => trackValidity(`journeyPhoto.${field}`, isValid)}
         onChange={(rules) => updateKind("journeyPhoto", rules as MediaConfigSnapshot["journeyPhoto"])}
       />
       <KindSection
@@ -138,6 +153,7 @@ function MediaConfigEditor({ config, uploadRules, onNotice }: MediaConfigEditorP
         draft={draft.journeyVideo}
         formats={VIDEO_FORMATS}
         sideAxis={undefined}
+        onValidityChange={(field, isValid) => trackValidity(`journeyVideo.${field}`, isValid)}
         onChange={(rules) => updateKind("journeyVideo", rules as MediaConfigSnapshot["journeyVideo"])}
       />
 
@@ -148,7 +164,7 @@ function MediaConfigEditor({ config, uploadRules, onNotice }: MediaConfigEditorP
             <Button variant="default" onClick={() => setDraft(config.snapshot)} disabled={update.isPending}>
               {t("save.discard")}
             </Button>
-            <Button onClick={() => void save()} loading={update.isPending}>
+            <Button onClick={() => void save()} loading={update.isPending} disabled={invalidFields.size > 0}>
               {t("save.submit")}
             </Button>
           </Group>
@@ -204,9 +220,10 @@ interface KindSectionProps {
   formats: readonly MediaFormat[];
   sideAxis: SideAxisEnum | undefined;
   onChange: (rules: KindRules) => void;
+  onValidityChange: (field: "maxSizeBytes" | "minSide", isValid: boolean) => void;
 }
 
-function KindSection({ title, saved, draft, formats, sideAxis, onChange }: KindSectionProps) {
+function KindSection({ title, saved, draft, formats, sideAxis, onChange, onValidityChange }: KindSectionProps) {
   const { t } = useTranslation("admin");
   const sizeLabel = t("rules.maxSize");
   const sideLabel = t(sideAxis === undefined ? "rules.minSide.any" : `rules.minSide.${sideAxis}`);
@@ -232,6 +249,7 @@ function KindSection({ title, saved, draft, formats, sideAxis, onChange }: KindS
               isInteger={false}
               isChanged={isRuleChanged(saved, draft, "maxSizeBytes")}
               onChange={(megabytes) => onChange({ ...draft, maxSizeBytes: megabytesToBytes(megabytes) })}
+              onValidityChange={(isValid) => onValidityChange("maxSizeBytes", isValid)}
             />
           </dd>
         </div>
@@ -265,6 +283,7 @@ function KindSection({ title, saved, draft, formats, sideAxis, onChange }: KindS
                 isInteger
                 isChanged={isRuleChanged(saved, draft, "minSide")}
                 onChange={(minSide) => onChange({ ...draft, minSide })}
+                onValidityChange={(isValid) => onValidityChange("minSide", isValid)}
               />
             </dd>
           </div>

@@ -407,7 +407,7 @@ export type MediaConfigResponse = {
    * Version
    */
   version: number;
-  snapshot: MediaConfigSnapshot;
+  snapshot: SavedMediaConfig;
   /**
    * Createdat
    */
@@ -548,6 +548,53 @@ export type ResolveCitiesResponse = {
    * Items
    */
   items: Array<CityName>;
+};
+
+/**
+ * SavedImageKindRules
+ *
+ * Сохранённые правила вида-картинки: только форма, без пределов формы правки.
+ */
+export type SavedImageKindRules = {
+  /**
+   * Maxsizebytes
+   */
+  maxSizeBytes: number;
+  /**
+   * Formats
+   */
+  formats: Array<ImageFormatEnum>;
+  /**
+   * Minside
+   */
+  minSide: number;
+};
+
+/**
+ * SavedMediaConfig
+ *
+ * Сохранённый конфиг media как он лежит в хранилище: по полю на каждый вид файла.
+ */
+export type SavedMediaConfig = {
+  avatar: SavedImageKindRules;
+  journeyPhoto: SavedImageKindRules;
+  journeyVideo: SavedVideoKindRules;
+};
+
+/**
+ * SavedVideoKindRules
+ *
+ * Сохранённые правила вида-видео: только форма, без пределов формы правки.
+ */
+export type SavedVideoKindRules = {
+  /**
+   * Maxsizebytes
+   */
+  maxSizeBytes: number;
+  /**
+   * Formats
+   */
+  formats: Array<VideoFormatEnum>;
 };
 
 /**

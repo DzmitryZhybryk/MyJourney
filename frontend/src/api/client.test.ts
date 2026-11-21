@@ -173,6 +173,20 @@ describe("appFetch", () => {
     },
   );
 
+  it("если refresh после 403 permission_required упал по сети — не завершает сессию и бросает 403", async () => {
+    const authListener = vi.fn();
+    const off = on("auth-required", authListener);
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(403, { code: "permission_required", message: "x" }))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    const error: unknown = await appFetch(`${ORIGIN}/v1/x/`).catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({ status: 403, code: "permission_required" });
+    expect(authListener).not.toHaveBeenCalled();
+    off();
+  });
+
   it("на ошибку без валидного JSON-тела отдаёт unknown_error", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response("<html>502</html>", { status: 502, headers: { "Content-Type": "text/html" } }),

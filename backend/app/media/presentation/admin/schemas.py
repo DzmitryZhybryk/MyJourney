@@ -46,12 +46,41 @@ class UpdateMediaConfigRequest(CamelModel):
     snapshot: MediaConfigSnapshot
 
 
+class SavedImageKindRules(CamelModel):
+    """Сохранённые правила вида-картинки: только форма, без пределов формы правки."""
+
+    model_config = ConfigDict(frozen=True)
+
+    max_size_bytes: int
+    formats: frozenset[ImageFormatEnum]
+    min_side: int
+
+
+class SavedVideoKindRules(CamelModel):
+    """Сохранённые правила вида-видео: только форма, без пределов формы правки."""
+
+    model_config = ConfigDict(frozen=True)
+
+    max_size_bytes: int
+    formats: frozenset[VideoFormatEnum]
+
+
+class SavedMediaConfig(CamelModel):
+    """Сохранённый конфиг media как он лежит в хранилище: по полю на каждый вид файла."""
+
+    model_config = ConfigDict(frozen=True)
+
+    avatar: SavedImageKindRules
+    journey_photo: SavedImageKindRules
+    journey_video: SavedVideoKindRules
+
+
 class MediaConfigResponse(CamelModel):
     """Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя)."""
 
     model_config = ConfigDict(frozen=True)
 
     version: int
-    snapshot: MediaConfigSnapshot
+    snapshot: SavedMediaConfig
     created_at: dt.datetime
     created_by: UUID | None

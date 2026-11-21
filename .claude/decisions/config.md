@@ -8,8 +8,12 @@ a new `<domain>_config` repeats it.
   a deploy), the whole config as one JSONB snapshot (`PydanticJSONB`). Public read at
   `GET /v1/{domain}/config/`, admin read and edit under `/v1/admin/{domain}/config/`.
 - The rows are the audit trail: no edit log. No per-domain cache: every use reads the latest row.
-- A change of the snapshot's shape ships as a data migration that inserts a new version.
+- A change of the snapshot's shape ships as a data migration that inserts a new version. Alembic
+  autogenerate does not see it (the column stays `jsonb`), so it is written by hand. A forgotten one stops
+  the deploy: the seed command reads the latest row with the new type and fails, so `app` never starts.
 - Why: one shape for every domain; whole-config edits by one or two admins; old versions stay for audit.
+- Rejected: a seed that tolerates an unreadable latest row and writes the defaults over it — silently
+  reverts what an admin saved.
 - Rejected: typed rows per kind with per-kind versions — a different table shape per domain.
 - Rejected: a history list on the admin screen — old snapshots may not fit the current schema.
 - Rejected: an in-process cache — caching is one shared mechanism, not per domain.
