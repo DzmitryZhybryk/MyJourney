@@ -57,7 +57,7 @@ export function resolveErrorToken(token: unknown, params?: ErrorParams): string 
     return messageForCode(token.slice(ERROR_CODE_PREFIX.length), undefined, params);
   }
 
-  return i18n.t(token, params);
+  return i18n.t(token, { ...params });
 }
 
 /**

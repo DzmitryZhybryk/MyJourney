@@ -38,8 +38,9 @@ describe("AppHeader", () => {
       authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
     });
 
-    // The burger shows on narrow screens (always rendered in jsdom) and opens the side menu.
-    await user.click(screen.getByRole("button", { name: "Primary sections" }));
+    // jsdom applies @media against a fixed 1024px viewport (resizeTo does not change it), where
+    // Mantine hides the burger; a hidden node has no accessible name, so query by its label.
+    await user.click(screen.getByLabelText("Primary sections", { selector: "button" }));
 
     // In the Drawer is the same "Journeys" link, now active (the desktop tab is present too).
     const links = await screen.findAllByRole("link", { name: "Journeys" });
