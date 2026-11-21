@@ -119,7 +119,7 @@ services:
     logging: *default-logging
 
   loki:
-    image: grafana/loki:3.7.9
+    image: grafana/loki:3.7.10
     container_name: myjourney_loki
     command: -config.file=/etc/loki/loki.yaml -log.level=error -target=all
     ports:
