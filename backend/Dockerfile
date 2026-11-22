@@ -33,7 +33,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # -----------------------------------------------------------------------------
 FROM deps AS source
 
-COPY pyproject.toml uv.lock README.md alembic.ini ./
+COPY pyproject.toml uv.lock README.md alembic.ini bootstrap.sh ./
 COPY ./app ./app
 COPY ./migrations ./migrations
 
@@ -73,5 +73,6 @@ COPY --from=builder --chown=nonroot:nonroot /opt/venv /opt/venv
 COPY --from=builder --chown=nonroot:nonroot /src/app ./app
 COPY --from=builder --chown=nonroot:nonroot /src/migrations ./migrations
 COPY --from=builder --chown=nonroot:nonroot /src/alembic.ini ./alembic.ini
+COPY --from=builder --chown=nonroot:nonroot /src/bootstrap.sh ./bootstrap.sh
 
 USER nonroot
