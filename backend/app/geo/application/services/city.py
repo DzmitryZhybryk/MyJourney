@@ -109,7 +109,7 @@ class CityService:
                 city_ids=sorted(missing_city_ids)[: self._logged_unknown_city_ids_limit],
             )
 
-        items = tuple(
+        items = frozenset(
             ResolvedCity(city_id=city_entity.city_id, name=city_entity.display_name(command.language))
             for city_entity in cities
         )
@@ -129,12 +129,12 @@ class CityService:
             command: Id городов
 
         Returns:
-            Найденные города в произвольном порядке
+            Найденные города
         """
         async with self._uow.transaction():
             cities = await self._uow.city_repository.find_cities_by_ids(command.city_ids)
 
-        items = tuple(
+        items = frozenset(
             CityLocation(
                 city_id=city_entity.city_id,
                 country_code=city_entity.country_code,

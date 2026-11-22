@@ -62,7 +62,7 @@ class AccountService:
             )
 
         return AccountsResult(
-            accounts=tuple(
+            accounts=frozenset(
                 Account(
                     id=user_credentials_entity.user_id,
                     email=user_credentials_entity.email,

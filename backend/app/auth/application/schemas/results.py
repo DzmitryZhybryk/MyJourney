@@ -29,9 +29,9 @@ class Account:
 
 @dataclass(frozen=True, slots=True)
 class AccountsResult:
-    """Найденные учётные записи в произвольном порядке; id без записи в нём нет."""
+    """Найденные учётные записи; id без записи в нём нет."""
 
-    accounts: tuple[Account, ...]
+    accounts: frozenset[Account]
 
 
 class IssuedRefreshToken(BaseModel):

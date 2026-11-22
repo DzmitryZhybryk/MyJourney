@@ -57,5 +57,5 @@ async def resolve_cities(
 ) -> ResolveCitiesResponse:
     command = ResolveCitiesCommand(city_ids=tuple(body.city_ids), language=body.language)
     result = await city_service.resolve_cities(command)
-    items = tuple(CityName.model_validate(item, from_attributes=True) for item in result.items)
+    items = frozenset(CityName.model_validate(item, from_attributes=True) for item in result.items)
     return ResolveCitiesResponse(items=items)

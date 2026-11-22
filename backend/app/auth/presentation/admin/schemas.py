@@ -21,8 +21,8 @@ class AccountItem(CamelModel):
 
 
 class AccountsResponse(CamelModel):
-    """Найденные учётные записи в произвольном порядке; id без записи в ответе нет."""
+    """Найденные учётные записи; id без записи в ответе нет."""
 
     model_config = ConfigDict(frozen=True)
 
-    accounts: tuple[AccountItem, ...]
+    accounts: frozenset[AccountItem]

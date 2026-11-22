@@ -25,7 +25,7 @@ export type AccountItem = {
 /**
  * AccountsResponse
  *
- * Найденные учётные записи в произвольном порядке; id без записи в ответе нет.
+ * Найденные учётные записи; id без записи в ответе нет.
  */
 export type AccountsResponse = {
   /**

@@ -28,10 +28,10 @@ class CityRepository(BaseDBRepository[GeoCity], CityRepositoryPort):
         result = await self._session.execute(query)
         return tuple(self._to_entity(city_model) for city_model in result.scalars())
 
-    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
+    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> frozenset[CityEntity]:
         query = select(GeoCity).where(GeoCity.id.in_(city_ids))
         result = await self._session.execute(query)
-        return tuple(self._to_entity(city_model) for city_model in result.scalars())
+        return frozenset(self._to_entity(city_model) for city_model in result.scalars())
 
     def _prefix_query(self, search_text: str) -> Select[GeoCity]:
         """

@@ -156,4 +156,4 @@ async def test_get_cities_by_ids_nothing_known_returns_empty(city_service: CityS
     """get_cities_by_ids: ни одного известного id → пустой ответ, не ошибка."""
     result = await city_service.get_cities_by_ids(GetCitiesByIdsCommand(frozenset({uuid4()})))
 
-    assert result.items == ()
+    assert result.items == frozenset()

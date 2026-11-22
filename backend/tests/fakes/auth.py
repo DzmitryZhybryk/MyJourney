@@ -46,8 +46,8 @@ class FakeUserCredentialsRepository(UserCredentialsRepositoryPort):
     async def find_user_credentials_by_user_ids(
         self,
         user_ids: frozenset[UUID],
-    ) -> tuple[UserCredentialsEntity, ...]:
-        return tuple(c for user_id, c in self.by_user_id.items() if user_id in user_ids)
+    ) -> frozenset[UserCredentialsEntity]:
+        return frozenset(c for user_id, c in self.by_user_id.items() if user_id in user_ids)
 
     async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
         return next((c for c in self.by_user_id.values() if c.email.lower() == email.lower()), None)

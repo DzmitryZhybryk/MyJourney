@@ -72,8 +72,10 @@ async def test_find_accounts_by_ids_returns_found_and_deleted_and_skips_unknown(
         FindAccountsByIdsCommand(user_ids=frozenset({active_entity.user_id, deleted_entity.user_id, uuid4()})),
     )
 
-    assert set(result.accounts) == {
-        Account(id=active_entity.user_id, email="neo@example.com", is_deleted=False),
-        Account(id=deleted_entity.user_id, email="smith@example.com", is_deleted=True),
-    }
+    assert result.accounts == frozenset(
+        {
+            Account(id=active_entity.user_id, email="neo@example.com", is_deleted=False),
+            Account(id=deleted_entity.user_id, email="smith@example.com", is_deleted=True),
+        }
+    )
     fake_uow.commit_mock.assert_not_awaited()

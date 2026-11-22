@@ -71,10 +71,10 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
     async def find_user_credentials_by_user_ids(
         self,
         user_ids: frozenset[UUID],
-    ) -> tuple[UserCredentialsEntity, ...]:
+    ) -> frozenset[UserCredentialsEntity]:
         query = sa.select(UserCredentials).where(UserCredentials.user_id.in_(user_ids))
         result = await self._session.execute(query)
-        return tuple(self._to_entity(user_credentials_model) for user_credentials_model in result.scalars())
+        return frozenset(self._to_entity(user_credentials_model) for user_credentials_model in result.scalars())
 
     async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
         """

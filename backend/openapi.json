@@ -2341,6 +2341,7 @@
               "$ref": "#/components/schemas/AccountItem"
             },
             "type": "array",
+            "uniqueItems": true,
             "title": "Accounts"
           }
         },
@@ -2349,7 +2350,7 @@
           "accounts"
         ],
         "title": "AccountsResponse",
-        "description": "Найденные учётные записи в произвольном порядке; id без записи в ответе нет."
+        "description": "Найденные учётные записи; id без записи в ответе нет."
       },
       "CityName": {
         "properties": {
@@ -3161,6 +3162,7 @@
               "$ref": "#/components/schemas/CityName"
             },
             "type": "array",
+            "uniqueItems": true,
             "title": "Items"
           }
         },

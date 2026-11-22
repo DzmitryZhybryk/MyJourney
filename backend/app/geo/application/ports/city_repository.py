@@ -30,7 +30,7 @@ class CityRepositoryPort(Protocol):
         """
         ...
 
-    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
+    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> frozenset[CityEntity]:
         """
         Находит города по id; несуществующие id пропускаются.
 
@@ -42,6 +42,6 @@ class CityRepositoryPort(Protocol):
             city_ids: Id городов
 
         Returns:
-            Найденные города в произвольном порядке
+            Найденные города
         """
         ...

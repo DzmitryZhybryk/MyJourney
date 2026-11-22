@@ -53,7 +53,7 @@ class UserCredentialsRepositoryPort(Protocol):
     async def find_user_credentials_by_user_ids(
         self,
         user_ids: frozenset[UUID],
-    ) -> tuple[UserCredentialsEntity, ...]:
+    ) -> frozenset[UserCredentialsEntity]:
         """
         Находит учётные данные по набору id пользователей; удалённые тоже находятся.
 
@@ -64,7 +64,7 @@ class UserCredentialsRepositoryPort(Protocol):
             user_ids: Id пользователей
 
         Returns:
-            Найденные учётные данные в произвольном порядке; id без записи пропускаются
+            Найденные учётные данные; id без записи пропускаются
         """
         ...
 
