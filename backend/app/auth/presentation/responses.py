@@ -18,14 +18,14 @@ from app.shared.exceptions import InternalError
 from app.shared.exceptions.examples import error_response_example
 from app.shared.exceptions.schemas import ErrorResponse
 from app.shared.infra.jwt import InvalidAccessTokenError
-from app.shared.types import DictStrAny
+from app.shared.types import DictStrAny, OpenAPIResponses
 
 _ATTEMPTS_EXCEEDED_EXAMPLE: Final[DictStrAny] = {
     **error_response_example(ChallengeAttemptsExceededError),
     "details": {"retry_after_seconds": 540},
 }
 
-REGISTER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+REGISTER_RESPONSES: Final[OpenAPIResponses] = {
     400: {
         "description": "Ошибка валидации",
         "model": ErrorResponse,
@@ -65,7 +65,7 @@ REGISTER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
 }
 
 
-LOGIN_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+LOGIN_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Неверные учётные данные",
         "model": ErrorResponse,
@@ -87,7 +87,7 @@ LOGIN_RESPONSES: Final[dict[int | str, DictStrAny]] = {
 }
 
 
-LOGOUT_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+LOGOUT_RESPONSES: Final[OpenAPIResponses] = {
     500: {
         "description": "Внутренняя ошибка сервера",
         "model": ErrorResponse,
@@ -100,7 +100,7 @@ LOGOUT_RESPONSES: Final[dict[int | str, DictStrAny]] = {
 }
 
 
-REFRESH_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+REFRESH_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший refresh-токен",
         "model": ErrorResponse,
@@ -142,7 +142,7 @@ _ACCOUNT_UNAUTHENTICATED_RESPONSE: Final[DictStrAny] = {
 }
 
 
-GET_CURRENT_ACCOUNT_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+GET_CURRENT_ACCOUNT_RESPONSES: Final[OpenAPIResponses] = {
     401: _ACCOUNT_UNAUTHENTICATED_RESPONSE,
     500: {
         "description": "Внутренняя ошибка сервера",
@@ -156,7 +156,7 @@ GET_CURRENT_ACCOUNT_RESPONSES: Final[dict[int | str, DictStrAny]] = {
 }
 
 
-SEND_EMAIL_VERIFICATION_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+SEND_EMAIL_VERIFICATION_RESPONSES: Final[OpenAPIResponses] = {
     401: _ACCOUNT_UNAUTHENTICATED_RESPONSE,
     409: {
         "description": "Email уже подтверждён",
@@ -197,7 +197,7 @@ SEND_EMAIL_VERIFICATION_RESPONSES: Final[dict[int | str, DictStrAny]] = {
 }
 
 
-VERIFY_EMAIL_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+VERIFY_EMAIL_RESPONSES: Final[OpenAPIResponses] = {
     400: {
         "description": "Неверный код подтверждения",
         "model": ErrorResponse,

@@ -4,7 +4,7 @@ from app.media.presentation.responses import INTERNAL_ERROR_RESPONSE
 from app.shared.exceptions.examples import error_response_example
 from app.shared.exceptions.schemas import ErrorResponse
 from app.shared.infra.jwt import InvalidAccessTokenError, PermissionRequiredError
-from app.shared.types import DictStrAny
+from app.shared.types import DictStrAny, OpenAPIResponses
 from app.shared.versioned_config import ConfigVersionConflictError
 
 _UNAUTHENTICATED_RESPONSE: Final[DictStrAny] = {
@@ -27,13 +27,13 @@ _PERMISSION_REQUIRED_RESPONSE: Final[DictStrAny] = {
     },
 }
 
-GET_MEDIA_CONFIG_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+GET_MEDIA_CONFIG_RESPONSES: Final[OpenAPIResponses] = {
     401: _UNAUTHENTICATED_RESPONSE,
     403: _PERMISSION_REQUIRED_RESPONSE,
     500: INTERNAL_ERROR_RESPONSE,
 }
 
-UPDATE_MEDIA_CONFIG_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+UPDATE_MEDIA_CONFIG_RESPONSES: Final[OpenAPIResponses] = {
     401: _UNAUTHENTICATED_RESPONSE,
     403: _PERMISSION_REQUIRED_RESPONSE,
     409: {
