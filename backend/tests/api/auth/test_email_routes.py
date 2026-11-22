@@ -157,9 +157,7 @@ async def test_verify_valid_code_returns_204_and_marks_verified(
 ) -> None:
     """verify с верным кодом (в т.ч. с пробелами по краям) → 204, email подтверждён, challenge использован."""
     user_credentials_entity = make_user_credentials()
-    challenge = make_challenge(
-        user_id=user_credentials_entity.user_id, code_ciphertext=secret_cipher.encrypt(secret="123456")
-    )
+    challenge = make_challenge(user_id=user_credentials_entity.user_id, code_ciphertext=secret_cipher.encrypt("123456"))
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
     token = mint_access_token(user_id=user_credentials_entity.user_id)
@@ -186,9 +184,7 @@ async def test_verify_wrong_code_returns_400_and_increments_attempts(
 ) -> None:
     """verify с неверным кодом (в т.ч. не-ASCII цифрами) → 400 auth.verification_code_invalid, попытка +1."""
     user_credentials_entity = make_user_credentials()
-    challenge = make_challenge(
-        user_id=user_credentials_entity.user_id, code_ciphertext=secret_cipher.encrypt(secret="123456")
-    )
+    challenge = make_challenge(user_id=user_credentials_entity.user_id, code_ciphertext=secret_cipher.encrypt("123456"))
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_challenge_repository.challenges.append(challenge)
     token = mint_access_token(user_id=user_credentials_entity.user_id)
@@ -277,7 +273,7 @@ async def test_verify_expired_challenge_returns_410(
     user_credentials_entity = make_user_credentials()
     challenge = make_challenge(
         user_id=user_credentials_entity.user_id,
-        code_ciphertext=secret_cipher.encrypt(secret=code),
+        code_ciphertext=secret_cipher.encrypt(code),
         expires_at=past,
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
@@ -308,7 +304,7 @@ async def test_verify_attempts_exceeded_returns_429(
     expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420)
     challenge = make_challenge(
         user_id=user_credentials_entity.user_id,
-        code_ciphertext=secret_cipher.encrypt(secret=code),
+        code_ciphertext=secret_cipher.encrypt(code),
         attempts=email_verification_config.max_attempts,
         expires_at=expires_at,
     )

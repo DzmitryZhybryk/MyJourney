@@ -11,7 +11,7 @@ class AccountService:
     def __init__(self, uow: AuthUnitOfWorkPort) -> None:
         self._uow = uow
 
-    async def get_current_account(self, *, user_id: UUID) -> CurrentAccountResult:
+    async def get_current_account(self, user_id: UUID) -> CurrentAccountResult:
         """
         Возвращает email, username и статус подтверждения email текущего пользователя.
 
@@ -29,7 +29,7 @@ class AccountService:
         """
         async with self._uow.transaction():
             user_credentials_entity = await self._uow.user_credentials_repository.find_user_credentials_by_user_id(
-                user_id=user_id
+                user_id
             )
             if user_credentials_entity is None:
                 raise AccountNotFoundError()

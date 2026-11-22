@@ -53,7 +53,7 @@ class ProcrastinateSessionBoundTaskBus(SessionBoundTaskBusPort):
 class ProcrastinateTaskBus(TaskBusPort):
     """Реализация ``TaskBusPort`` поверх procrastinate. Defer'ы выполняются как fire-and-forget."""
 
-    def __init__(self, *, app: ProcrastinateApp) -> None:
+    def __init__(self, app: ProcrastinateApp) -> None:
         self._app = app
 
     async def defer(self, *, task_name: str, lock: str | None = None, **task_kwargs: Any) -> None:

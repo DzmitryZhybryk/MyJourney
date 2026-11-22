@@ -21,9 +21,9 @@ async def test_journey_repository_write_is_persisted_by_uow_commit(
     """Запись через ``uow.journey_repository`` фиксирует ``uow.commit()`` — она видна из новой сессии."""
     journey_entity = make_journey()
     async with session_factory() as session:
-        uow = JourneyUnitOfWork(session=session)
+        uow = JourneyUnitOfWork(session)
         async with uow.transaction():
-            await uow.journey_repository.insert_journey(journey_entity=journey_entity)
+            await uow.journey_repository.insert_journey(journey_entity)
             await uow.commit()
 
     async with session_factory() as reader:

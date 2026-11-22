@@ -46,9 +46,9 @@ _LOCK_POLL_SECONDS = 0.02
 
 
 async def _insert(db_session: AsyncSession, *journey_entities: JourneyEntity) -> JourneyRepository:
-    repository = JourneyRepository(session=db_session)
+    repository = JourneyRepository(db_session)
     for journey_entity in journey_entities:
-        await repository.insert_journey(journey_entity=journey_entity)
+        await repository.insert_journey(journey_entity)
 
     await db_session.commit()
     return repository
@@ -63,7 +63,7 @@ async def test_insert_journey_persists_snapshot(db_session: AsyncSession) -> Non
         traveled_year=2020,
     )
 
-    await JourneyRepository(session=db_session).insert_journey(journey_entity=journey_entity)
+    await JourneyRepository(db_session).insert_journey(journey_entity)
     await db_session.commit()
 
     journey_model = (await db_session.execute(sa.select(Journey))).scalar_one()
@@ -82,10 +82,10 @@ async def test_insert_journey_persists_snapshot(db_session: AsyncSession) -> Non
 async def test_insert_multiple_journeys_for_same_user(db_session: AsyncSession) -> None:
     """insert_journey: несколько поездок одного пользователя сохраняются (на user_id нет unique)."""
     user_id = uuid4()
-    repository = JourneyRepository(session=db_session)
+    repository = JourneyRepository(db_session)
 
-    await repository.insert_journey(journey_entity=make_journey(user_id=user_id))
-    await repository.insert_journey(journey_entity=make_journey(user_id=user_id))
+    await repository.insert_journey(make_journey(user_id=user_id))
+    await repository.insert_journey(make_journey(user_id=user_id))
     await db_session.commit()
 
     count = (await db_session.execute(sa.select(sa.func.count()).select_from(Journey))).scalar_one()
@@ -105,7 +105,7 @@ async def test_find_visited_cities_counts_both_ends_with_distinct_sorted_years(d
         make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON, traveled_year=2021),
     )
 
-    visited_cities = await repository.find_visited_cities_by_user_id(user_id=user_id)
+    visited_cities = await repository.find_visited_cities_by_user_id(user_id)
 
     years_by_city = {visited_city.city.city_id: visited_city.years for visited_city in visited_cities}
     assert years_by_city == {MOSCOW_CITY_ID: (2019, 2021), LONDON_CITY_ID: (2019, 2021)}
@@ -122,7 +122,7 @@ async def test_find_visited_cities_orders_by_country_then_city_id(db_session: As
         make_journey(user_id=user_id, origin=_LONDON, destination=second_russian_city),
     )
 
-    visited_cities = await repository.find_visited_cities_by_user_id(user_id=user_id)
+    visited_cities = await repository.find_visited_cities_by_user_id(user_id)
 
     assert [(visited_city.city.country_code, visited_city.city.city_id) for visited_city in visited_cities] == [
         ("FR", _PARIS_CITY_ID),
@@ -142,7 +142,7 @@ async def test_find_visited_cities_diverging_copies_of_city_give_one_row(db_sess
         make_journey(user_id=user_id, origin=shifted_moscow, destination=_PARIS),
     )
 
-    visited_cities = await repository.find_visited_cities_by_user_id(user_id=user_id)
+    visited_cities = await repository.find_visited_cities_by_user_id(user_id)
 
     moscow_rows = [visited_city for visited_city in visited_cities if visited_city.city.city_id == MOSCOW_CITY_ID]
     assert len(moscow_rows) == 1
@@ -163,14 +163,14 @@ async def test_find_visited_cities_skips_deleted_and_other_users_journeys(db_ses
         make_journey(user_id=uuid4(), origin=_PARIS, destination=_LONDON),
     )
 
-    visited_cities = await repository.find_visited_cities_by_user_id(user_id=user_id)
+    visited_cities = await repository.find_visited_cities_by_user_id(user_id)
 
     assert {visited_city.city.city_id for visited_city in visited_cities} == {MOSCOW_CITY_ID, LONDON_CITY_ID}
 
 
 async def test_find_visited_cities_without_journeys_returns_empty(db_session: AsyncSession) -> None:
     """У пользователя без поездок городов нет."""
-    assert await JourneyRepository(session=db_session).find_visited_cities_by_user_id(user_id=uuid4()) == ()
+    assert await JourneyRepository(db_session).find_visited_cities_by_user_id(uuid4()) == ()
 
 
 # --- find_movement_connections_by_user_id ---------------------------------------------------
@@ -295,7 +295,7 @@ async def test_find_movement_connections_skips_deleted_and_other_users_journeys(
 
 async def test_find_movement_connections_without_journeys_returns_empty(db_session: AsyncSession) -> None:
     """У пользователя без поездок маршрутов нет."""
-    connections = await JourneyRepository(session=db_session).find_movement_connections_by_user_id(
+    connections = await JourneyRepository(db_session).find_movement_connections_by_user_id(
         user_id=uuid4(), transport_types=None
     )
 
@@ -318,7 +318,7 @@ async def test_find_journey_years_returns_distinct_years_ascending(db_session: A
         make_journey(user_id=uuid4(), traveled_year=2010),
     )
 
-    assert await repository.find_journey_years_by_user_id(user_id=user_id) == (2017, 2019, 2021)
+    assert await repository.find_journey_years_by_user_id(user_id) == (2017, 2019, 2021)
 
 
 async def test_find_journey_years_without_journeys_returns_empty(db_session: AsyncSession) -> None:
@@ -326,8 +326,8 @@ async def test_find_journey_years_without_journeys_returns_empty(db_session: Asy
     user_id = uuid4()
     repository = await _insert(db_session, make_journey(user_id=user_id, deleted_at=_DELETED_AT))
 
-    assert await repository.find_journey_years_by_user_id(user_id=user_id) == ()
-    assert await repository.find_journey_years_by_user_id(user_id=uuid4()) == ()
+    assert await repository.find_journey_years_by_user_id(user_id) == ()
+    assert await repository.find_journey_years_by_user_id(uuid4()) == ()
 
 
 # --- find_journeys_page_by_user_id ---------------------------------------------------------
@@ -429,7 +429,7 @@ async def test_find_journeys_page_sort_key_compares_bytewise(db_session: AsyncSe
     )
 
     assert [journey.sort_key for journey in page.items] == ["Zz", "a1"]
-    assert await repository.find_last_sort_key(scope=JourneyOrderScope(user_id=user_id, traveled_year=2020)) == "a1"
+    assert await repository.find_last_sort_key(JourneyOrderScope(user_id=user_id, traveled_year=2020)) == "a1"
 
 
 # --- порядок внутри года: соседние ключи, уникальность, блокировка ------------------------------
@@ -457,9 +457,9 @@ async def test_find_next_and_previous_sort_key_stay_in_live_rows_of_year(db_sess
 async def test_unique_sort_key_index_rejects_duplicate_live_key_in_year(db_session: AsyncSession) -> None:
     """Частичный unique-индекс: два живых ключа в одном году пользователя — IntegrityError."""
     user_id = uuid4()
-    repository = JourneyRepository(session=db_session)
-    await repository.insert_journey(journey_entity=make_journey(user_id=user_id, traveled_year=2020, sort_key="m"))
-    await repository.insert_journey(journey_entity=make_journey(user_id=user_id, traveled_year=2020, sort_key="m"))
+    repository = JourneyRepository(db_session)
+    await repository.insert_journey(make_journey(user_id=user_id, traveled_year=2020, sort_key="m"))
+    await repository.insert_journey(make_journey(user_id=user_id, traveled_year=2020, sort_key="m"))
 
     with pytest.raises(IntegrityError):
         await db_session.commit()
@@ -485,19 +485,19 @@ async def test_lock_sort_keys_serializes_concurrent_inserts_into_one_year(
     user_id = uuid4()
     scope = JourneyOrderScope(user_id=user_id, traveled_year=2020)
     async with session_factory() as first_session, session_factory() as second_session:
-        first_repository = JourneyRepository(session=first_session)
-        second_repository = JourneyRepository(session=second_session)
-        await first_repository.lock_sort_keys(scope=scope)
-        first_key = generate_key_between(before=await first_repository.find_last_sort_key(scope=scope), after=None)
+        first_repository = JourneyRepository(first_session)
+        second_repository = JourneyRepository(second_session)
+        await first_repository.lock_sort_keys(scope)
+        first_key = generate_key_between(before=await first_repository.find_last_sort_key(scope), after=None)
 
         async def insert_second() -> str:
-            await second_repository.lock_sort_keys(scope=scope)
+            await second_repository.lock_sort_keys(scope)
             second_key = generate_key_between(
-                before=await second_repository.find_last_sort_key(scope=scope),
+                before=await second_repository.find_last_sort_key(scope),
                 after=None,
             )
             await second_repository.insert_journey(
-                journey_entity=make_journey(user_id=user_id, traveled_year=2020, sort_key=second_key)
+                make_journey(user_id=user_id, traveled_year=2020, sort_key=second_key)
             )
             await second_session.commit()
             return second_key
@@ -510,9 +510,7 @@ async def test_lock_sort_keys_serializes_concurrent_inserts_into_one_year(
                 while not await observer_session.scalar(_WAITING_ADVISORY_LOCKS):  # noqa: ASYNC110
                     await asyncio.sleep(_LOCK_POLL_SECONDS)
 
-        await first_repository.insert_journey(
-            journey_entity=make_journey(user_id=user_id, traveled_year=2020, sort_key=first_key)
-        )
+        await first_repository.insert_journey(make_journey(user_id=user_id, traveled_year=2020, sort_key=first_key))
         await first_session.commit()
         second_key = await asyncio.wait_for(second_task, timeout=_LOCK_WAIT_TIMEOUT_SECONDS)
 
@@ -532,7 +530,7 @@ async def test_update_journey_by_id_persists_revise_and_move(db_session: AsyncSe
 
     journey_entity.revise(origin=_PARIS, destination=_MOSCOW, transport_type=TransportTypeEnum.LAND, distance_km=2480)
     journey_entity.move(traveled_year=2018, sort_key="b")
-    await repository.update_journey_by_id(journey_entity=journey_entity)
+    await repository.update_journey_by_id(journey_entity)
     await db_session.commit()
 
     stored = await repository.find_journey_by_id_and_user_id(journey_id=journey_entity.journey_id, user_id=user_id)
@@ -553,7 +551,7 @@ async def test_deleted_journey_drops_out_of_feed_and_years_but_stays_findable(db
     repository = await _insert(db_session, journey_entity)
 
     journey_entity.delete()
-    await repository.update_journey_by_id(journey_entity=journey_entity)
+    await repository.update_journey_by_id(journey_entity)
     await db_session.commit()
 
     page = await repository.find_journeys_page_by_user_id(
@@ -563,7 +561,7 @@ async def test_deleted_journey_drops_out_of_feed_and_years_but_stays_findable(db
     )
     stored = await repository.find_journey_by_id_and_user_id(journey_id=journey_entity.journey_id, user_id=user_id)
     assert page.items == ()
-    assert await repository.find_journey_years_by_user_id(user_id=user_id) == ()
+    assert await repository.find_journey_years_by_user_id(user_id) == ()
     assert stored is not None
     assert stored.is_deleted
 

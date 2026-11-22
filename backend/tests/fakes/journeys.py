@@ -161,7 +161,7 @@ class FakeJourneyRepository(JourneyRepositoryPort):
             )
         )
 
-    async def find_visited_cities_by_user_id(self, *, user_id: UUID) -> tuple[VisitedCity, ...]:
+    async def find_visited_cities_by_user_id(self, user_id: UUID) -> tuple[VisitedCity, ...]:
         return tuple(self.visited_cities_by_user_id.get(user_id, ()))
 
     async def find_movement_connections_by_user_id(
@@ -182,7 +182,7 @@ class FakeJourneyRepository(JourneyRepositoryPort):
 class FakeJourneyUnitOfWork(JourneyUnitOfWorkPort):
     """In-memory UoW journeys: фейк-репозиторий + мокнутый ``commit`` и no-op ``transaction``."""
 
-    def __init__(self, *, journey_repository: JourneyRepositoryPort) -> None:
+    def __init__(self, journey_repository: JourneyRepositoryPort) -> None:
         self.journey_repository = journey_repository
         self.commit_mock = AsyncMock()
         self.transactions_started = 0
@@ -204,10 +204,10 @@ class FakeCitiesClient(CitiesClientPort):
     произвольный; тест может переставить ``locations``, чтобы проверить сопоставление по id.
     """
 
-    def __init__(self, *, locations: Collection[CityLocationResponse] = ()) -> None:
+    def __init__(self, locations: Collection[CityLocationResponse] = ()) -> None:
         self.locations = {location.city_id: location for location in locations}
         self.calls: list[tuple[UUID, ...]] = []
 
-    async def find_city_locations(self, *, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
+    async def find_city_locations(self, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
         self.calls.append(tuple(city_ids))
         return tuple(location for city_id, location in self.locations.items() if city_id in city_ids)

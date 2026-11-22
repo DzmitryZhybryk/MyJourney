@@ -33,12 +33,12 @@ async def test_insert_then_find_refresh_token_by_hash_roundtrip(
     await seed_user_credentials(user_id=user_id, email="rt-roundtrip@example.com", username="rt_roundtrip")
     refresh_token_entity = make_refresh_token(user_id=user_id, token_hash="roundtrip-hash", expires_at=_EXPIRES_AT)
     async with session_factory() as writer:
-        await RefreshTokenRepository(session=writer).insert_refresh_token(refresh_token_entity=refresh_token_entity)
+        await RefreshTokenRepository(writer).insert_refresh_token(refresh_token_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await RefreshTokenRepository(session=reader).find_refresh_token_by_hash_for_update(
-            token_hash="roundtrip-hash",
+        found = await RefreshTokenRepository(reader).find_refresh_token_by_hash_for_update(
+            "roundtrip-hash",
         )
 
     assert found is not None
@@ -51,8 +51,8 @@ async def test_insert_then_find_refresh_token_by_hash_roundtrip(
 
 async def test_find_refresh_token_by_hash_missing_returns_none(db_session: AsyncSession) -> None:
     """Поиск по несуществующему hash'у возвращает ``None``, а не падает."""
-    found = await RefreshTokenRepository(session=db_session).find_refresh_token_by_hash_for_update(
-        token_hash="missing-hash",
+    found = await RefreshTokenRepository(db_session).find_refresh_token_by_hash_for_update(
+        "missing-hash",
     )
 
     assert found is None
@@ -70,7 +70,7 @@ async def test_update_refresh_token_persists_revoked_at(
         token_id=token_id, user_id=user_id, token_hash="update-hash", expires_at=_EXPIRES_AT
     )
     async with session_factory() as writer:
-        await RefreshTokenRepository(session=writer).insert_refresh_token(refresh_token_entity=refresh_token_entity)
+        await RefreshTokenRepository(writer).insert_refresh_token(refresh_token_entity)
         await writer.commit()
 
     revoked_token = make_refresh_token(
@@ -81,12 +81,12 @@ async def test_update_refresh_token_persists_revoked_at(
         revoked_at=_REVOKED_AT,
     )
     async with session_factory() as writer:
-        await RefreshTokenRepository(session=writer).update_refresh_token_by_id(refresh_token_entity=revoked_token)
+        await RefreshTokenRepository(writer).update_refresh_token_by_id(revoked_token)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await RefreshTokenRepository(session=reader).find_refresh_token_by_hash_for_update(
-            token_hash="update-hash",
+        found = await RefreshTokenRepository(reader).find_refresh_token_by_hash_for_update(
+            "update-hash",
         )
 
     assert found is not None
@@ -109,21 +109,21 @@ async def test_revoke_all_active_refresh_tokens_revokes_only_active(
         revoked_at=_ALREADY_REVOKED_AT,
     )
     async with session_factory() as writer:
-        repository = RefreshTokenRepository(session=writer)
+        repository = RefreshTokenRepository(writer)
         for refresh_token_entity in (active_one, active_two, already_revoked):
-            await repository.insert_refresh_token(refresh_token_entity=refresh_token_entity)
+            await repository.insert_refresh_token(refresh_token_entity)
 
         await writer.commit()
 
     async with session_factory() as actor:
-        await RefreshTokenRepository(session=actor).revoke_all_active_refresh_tokens_by_user_id(user_id=user_id)
+        await RefreshTokenRepository(actor).revoke_all_active_refresh_tokens_by_user_id(user_id)
         await actor.commit()
 
     async with session_factory() as reader:
-        repository = RefreshTokenRepository(session=reader)
-        found_active_one = await repository.find_refresh_token_by_hash_for_update(token_hash="active-1")
-        found_active_two = await repository.find_refresh_token_by_hash_for_update(token_hash="active-2")
-        found_already_revoked = await repository.find_refresh_token_by_hash_for_update(token_hash="revoked-1")
+        repository = RefreshTokenRepository(reader)
+        found_active_one = await repository.find_refresh_token_by_hash_for_update("active-1")
+        found_active_two = await repository.find_refresh_token_by_hash_for_update("active-2")
+        found_already_revoked = await repository.find_refresh_token_by_hash_for_update("revoked-1")
 
     assert found_active_one is not None
     assert found_active_one.revoked_at is not None
@@ -142,13 +142,13 @@ async def test_find_refresh_token_by_hash_for_update_locks_row(
     await seed_user_credentials(user_id=user_id, email="rt-lock@example.com", username="rt_lock")
     refresh_token_entity = make_refresh_token(user_id=user_id, token_hash="lock-hash", expires_at=_EXPIRES_AT)
     async with session_factory() as writer:
-        await RefreshTokenRepository(session=writer).insert_refresh_token(refresh_token_entity=refresh_token_entity)
+        await RefreshTokenRepository(writer).insert_refresh_token(refresh_token_entity)
         await writer.commit()
 
     async with session_factory() as holder, session_factory() as contender:
         # holder берёт row-лок через FOR UPDATE и держит транзакцию открытой
-        locked = await RefreshTokenRepository(session=holder).find_refresh_token_by_hash_for_update(
-            token_hash="lock-hash",
+        locked = await RefreshTokenRepository(holder).find_refresh_token_by_hash_for_update(
+            "lock-hash",
         )
         assert locked is not None
 

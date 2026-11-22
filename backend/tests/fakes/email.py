@@ -15,7 +15,7 @@ class FakeEmailTransport(EmailTransportPort):
         self.sent: list[EmailMessage] = []
         self.error: Exception | None = None
 
-    async def send(self, *, message: EmailMessage) -> None:
+    async def send(self, message: EmailMessage) -> None:
         if self.error is not None:
             raise self.error
 

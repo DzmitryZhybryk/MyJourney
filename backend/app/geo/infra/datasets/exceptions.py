@@ -19,21 +19,21 @@ class DatasetFormatError(Exception):
 class DatasetColumnsError(DatasetFormatError):
     """Колонки файла не совпадают с форматом."""
 
-    def __init__(self, *, columns: Iterable[str]) -> None:
+    def __init__(self, columns: Iterable[str]) -> None:
         super().__init__(f"Unexpected dataset columns: {sorted(columns)}")
 
 
 class MissingEnglishNameError(DatasetFormatError):
     """У строки датасета нет имени на ``en`` — фолбэка отображения для любого языка."""
 
-    def __init__(self, *, external_id: str) -> None:
+    def __init__(self, external_id: str) -> None:
         super().__init__(f"Dataset row {external_id} has no English name")
 
 
 class MissingCountryCodeError(DatasetFormatError):
     """У строки датасета нет страны."""
 
-    def __init__(self, *, external_id: str) -> None:
+    def __init__(self, external_id: str) -> None:
         super().__init__(f"Dataset row {external_id} has no country code")
 
 
@@ -47,7 +47,7 @@ class UnknownPlaceKindError(DatasetFormatError):
 class InvalidExternalIdError(DatasetFormatError):
     """Ключ строки датасета не вида ``<источник>:<ключ>``."""
 
-    def __init__(self, *, external_id: str) -> None:
+    def __init__(self, external_id: str) -> None:
         super().__init__(f"Dataset row has invalid external_id {external_id!r}: expected <source>:<key>")
 
 

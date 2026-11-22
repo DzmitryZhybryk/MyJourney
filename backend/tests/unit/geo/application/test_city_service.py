@@ -142,7 +142,7 @@ async def test_get_cities_by_ids_returns_location_of_known_cities_only(
     unknown_id = uuid4()
 
     result = await city_service.get_cities_by_ids(
-        command=GetCitiesByIdsCommand(city_ids=frozenset({moscow.city_id, london.city_id, unknown_id})),
+        GetCitiesByIdsCommand(frozenset({moscow.city_id, london.city_id, unknown_id})),
     )
 
     assert sorted(result.items, key=lambda item: item.latitude) == [
@@ -154,6 +154,6 @@ async def test_get_cities_by_ids_returns_location_of_known_cities_only(
 
 async def test_get_cities_by_ids_nothing_known_returns_empty(city_service: CityService) -> None:
     """get_cities_by_ids: ни одного известного id → пустой ответ, не ошибка."""
-    result = await city_service.get_cities_by_ids(command=GetCitiesByIdsCommand(city_ids=frozenset({uuid4()})))
+    result = await city_service.get_cities_by_ids(GetCitiesByIdsCommand(frozenset({uuid4()})))
 
     assert result.items == ()

@@ -49,7 +49,7 @@ class FakeUserUnitOfWork(UserUnitOfWorkPort):
     факта фиксации.
     """
 
-    def __init__(self, *, user_repository: UserRepositoryPort) -> None:
+    def __init__(self, user_repository: UserRepositoryPort) -> None:
         self.user_repository = user_repository
         self.commit_mock = AsyncMock()
 

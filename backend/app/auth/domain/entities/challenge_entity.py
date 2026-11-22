@@ -143,7 +143,7 @@ class ChallengeEntity(TimestampedEntityMixin):
         remaining_seconds = (self.expires_at - dt.datetime.now(tz=dt.UTC)).total_seconds()
         return max(0, math.ceil(remaining_seconds))
 
-    def ensure_resend_cooldown_passed(self, *, cooldown_seconds: int) -> None:
+    def ensure_resend_cooldown_passed(self, cooldown_seconds: int) -> None:
         """
         Проверяет, что с последней отправки кода прошло достаточно времени, чтобы отправить его снова.
 
@@ -160,7 +160,7 @@ class ChallengeEntity(TimestampedEntityMixin):
         if elapsed_seconds < cooldown_seconds:
             raise ChallengeResendCooldownError()
 
-    def ensure_not_exhausted(self, *, max_attempts: int) -> None:
+    def ensure_not_exhausted(self, max_attempts: int) -> None:
         """
         Проверяет, что лимит попыток ввода не выбран.
 
@@ -180,7 +180,7 @@ class ChallengeEntity(TimestampedEntityMixin):
         if self.attempts >= max_attempts:
             raise ChallengeAttemptsExceededError(details={"retry_after_seconds": self.seconds_until_expiry()})
 
-    def resend(self, *, ttl_minutes: int) -> None:
+    def resend(self, ttl_minutes: int) -> None:
         """
         Отмечает повторную отправку того же кода и продлевает его срок.
 
@@ -195,7 +195,7 @@ class ChallengeEntity(TimestampedEntityMixin):
         self.expires_at = now + dt.timedelta(minutes=ttl_minutes)
         self._mark_updated()
 
-    def ensure_can_attempt(self, *, max_attempts: int) -> None:
+    def ensure_can_attempt(self, max_attempts: int) -> None:
         """
         Проверяет, что challenge пригоден к очередной попытке ввода кода.
 
@@ -217,7 +217,7 @@ class ChallengeEntity(TimestampedEntityMixin):
         if not self.is_active():
             raise ChallengeExpiredError()
 
-        self.ensure_not_exhausted(max_attempts=max_attempts)
+        self.ensure_not_exhausted(max_attempts)
 
     def register_failed_attempt(self) -> None:
         """

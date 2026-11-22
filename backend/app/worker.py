@@ -42,12 +42,12 @@ async def run_worker() -> None:  # pragma: no cover — entry-point обвязк
     Scenarios:
         - запуск воркера фоновых задач
     """
-    configure_logging(include_debug=settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
+    configure_logging(settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
 
     registry = ComponentRegistry()
     components: list[BaseComponent] = [
-        ResendComponent(settings=settings),
-        MediaStorageComponent(settings=settings),
+        ResendComponent(settings),
+        MediaStorageComponent(settings),
         ProcrastinateComponent(settings=settings, blueprints=TASK_BLUEPRINTS),
     ]
     async with run_components(components=components, registry=registry):

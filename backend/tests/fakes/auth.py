@@ -50,9 +50,7 @@ class FakeUserCredentialsRepository(UserCredentialsRepositoryPort):
         return next((c for c in self.by_user_id.values() if c.username.lower() == username.lower()), None)
 
     async def find_user_credentials_by_login(self, login: str) -> UserCredentialsEntity | None:
-        return await self.find_user_credentials_by_email(email=login) or await self.find_user_credentials_by_username(
-            username=login
-        )
+        return await self.find_user_credentials_by_email(login) or await self.find_user_credentials_by_username(login)
 
 
 class FakeRefreshTokenRepository(RefreshTokenRepositoryPort):

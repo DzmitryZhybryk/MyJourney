@@ -55,7 +55,7 @@ async def test_register_persists_credentials_calls_users_and_requests_verificati
     stored = next(iter(fake_user_credentials_repository.by_user_id.values()))
     assert stored.email == "neo@example.com"
     assert stored.username == "neo"
-    assert stored.password.hash == fake_salted_hasher.hash(secret="pw")
+    assert stored.password.hash == fake_salted_hasher.hash("pw")
 
     assert len(fake_users_client.created) == 1
     created = fake_users_client.created[0]
@@ -64,7 +64,7 @@ async def test_register_persists_credentials_calls_users_and_requests_verificati
     assert created.marketing_emails_consent is True
     assert created.terms_accepted_at == stored.created_at
 
-    stored_hash = deterministic_hasher.digest(secret=pair.refresh_token.secret.get_secret_value())
+    stored_hash = deterministic_hasher.digest(pair.refresh_token.secret.get_secret_value())
     assert stored_hash in fake_refresh_token_repository.by_hash
 
     fake_uow.commit_mock.assert_awaited_once()
@@ -81,7 +81,7 @@ async def test_register_raises_when_email_already_exists(
 ) -> None:
     """register: занятый email (в любом регистре) → EmailAlreadyExistError, без новой записи, вызова users и коммита."""
     await fake_user_credentials_repository.insert_user_credentials(
-        user_credentials_entity=make_user_credentials(email="neo@example.com", username="existing"),
+        make_user_credentials(email="neo@example.com", username="existing"),
     )
     command = RegistrationCommand(
         username="neo",
@@ -129,7 +129,7 @@ async def test_register_raises_when_username_already_taken(
 ) -> None:
     """register: свободный email, но занятый username (в любом регистре) → UsernameAlreadyExistError, без коммита."""
     await fake_user_credentials_repository.insert_user_credentials(
-        user_credentials_entity=make_user_credentials(email="taken@example.com", username="neo"),
+        make_user_credentials(email="taken@example.com", username="neo"),
     )
     command = RegistrationCommand(
         username=username,
@@ -158,10 +158,10 @@ async def test_login_with_email_returns_token_pair(
 ) -> None:
     """login по email (в любом регистре) с верным паролем выдаёт пару токенов и сохраняет refresh."""
     await fake_user_credentials_repository.insert_user_credentials(
-        user_credentials_entity=make_user_credentials(
+        make_user_credentials(
             email="neo@example.com",
             username="neo",
-            password=make_password(hash=fake_salted_hasher.hash(secret="pw")),
+            password=make_password(fake_salted_hasher.hash("pw")),
         ),
     )
 
@@ -185,10 +185,10 @@ async def test_login_with_username_returns_token_pair(
 ) -> None:
     """login по username (в любом регистре), а не email, тоже работает."""
     await fake_user_credentials_repository.insert_user_credentials(
-        user_credentials_entity=make_user_credentials(
+        make_user_credentials(
             email="neo@example.com",
             username="Neo",
-            password=make_password(hash=fake_salted_hasher.hash(secret="pw")),
+            password=make_password(fake_salted_hasher.hash("pw")),
         ),
     )
 
@@ -228,10 +228,10 @@ async def test_login_raises_when_password_wrong(
 ) -> None:
     """login: верный логин, неверный пароль → InvalidCredentialsError, без refresh и коммита."""
     await fake_user_credentials_repository.insert_user_credentials(
-        user_credentials_entity=make_user_credentials(
+        make_user_credentials(
             email="neo@example.com",
             username="neo",
-            password=make_password(hash=fake_salted_hasher.hash(secret="correct")),
+            password=make_password(fake_salted_hasher.hash("correct")),
         ),
     )
 
@@ -256,12 +256,10 @@ async def test_logout_revokes_active_token(
 ) -> None:
     """logout: известный активный секрет отзывает токен и коммитит."""
     secret = "live-secret"
-    refresh_token_entity = make_refresh_token(
-        token_hash=token_issuer.hash_refresh_secret(refresh_secret=secret), revoked_at=None
-    )
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=refresh_token_entity)
+    refresh_token_entity = make_refresh_token(token_hash=token_issuer.hash_refresh_secret(secret), revoked_at=None)
+    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity)
 
-    await auth_service.logout(refresh_secret=secret)
+    await auth_service.logout(secret)
 
     assert refresh_token_entity.is_revoked
     fake_uow.commit_mock.assert_awaited_once()
@@ -269,14 +267,14 @@ async def test_logout_revokes_active_token(
 
 async def test_logout_noop_when_secret_is_none(auth_service: AuthService, fake_uow: FakeAuthUnitOfWork) -> None:
     """logout без cookie (None) — молча ничего не делает, без коммита."""
-    await auth_service.logout(refresh_secret=None)
+    await auth_service.logout(None)
 
     fake_uow.commit_mock.assert_not_awaited()
 
 
 async def test_logout_noop_when_token_unknown(auth_service: AuthService, fake_uow: FakeAuthUnitOfWork) -> None:
     """logout с неизвестным секретом — молча ничего не делает, без коммита."""
-    await auth_service.logout(refresh_secret="unknown")
+    await auth_service.logout("unknown")
 
     fake_uow.commit_mock.assert_not_awaited()
 
@@ -290,12 +288,12 @@ async def test_logout_noop_when_token_already_revoked(
     """logout по уже отозванному токену идемпотентен — без повторного коммита."""
     secret = "revoked-secret"
     refresh_token_entity = make_refresh_token(
-        token_hash=token_issuer.hash_refresh_secret(refresh_secret=secret),
+        token_hash=token_issuer.hash_refresh_secret(secret),
         revoked_at=dt.datetime.now(tz=dt.UTC),
     )
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=refresh_token_entity)
+    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity)
 
-    await auth_service.logout(refresh_secret=secret)
+    await auth_service.logout(secret)
 
     fake_uow.commit_mock.assert_not_awaited()
 
@@ -313,19 +311,19 @@ async def test_refresh_rotates_token_and_returns_new_pair(
 ) -> None:
     """refresh валидным секретом: старый токен revoked, выпущен новый активный, коммит."""
     user_credentials_entity = make_user_credentials()
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     secret = "live-secret"
     old_token = make_refresh_token(
         user_id=user_credentials_entity.user_id,
-        token_hash=token_issuer.hash_refresh_secret(refresh_secret=secret),
+        token_hash=token_issuer.hash_refresh_secret(secret),
         revoked_at=None,
     )
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=old_token)
+    await fake_refresh_token_repository.insert_refresh_token(old_token)
 
     pair = await auth_service.refresh(refresh_secret=secret, client_metadata=_CLIENT_METADATA)
 
     assert old_token.is_revoked
-    new_hash = deterministic_hasher.digest(secret=pair.refresh_token.secret.get_secret_value())
+    new_hash = deterministic_hasher.digest(pair.refresh_token.secret.get_secret_value())
     assert new_hash != old_token.token_hash
     assert new_hash in fake_refresh_token_repository.by_hash
     assert not fake_refresh_token_repository.by_hash[new_hash].is_revoked
@@ -351,12 +349,12 @@ async def test_refresh_reuse_detection_revokes_all_active_and_raises(
     secret = "leaked-secret"
     reused = make_refresh_token(
         user_id=user_id,
-        token_hash=token_issuer.hash_refresh_secret(refresh_secret=secret),
+        token_hash=token_issuer.hash_refresh_secret(secret),
         revoked_at=dt.datetime.now(tz=dt.UTC),
     )
     other_active = make_refresh_token(user_id=user_id, token_hash="other-active-hash", revoked_at=None)
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=reused)
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=other_active)
+    await fake_refresh_token_repository.insert_refresh_token(reused)
+    await fake_refresh_token_repository.insert_refresh_token(other_active)
 
     with pytest.raises(InvalidRefreshTokenError):
         await auth_service.refresh(refresh_secret=secret, client_metadata=_CLIENT_METADATA)
@@ -374,11 +372,11 @@ async def test_refresh_raises_when_token_expired_without_side_effects(
     """refresh истёкшим (но не отозванным) токеном → 401 без побочных эффектов."""
     secret = "expired-secret"
     refresh_token_entity = make_refresh_token(
-        token_hash=token_issuer.hash_refresh_secret(refresh_secret=secret),
+        token_hash=token_issuer.hash_refresh_secret(secret),
         revoked_at=None,
         expires_at=dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=1),
     )
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=refresh_token_entity)
+    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity)
 
     with pytest.raises(InvalidRefreshTokenError):
         await auth_service.refresh(refresh_secret=secret, client_metadata=_CLIENT_METADATA)
@@ -396,10 +394,10 @@ async def test_refresh_raises_when_credentials_missing(
     """refresh валидным токеном, но аккаунт удалён → 401, старый токен не тронут, без коммита."""
     secret = "orphan-secret"
     refresh_token_entity = make_refresh_token(
-        token_hash=token_issuer.hash_refresh_secret(refresh_secret=secret),
+        token_hash=token_issuer.hash_refresh_secret(secret),
         revoked_at=None,
     )
-    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity=refresh_token_entity)
+    await fake_refresh_token_repository.insert_refresh_token(refresh_token_entity)
 
     with pytest.raises(InvalidRefreshTokenError):
         await auth_service.refresh(refresh_secret=secret, client_metadata=_CLIENT_METADATA)

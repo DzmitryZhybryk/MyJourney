@@ -69,7 +69,7 @@ async def test_seed_media_config_empty_store_writes_version_one_by_deploy(
     """Пустая таблица получает версию 1 без автора, и запись фиксируется."""
     snapshot = make_media_config_snapshot()
 
-    await media_config_service.seed_media_config(SeedMediaConfigCommand(snapshot=snapshot))
+    await media_config_service.seed_media_config(SeedMediaConfigCommand(snapshot))
 
     stored = fake_media_config_repository.versions[1]
     assert (stored.snapshot, stored.created_by) == (snapshot, None)
@@ -85,7 +85,7 @@ async def test_seed_media_config_existing_config_left_untouched(
     edited = make_media_config_snapshot(avatar_max_size_bytes=1_000)
     await fake_media_config_repository.insert_media_config(version=1, snapshot=edited, created_by=ADMIN_ID)
 
-    await media_config_service.seed_media_config(SeedMediaConfigCommand(snapshot=make_media_config_snapshot()))
+    await media_config_service.seed_media_config(SeedMediaConfigCommand(make_media_config_snapshot()))
 
     assert list(fake_media_config_repository.versions) == [1]
     assert fake_media_config_repository.versions[1].snapshot == edited
@@ -104,9 +104,9 @@ async def test_seed_media_config_concurrent_seed_conflict_is_not_an_error() -> N
         ) -> None:
             raise ConfigVersionConflictError()
 
-    uow = FakeMediaUnitOfWork(media_config_repository=RacingMediaConfigRepository())
+    uow = FakeMediaUnitOfWork(RacingMediaConfigRepository())
 
-    await MediaConfigService(uow=uow).seed_media_config(SeedMediaConfigCommand(snapshot=make_media_config_snapshot()))
+    await MediaConfigService(uow).seed_media_config(SeedMediaConfigCommand(make_media_config_snapshot()))
 
     uow.commit_mock.assert_not_awaited()
 

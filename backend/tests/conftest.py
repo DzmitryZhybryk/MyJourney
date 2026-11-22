@@ -172,7 +172,7 @@ def fake_user_repository() -> FakeUserRepository:
 def fake_user_uow(fake_user_repository: FakeUserRepository) -> FakeUserUnitOfWork:
     # Репозиторий — отдельная фикстура того же инстанса: тест сидит/ассертит его состояние
     # по конкретному типу (на uow он под port-типом, без .by_user_id).
-    return FakeUserUnitOfWork(user_repository=fake_user_repository)
+    return FakeUserUnitOfWork(fake_user_repository)
 
 
 @pytest.fixture
@@ -204,7 +204,7 @@ def fake_city_repository() -> FakeCityRepository:
 
 @pytest.fixture
 def fake_geo_uow(fake_city_repository: FakeCityRepository) -> FakeGeoUnitOfWork:
-    return FakeGeoUnitOfWork(city_repository=fake_city_repository)
+    return FakeGeoUnitOfWork(fake_city_repository)
 
 
 @pytest.fixture
@@ -214,14 +214,14 @@ def fake_media_config_repository() -> FakeMediaConfigRepository:
 
 @pytest.fixture
 def fake_media_uow(fake_media_config_repository: FakeMediaConfigRepository) -> FakeMediaUnitOfWork:
-    return FakeMediaUnitOfWork(media_config_repository=fake_media_config_repository)
+    return FakeMediaUnitOfWork(fake_media_config_repository)
 
 
 @pytest.fixture
 def fake_cities_client() -> FakeCitiesClient:
     """Справочник с Москвой и Лондоном — в порядке запроса поездки Москва → Лондон."""
     return FakeCitiesClient(
-        locations=(
+        (
             make_city_location_response(),
             make_city_location_response(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
         )
@@ -237,7 +237,7 @@ def fake_journey_repository() -> FakeJourneyRepository:
 def fake_journey_uow(fake_journey_repository: FakeJourneyRepository) -> FakeJourneyUnitOfWork:
     # Репозиторий — отдельная фикстура того же инстанса: тест сидит/ассертит его состояние
     # по конкретному типу (на uow он под port-типом, без .journeys).
-    return FakeJourneyUnitOfWork(journey_repository=fake_journey_repository)
+    return FakeJourneyUnitOfWork(fake_journey_repository)
 
 
 @pytest.fixture

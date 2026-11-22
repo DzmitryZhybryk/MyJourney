@@ -31,7 +31,7 @@ def test_collect_places_merges_rows_of_one_object() -> None:
     """collect_places: строки одного объекта (по стране на строку) сводятся в одно место, страны — по алфавиту."""
     bindings = [_TIAN_SHAN, {**_TIAN_SHAN, "iso": {"value": "CN"}}, {**_TIAN_SHAN, "iso": {"value": "KG"}}]
 
-    places, outcomes = collect_places(class_bindings=[(PlaceKindEnum.MOUNTAIN_RANGE, bindings)])
+    places, outcomes = collect_places([(PlaceKindEnum.MOUNTAIN_RANGE, bindings)])
 
     assert places == (
         ExportedPlace(
@@ -55,7 +55,7 @@ def test_collect_places_object_keeps_kind_of_narrowest_class() -> None:
         (PlaceKindEnum.MOUNTAIN_RANGE, [{**_BELUKHA, "iso": {"value": "KZ"}}]),
     ]
 
-    places, outcomes = collect_places(class_bindings=class_bindings)
+    places, outcomes = collect_places(class_bindings)
 
     [place] = places
     assert (place.kind, place.country_codes) == (PlaceKindEnum.MOUNTAIN, ("RU",))
@@ -71,7 +71,7 @@ def test_collect_places_picks_smallest_point_whatever_the_order(coordinates: tup
     """collect_places: из нескольких точек берётся наименьшая по (широта, долгота), порядок строк не важен."""
     bindings = [{**_BELUKHA, "coord": {"value": coordinate}} for coordinate in coordinates]
 
-    [place], _ = collect_places(class_bindings=[(PlaceKindEnum.MOUNTAIN, bindings)])
+    [place], _ = collect_places([(PlaceKindEnum.MOUNTAIN, bindings)])
 
     assert (place.latitude, place.longitude) == (49.81, 86.59)
 
@@ -92,7 +92,7 @@ def test_collect_places_picks_smallest_point_whatever_the_order(coordinates: tup
 )
 def test_collect_places_drops_unusable_object(binding: DictStrAny, outcome: ExportOutcomeEnum) -> None:
     """collect_places: объект без земной точки, страны или годного имени en в датасет не попадает, причина в итоге."""
-    places, outcomes = collect_places(class_bindings=[(PlaceKindEnum.MOUNTAIN, [binding])])
+    places, outcomes = collect_places([(PlaceKindEnum.MOUNTAIN, [binding])])
 
     assert places == ()
     assert outcomes == Counter({(PlaceKindEnum.MOUNTAIN, outcome): 1})
@@ -110,7 +110,7 @@ def test_collect_places_drops_unusable_object(binding: DictStrAny, outcome: Expo
 )
 def test_collect_places_cleans_labels(binding: DictStrAny, names: tuple[str, str | None]) -> None:
     """collect_places: уточнения в скобках срезаются; негодная или отсутствующая метка ru — место без русского имени."""
-    [place], _ = collect_places(class_bindings=[(PlaceKindEnum.MOUNTAIN, [binding])])
+    [place], _ = collect_places([(PlaceKindEnum.MOUNTAIN, [binding])])
 
     assert (place.name_en, place.name_ru) == names
 
@@ -122,6 +122,6 @@ def test_collect_places_sorts_places_by_external_id() -> None:
         {**_BELUKHA, "item": {"value": "http://www.wikidata.org/entity/Q10"}},
     ]
 
-    places, _ = collect_places(class_bindings=[(PlaceKindEnum.MOUNTAIN, bindings)])
+    places, _ = collect_places([(PlaceKindEnum.MOUNTAIN, bindings)])
 
     assert [place.external_id for place in places] == ["Wikidata:Q10", "Wikidata:Q9"]

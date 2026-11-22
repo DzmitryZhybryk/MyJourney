@@ -55,7 +55,7 @@ def main() -> None:
     Scenarios:
         - сборка новой версии датасета мест из Wikidata
     """
-    configure_logging(include_debug=False)
+    configure_logging(False)
     args = _parse_args()
     class_bindings: list[tuple[PlaceKindEnum, tuple[DictStrAny, ...]]] = []
     with httpx.Client(timeout=_HTTP_TIMEOUT_SECONDS) as http_client:
@@ -69,11 +69,11 @@ def main() -> None:
                 logger.info("geo.wikidata_places.class_fetched", kind=kind, class_qid=class_qid, rows=len(bindings))
                 class_bindings.append((kind, bindings))
 
-    places, outcomes = collect_places(class_bindings=class_bindings)
+    places, outcomes = collect_places(class_bindings)
     sha256 = write_dataset_file(
         path=args.output,
         fieldnames=_FIELDNAMES,
-        rows=(_to_csv_row(place=place) for place in places),
+        rows=(_to_csv_row(place) for place in places),
     )
     logger.info(
         "geo.wikidata_places.exported",
@@ -84,7 +84,7 @@ def main() -> None:
     )
 
 
-def _to_csv_row(*, place: ExportedPlace) -> dict[str, str | float | int]:
+def _to_csv_row(place: ExportedPlace) -> dict[str, str | float | int]:
     return {
         "external_id": place.external_id,
         "kind": place.kind,

@@ -39,7 +39,7 @@ async def search_cities(
     limit: Annotated[int, Query(ge=1, le=50, description="Максимум кандидатов в выдаче.")] = 10,
 ) -> CitySearchResponse:
     command = SearchCitiesCommand(search_text=search_text, language=language, limit=limit)
-    result = await city_service.search_cities(command=command)
+    result = await city_service.search_cities(command)
     items = tuple(CitySearchItem.model_validate(item, from_attributes=True) for item in result.items)
     return CitySearchResponse(items=items)
 
@@ -56,6 +56,6 @@ async def resolve_cities(
     city_service: Annotated[CityService, Depends(city_service_dependency)],
 ) -> ResolveCitiesResponse:
     command = ResolveCitiesCommand(city_ids=tuple(body.city_ids), language=body.language)
-    result = await city_service.resolve_cities(command=command)
+    result = await city_service.resolve_cities(command)
     items = tuple(CityName.model_validate(item, from_attributes=True) for item in result.items)
     return ResolveCitiesResponse(items=items)

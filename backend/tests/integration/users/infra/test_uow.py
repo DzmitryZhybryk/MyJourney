@@ -18,12 +18,12 @@ async def test_user_repository_write_is_persisted_by_uow_commit(
     """Запись через ``uow.user_repository`` фиксирует ``uow.commit()`` — она видна из новой сессии."""
     user_entity = make_user_entity()
     async with session_factory() as session:
-        uow = UserUnitOfWork(session=session)
+        uow = UserUnitOfWork(session)
         async with uow.transaction():
-            await uow.user_repository.insert_user(user_entity=user_entity)
+            await uow.user_repository.insert_user(user_entity)
             await uow.commit()
 
     async with session_factory() as reader:
-        found = await UserRepository(session=reader).find_user_by_id(user_id=user_entity.user_id)
+        found = await UserRepository(reader).find_user_by_id(user_entity.user_id)
 
     assert found is not None

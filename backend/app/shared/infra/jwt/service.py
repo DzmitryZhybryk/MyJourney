@@ -21,7 +21,7 @@ class JWTService:
         self._algorithm = algorithm
         self._expire_minutes = access_token_expire_minutes
 
-    def create_access_token(self, *, claims: AccessTokenClaims) -> str:
+    def create_access_token(self, claims: AccessTokenClaims) -> str:
         now = dt.datetime.now(tz=dt.UTC)
         payload = AccessTokenPayload(
             sub=claims.user_id,

@@ -49,8 +49,8 @@ class CityService:
         items: list[CitySearchItem] = []
         cities_without_name: list[DictStrAny] = []
         for city_entity in cities:
-            name = city_entity.display_name(language=command.language)
-            if city_entity.localized_name(language=command.language) is None:
+            name = city_entity.display_name(command.language)
+            if city_entity.localized_name(command.language) is None:
                 cities_without_name.append(
                     {
                         "city_id": city_entity.city_id,
@@ -79,7 +79,7 @@ class CityService:
                 cities=tuple(cities_without_name),
             )
 
-        return CitySearchResult(items=tuple(items))
+        return CitySearchResult(tuple(items))
 
     async def resolve_cities(self, command: ResolveCitiesCommand) -> ResolveCitiesResult:
         """
@@ -99,7 +99,7 @@ class CityService:
             Названия найденных городов
         """
         async with self._uow.transaction():
-            cities = await self._uow.city_repository.find_cities_by_ids(city_ids=command.city_ids)
+            cities = await self._uow.city_repository.find_cities_by_ids(command.city_ids)
 
         missing_city_ids = set(command.city_ids) - {city_entity.city_id for city_entity in cities}
         if missing_city_ids:
@@ -110,10 +110,10 @@ class CityService:
             )
 
         items = tuple(
-            ResolvedCity(city_id=city_entity.city_id, name=city_entity.display_name(language=command.language))
+            ResolvedCity(city_id=city_entity.city_id, name=city_entity.display_name(command.language))
             for city_entity in cities
         )
-        return ResolveCitiesResult(items=items)
+        return ResolveCitiesResult(items)
 
     async def get_cities_by_ids(self, command: GetCitiesByIdsCommand) -> CitiesByIdsResult:
         """
@@ -132,7 +132,7 @@ class CityService:
             Найденные города в произвольном порядке
         """
         async with self._uow.transaction():
-            cities = await self._uow.city_repository.find_cities_by_ids(city_ids=command.city_ids)
+            cities = await self._uow.city_repository.find_cities_by_ids(command.city_ids)
 
         items = tuple(
             CityLocation(
@@ -143,4 +143,4 @@ class CityService:
             )
             for city_entity in cities
         )
-        return CitiesByIdsResult(items=items)
+        return CitiesByIdsResult(items)

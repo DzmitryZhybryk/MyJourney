@@ -29,9 +29,9 @@ async def test_get_current_account_returns_login_identifiers(
         username="neo",
         email_verified_at=email_verified_at,
     )
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
-    result = await account_service.get_current_account(user_id=user_credentials_entity.user_id)
+    result = await account_service.get_current_account(user_credentials_entity.user_id)
 
     assert result == CurrentAccountResult(
         email="neo@example.com",
@@ -46,6 +46,6 @@ async def test_get_current_account_unknown_user_raises_account_not_found(
 ) -> None:
     """get_current_account без учётной записи → AccountNotFoundError, без коммита."""
     with pytest.raises(AccountNotFoundError):
-        await account_service.get_current_account(user_id=uuid4())
+        await account_service.get_current_account(uuid4())
 
     fake_uow.commit_mock.assert_not_awaited()

@@ -11,4 +11,4 @@ class JourneyUnitOfWork(BaseUnitOfWork, JourneyUnitOfWorkPort):
 
     def __init__(self, session: AsyncSession):
         super().__init__(session=session)
-        self.journey_repository = JourneyRepository(session=session)
+        self.journey_repository = JourneyRepository(session)

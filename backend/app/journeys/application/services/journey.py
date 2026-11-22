@@ -62,11 +62,11 @@ class JourneyService:
             origin_city_id=command.origin_city_id,
             destination_city_id=command.destination_city_id,
         )
-        distance_km = origin.distance_km_to(destination=destination)
+        distance_km = origin.distance_km_to(destination)
         async with self._uow.transaction():
             order_scope = JourneyOrderScope(user_id=user_id, traveled_year=command.traveled_year)
-            await self._uow.journey_repository.lock_sort_keys(scope=order_scope)
-            last_sort_key = await self._uow.journey_repository.find_last_sort_key(scope=order_scope)
+            await self._uow.journey_repository.lock_sort_keys(order_scope)
+            last_sort_key = await self._uow.journey_repository.find_last_sort_key(order_scope)
             journey_entity = JourneyEntity.create(
                 user_id=user_id,
                 origin=origin,
@@ -76,7 +76,7 @@ class JourneyService:
                 traveled_year=command.traveled_year,
                 sort_key=generate_key_between(before=last_sort_key, after=None),
             )
-            await self._uow.journey_repository.insert_journey(journey_entity=journey_entity)
+            await self._uow.journey_repository.insert_journey(journey_entity)
             await self._uow.commit()
 
     async def update_journey(self, *, user_id: UUID, journey_id: UUID, command: UpdateJourneyCommand) -> None:
@@ -99,10 +99,10 @@ class JourneyService:
             origin_city_id=command.origin_city_id,
             destination_city_id=command.destination_city_id,
         )
-        distance_km = origin.distance_km_to(destination=destination)
+        distance_km = origin.distance_km_to(destination)
         async with self._uow.transaction():
             target_scope = JourneyOrderScope(user_id=user_id, traveled_year=command.traveled_year)
-            await self._uow.journey_repository.lock_sort_keys(scope=target_scope)
+            await self._uow.journey_repository.lock_sort_keys(target_scope)
             journey_entity = await self._find_user_journey_for_update(user_id=user_id, journey_id=journey_id)
             journey_entity.revise(
                 origin=origin,
@@ -111,13 +111,13 @@ class JourneyService:
                 distance_km=distance_km,
             )
             if journey_entity.traveled_year != command.traveled_year:
-                last_sort_key = await self._uow.journey_repository.find_last_sort_key(scope=target_scope)
+                last_sort_key = await self._uow.journey_repository.find_last_sort_key(target_scope)
                 journey_entity.move(
                     traveled_year=command.traveled_year,
                     sort_key=generate_key_between(before=last_sort_key, after=None),
                 )
 
-            await self._uow.journey_repository.update_journey_by_id(journey_entity=journey_entity)
+            await self._uow.journey_repository.update_journey_by_id(journey_entity)
             await self._uow.commit()
 
     async def delete_journey(self, *, user_id: UUID, journey_id: UUID) -> None:
@@ -137,7 +137,7 @@ class JourneyService:
         async with self._uow.transaction():
             journey_entity = await self._find_user_journey_for_update(user_id=user_id, journey_id=journey_id)
             journey_entity.delete()
-            await self._uow.journey_repository.update_journey_by_id(journey_entity=journey_entity)
+            await self._uow.journey_repository.update_journey_by_id(journey_entity)
             await self._uow.commit()
 
     async def move_journey(self, *, user_id: UUID, journey_id: UUID, command: MoveJourneyCommand) -> MoveJourneyResult:
@@ -169,7 +169,7 @@ class JourneyService:
                 raise InvalidMoveTargetError()
 
             target_scope = JourneyOrderScope(user_id=user_id, traveled_year=neighbor_entity.traveled_year)
-            await self._uow.journey_repository.lock_sort_keys(scope=target_scope)
+            await self._uow.journey_repository.lock_sort_keys(target_scope)
             # Пока ждали блокировку года, соседа могли переставить, перенести в другой год или удалить.
             neighbor_entity = await self._uow.journey_repository.find_journey_by_id_and_user_id(
                 journey_id=command.neighbor_journey_id,
@@ -193,10 +193,10 @@ class JourneyService:
                 traveled_year=neighbor_entity.traveled_year,
                 sort_key=generate_key_between(before=before_sort_key, after=after_sort_key),
             )
-            await self._uow.journey_repository.update_journey_by_id(journey_entity=journey_entity)
+            await self._uow.journey_repository.update_journey_by_id(journey_entity)
             await self._uow.commit()
 
-        return MoveJourneyResult(traveled_year=journey_entity.traveled_year)
+        return MoveJourneyResult(journey_entity.traveled_year)
 
     async def estimate_journey_distance(self, command: EstimateJourneyDistanceCommand) -> JourneyDistanceResult:
         """
@@ -218,7 +218,7 @@ class JourneyService:
             origin_city_id=command.origin_city_id,
             destination_city_id=command.destination_city_id,
         )
-        return JourneyDistanceResult(distance_km=origin.distance_km_to(destination=destination))
+        return JourneyDistanceResult(origin.distance_km_to(destination))
 
     async def _find_route_points(self, *, origin_city_id: UUID, destination_city_id: UUID) -> tuple[GeoPoint, GeoPoint]:
         """
@@ -242,9 +242,7 @@ class JourneyService:
         """
         city_ids = (origin_city_id, destination_city_id)
         # geo отдаёт города в произвольном порядке, поэтому сопоставляем по id, а не по позиции.
-        locations = {
-            location.city_id: location for location in await self._cities_client.find_city_locations(city_ids=city_ids)
-        }
+        locations = {location.city_id: location for location in await self._cities_client.find_city_locations(city_ids)}
         missing_city_ids = frozenset(city_ids) - locations.keys()
         if missing_city_ids:
             raise UnknownCityError(details={"city_ids": missing_city_ids})
@@ -354,7 +352,7 @@ class JourneyService:
         )
         return ListJourneysResult(items=items, next_cursor=journeys_page.next_cursor)
 
-    async def get_journey_years(self, *, user_id: UUID) -> JourneyYearsResult:
+    async def get_journey_years(self, user_id: UUID) -> JourneyYearsResult:
         """
         Отдаёт годы, в которые пользователь ездил, по возрастанию — без учёта фильтров ленты.
 
@@ -368,11 +366,11 @@ class JourneyService:
             Годы поездок
         """
         async with self._uow.transaction():
-            years = await self._uow.journey_repository.find_journey_years_by_user_id(user_id=user_id)
+            years = await self._uow.journey_repository.find_journey_years_by_user_id(user_id)
 
-        return JourneyYearsResult(years=years)
+        return JourneyYearsResult(years)
 
-    async def get_journeys_map(self, *, user_id: UUID) -> JourneysMapResult:
+    async def get_journeys_map(self, user_id: UUID) -> JourneysMapResult:
         """
         Собирает агрегат карты путешествий: посещённые страны с городами и годами визитов.
 
@@ -389,7 +387,7 @@ class JourneyService:
             Посещённые страны (по коду) с городами и годами визитов
         """
         async with self._uow.transaction():
-            visited_cities = await self._uow.journey_repository.find_visited_cities_by_user_id(user_id=user_id)
+            visited_cities = await self._uow.journey_repository.find_visited_cities_by_user_id(user_id)
 
         # Репозиторий отдаёт города упорядоченными по стране — groupby собирает каждую страну целиком.
         countries = tuple(
@@ -409,9 +407,9 @@ class JourneyService:
                 visited_cities, key=lambda visited_city: visited_city.city.country_code
             )
         )
-        return JourneysMapResult(countries=countries)
+        return JourneysMapResult(countries)
 
-    async def get_journeys_globe(self, *, user_id: UUID) -> JourneysGlobeResult:
+    async def get_journeys_globe(self, user_id: UUID) -> JourneysGlobeResult:
         """
         Собирает города для глобуса: где пользователь побывал, каждый город по одному разу.
 
@@ -425,9 +423,9 @@ class JourneyService:
             Посещённые города с координатами
         """
         async with self._uow.transaction():
-            visited_cities = await self._uow.journey_repository.find_visited_cities_by_user_id(user_id=user_id)
+            visited_cities = await self._uow.journey_repository.find_visited_cities_by_user_id(user_id)
 
-        return JourneysGlobeResult(cities=tuple(visited_city.city for visited_city in visited_cities))
+        return JourneysGlobeResult(tuple(visited_city.city for visited_city in visited_cities))
 
     async def get_movements_map(self, *, user_id: UUID, command: GetMovementsMapCommand) -> MovementsMapResult:
         """
@@ -447,7 +445,7 @@ class JourneyService:
             Маршруты поездок и годы первой и последней поездки
         """
         async with self._uow.transaction():
-            years = await self._uow.journey_repository.find_journey_years_by_user_id(user_id=user_id)
+            years = await self._uow.journey_repository.find_journey_years_by_user_id(user_id)
             if not years:
                 return MovementsMapResult(first_year=None, last_year=None, connections=())
 

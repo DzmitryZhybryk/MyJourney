@@ -36,7 +36,7 @@ class UserService:
             marketing_emails_consent=command.marketing_emails_consent,
             terms_accepted_at=command.terms_accepted_at,
         )
-        await self._uow.user_repository.insert_user(user_entity=user_entity)
+        await self._uow.user_repository.insert_user(user_entity)
 
     async def get_current_user(self, user_id: UUID) -> CurrentUserResult:
         """
@@ -59,7 +59,7 @@ class UserService:
             UserDeletedError: Если пользователь удалён (soft-delete).
         """
         async with self._uow.transaction():
-            user_entity = await self._uow.user_repository.find_user_by_id(user_id=user_id)
+            user_entity = await self._uow.user_repository.find_user_by_id(user_id)
             if user_entity is None:
                 raise UserNotFoundError()
 
@@ -90,7 +90,7 @@ class UserService:
             UserDeletedError: Если пользователь удалён (soft-delete).
         """
         async with self._uow.transaction():
-            user_entity = await self._uow.user_repository.find_user_by_id_for_update(user_id=user_id)
+            user_entity = await self._uow.user_repository.find_user_by_id_for_update(user_id)
             if user_entity is None:
                 raise UserNotFoundError()
 
@@ -99,7 +99,7 @@ class UserService:
                 display_name=command.display_name,
                 marketing_emails_consent=command.marketing_emails_consent,
             )
-            await self._uow.user_repository.update_user_by_id(user_entity=user_entity)
+            await self._uow.user_repository.update_user_by_id(user_entity)
             await self._uow.commit()
 
         return CurrentUserResult(

@@ -38,18 +38,13 @@ not a retelling of the decision, its history or metrics.
 
 ## Named arguments
 
-**Call side:** pass every argument as a keyword.
+One parameter (`self` / `cls` not counted) — declared without `*`, passed positionally. Two or
+more — keyword-only with `*`, passed by keyword.
 
 ```python
-Password(hash=user_credentials_model.password_hash)   # not Password(user_credentials_model.password_hash)
-```
-
-**Declaration side:** a function, method or constructor with **more than one** parameter makes them
-all keyword-only with `*`. A single parameter may stay positional. `self` / `cls` do not count.
-
-```python
-def decode_cursor(*, cursor: str, parsers: Sequence[CursorParser]) -> tuple[object, ...]: ...
 def find_journey_years_by_user_id(self, user_id: UUID) -> tuple[int, ...]: ...
+def decode_cursor(*, cursor: str, parsers: Sequence[CursorParser]) -> tuple[object, ...]: ...
+Password(user_credentials_model.password_hash)   # not Password(hash=...)
 ```
 
 Exempt only signatures that something else calls **positionally**: framework hooks (pydantic

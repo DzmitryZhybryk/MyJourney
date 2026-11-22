@@ -24,15 +24,13 @@ async def test_user_credentials_repository_write_is_persisted_by_uow_commit(
         user_id=user_id, email="uow-commit@example.com", username="uow_commit"
     )
     async with session_factory() as session:
-        uow = AuthUnitOfWork(session=session)
+        uow = AuthUnitOfWork(session)
         async with uow.transaction():
-            await uow.user_credentials_repository.insert_user_credentials(
-                user_credentials_entity=user_credentials_entity
-            )
+            await uow.user_credentials_repository.insert_user_credentials(user_credentials_entity)
             await uow.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
 
     assert found is not None
     assert found.user_id == user_id
@@ -58,21 +56,19 @@ async def test_transaction_flush_orders_credentials_before_dependent_refresh_tok
     )
     refresh_token_entity = make_refresh_token(user_id=user_id, token_hash="uow-fk-order-refresh_token_entity-hash")
     async with session_factory() as session:
-        uow = AuthUnitOfWork(session=session)
+        uow = AuthUnitOfWork(session)
         async with uow.transaction():
-            await uow.user_credentials_repository.insert_user_credentials(
-                user_credentials_entity=user_credentials_entity
-            )
+            await uow.user_credentials_repository.insert_user_credentials(user_credentials_entity)
             await uow.flush()  # родитель уходит в БД до зависимого refresh_token
-            await uow.refresh_token_repository.insert_refresh_token(refresh_token_entity=refresh_token_entity)
+            await uow.refresh_token_repository.insert_refresh_token(refresh_token_entity)
             await uow.commit()
 
     async with session_factory() as reader:
-        found_credentials = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(
-            user_id=user_id,
+        found_credentials = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(
+            user_id,
         )
-        found_token = await RefreshTokenRepository(session=reader).find_refresh_token_by_hash_for_update(
-            token_hash="uow-fk-order-refresh_token_entity-hash",
+        found_token = await RefreshTokenRepository(reader).find_refresh_token_by_hash_for_update(
+            "uow-fk-order-refresh_token_entity-hash",
         )
 
     assert found_credentials is not None

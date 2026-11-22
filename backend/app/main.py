@@ -104,7 +104,7 @@ def create_app() -> BFastAPI:
     Scenarios:
         - запуск API-процесса: в Docker-стеках dev, e2e и prod и локально
     """
-    configure_logging(include_debug=settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
+    configure_logging(settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
 
     # В production не публикуем интерактивную документацию и OpenAPI-схему наружу:
     # это внутренняя поверхность API, её не должно быть видно на публичном домене.
@@ -119,9 +119,9 @@ def create_app() -> BFastAPI:
         generate_unique_id_function=route_operation_id,
         telemetry=get_api_telemetry_config(),
         components=[
-            SqlAlchemyComponent(settings=settings),
-            ResendComponent(settings=settings),
-            MediaStorageComponent(settings=settings),
+            SqlAlchemyComponent(settings),
+            ResendComponent(settings),
+            MediaStorageComponent(settings),
             ProcrastinateComponent(settings=settings, blueprints=TASK_BLUEPRINTS),
             TaskBusComponent(),
         ],

@@ -354,7 +354,7 @@ def test_decisions_file_roundtrip(tmp_path: Path) -> None:
 
     write_decisions(decisions=decisions, path=path)
 
-    assert read_decisions(path=path) == {decision.external_id: decision for decision in decisions}
+    assert read_decisions(path) == {decision.external_id: decision for decision in decisions}
     assert [line.split(",")[0] for line in path.read_text(encoding="utf-8").splitlines()[1:]] == [
         "GeoNames:1",
         "GeoNames:2",
@@ -416,7 +416,7 @@ def test_read_decisions_rejects_invalid_file(tmp_path: Path, lines: list[str], m
     path.write_text("\n".join(["external_id,geonames_ru,wikidata_ru,name_ru,decided_by,reason", *lines]) + "\n")
 
     with pytest.raises(ArbitrationError, match=match):
-        read_decisions(path=path)
+        read_decisions(path)
 
 
 def test_merge_decisions_replaces_decision_by_city() -> None:

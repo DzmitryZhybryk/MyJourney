@@ -75,7 +75,7 @@ async def send_verification_email(
 
     registry: ComponentRegistry = context.additional_context[WORKER_REGISTRY_KEY]
     transport = registry.get(EmailTransportPort)
-    code = get_fernet_secret_cipher().decrypt(ciphertext=code_ciphertext)
+    code = get_fernet_secret_cipher().decrypt(code_ciphertext)
     message = render_verification_email(email=email, code=code)
-    await transport.send(message=message)
+    await transport.send(message)
     logger.info("auth.verification_email.sent", user_id=user_id)

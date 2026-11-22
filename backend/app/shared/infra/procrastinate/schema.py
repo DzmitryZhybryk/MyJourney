@@ -8,7 +8,7 @@ from app.shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-async def ensure_procrastinate_schema(*, procrastinate_app: ProcrastinateApp) -> None:
+async def ensure_procrastinate_schema(procrastinate_app: ProcrastinateApp) -> None:
     """
     Применяет procrastinate-схему, если её ещё нет.
 

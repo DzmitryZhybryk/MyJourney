@@ -59,4 +59,4 @@ def get_fernet_secret_cipher() -> FernetSecretCipher:
     Scenarios:
         - домен, который хранит одноразовые коды и отправляет их в письме
     """
-    return FernetSecretCipher(key=settings.CHALLENGE_CODE_ENCRYPTION_KEY)
+    return FernetSecretCipher(settings.CHALLENGE_CODE_ENCRYPTION_KEY)

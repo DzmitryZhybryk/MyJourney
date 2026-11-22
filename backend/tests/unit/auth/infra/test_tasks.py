@@ -23,7 +23,7 @@ async def test_send_verification_email_renders_and_sends(
         job_context,
         user_id="user-1",
         email="user@example.com",
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
         expires_at=_FUTURE_EXPIRES_AT,
     )
 
@@ -46,7 +46,7 @@ async def test_send_verification_email_logs_sending_without_personal_data(
             job_context,
             user_id="user-1",
             email="user@example.com",
-            code_ciphertext=secret_cipher.encrypt(secret="123456"),
+            code_ciphertext=secret_cipher.encrypt("123456"),
             expires_at=_FUTURE_EXPIRES_AT,
         )
 
@@ -67,7 +67,7 @@ async def test_send_verification_email_skips_expired_code(
             job_context,
             user_id="user-1",
             email="user@example.com",
-            code_ciphertext=secret_cipher.encrypt(secret="123456"),
+            code_ciphertext=secret_cipher.encrypt("123456"),
             expires_at=expired_at,
         )
 
@@ -93,7 +93,7 @@ async def test_send_verification_email_propagates_temporary_error(
             job_context,
             user_id="user-1",
             email="user@example.com",
-            code_ciphertext=secret_cipher.encrypt(secret="123456"),
+            code_ciphertext=secret_cipher.encrypt("123456"),
             expires_at=_FUTURE_EXPIRES_AT,
         )
 
@@ -155,7 +155,7 @@ async def test_send_verification_email_propagates_persistent_error(
             job_context,
             user_id="user-1",
             email="user@example.com",
-            code_ciphertext=secret_cipher.encrypt(secret="123456"),
+            code_ciphertext=secret_cipher.encrypt("123456"),
             expires_at=_FUTURE_EXPIRES_AT,
         )
 

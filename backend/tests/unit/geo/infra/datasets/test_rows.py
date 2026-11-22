@@ -23,10 +23,10 @@ def test_iter_city_rows_parses_full_row() -> None:
     """iter_city_rows: строка файла → значения колонок, id выведен из external_id."""
     lines = [_HEADER, "GeoNames:524901,Moscow,Москва,RU,55.75,37.62,10000000"]
 
-    [row] = list(iter_city_rows(lines=lines))
+    [row] = list(iter_city_rows(lines))
 
     assert row == (
-        gazetteer_id_for(external_id="GeoNames:524901"),
+        gazetteer_id_for("GeoNames:524901"),
         "GeoNames:524901",
         "Moscow",
         "Москва",
@@ -41,7 +41,7 @@ def test_iter_city_rows_empty_optional_cells_become_none() -> None:
     """iter_city_rows: пустые name_ru и population — NULL, а не пустая строка."""
     lines = [_HEADER, "GeoNames:1,Town,,FR,43.4,3.4,"]
 
-    [row] = list(iter_city_rows(lines=lines))
+    [row] = list(iter_city_rows(lines))
 
     assert row[3] is None
     assert row[7] is None
@@ -54,7 +54,7 @@ def test_iter_city_rows_accepts_columns_in_any_order() -> None:
         "Moscow,GeoNames:524901,Москва,RU,55.75,37.62,10000000",
     ]
 
-    [row] = list(iter_city_rows(lines=lines))
+    [row] = list(iter_city_rows(lines))
 
     assert row[1] == "GeoNames:524901"
     assert row[2] == "Moscow"
@@ -72,7 +72,7 @@ def test_iter_city_rows_accepts_columns_in_any_order() -> None:
 def test_iter_city_rows_rejects_unexpected_columns(header: str) -> None:
     """iter_city_rows: набор колонок не как в формате → DatasetColumnsError до разбора строк."""
     with pytest.raises(DatasetColumnsError):
-        list(iter_city_rows(lines=[header]))
+        list(iter_city_rows([header]))
 
 
 def test_iter_city_rows_rejects_city_without_english_name() -> None:
@@ -80,7 +80,7 @@ def test_iter_city_rows_rejects_city_without_english_name() -> None:
     lines = [_HEADER, "GeoNames:7,,Москва,RU,55.75,37.62,1"]
 
     with pytest.raises(MissingEnglishNameError, match="GeoNames:7"):
-        list(iter_city_rows(lines=lines))
+        list(iter_city_rows(lines))
 
 
 def test_iter_city_rows_rejects_city_without_country() -> None:
@@ -88,7 +88,7 @@ def test_iter_city_rows_rejects_city_without_country() -> None:
     lines = [_HEADER, "GeoNames:8,Town,,,55.75,37.62,1"]
 
     with pytest.raises(MissingCountryCodeError, match="GeoNames:8"):
-        list(iter_city_rows(lines=lines))
+        list(iter_city_rows(lines))
 
 
 @pytest.mark.parametrize(
@@ -101,7 +101,7 @@ def test_iter_city_rows_rejects_malformed_external_id(external_id: str) -> None:
     lines = [_HEADER, f"{external_id},Moscow,Москва,RU,55.75,37.62,1"]
 
     with pytest.raises(InvalidExternalIdError):
-        list(iter_city_rows(lines=lines))
+        list(iter_city_rows(lines))
 
 
 @pytest.mark.parametrize("country_code", ["ru", "R1", "RUS"], ids=["lowercase", "digit", "three-letters"])
@@ -110,7 +110,7 @@ def test_iter_city_rows_rejects_invalid_country_code(country_code: str) -> None:
     lines = [_HEADER, f"GeoNames:8,Town,,{country_code},55.75,37.62,1"]
 
     with pytest.raises(InvalidCountryCodeError, match="GeoNames:8"):
-        list(iter_city_rows(lines=lines))
+        list(iter_city_rows(lines))
 
 
 @pytest.mark.parametrize(
@@ -145,14 +145,14 @@ def test_iter_city_rows_rejects_invalid_number(latitude: str, longitude: str, po
     lines = [_HEADER, f"GeoNames:9,Town,,FR,{latitude},{longitude},{population}"]
 
     with pytest.raises(InvalidNumberError, match="GeoNames:9"):
-        list(iter_city_rows(lines=lines))
+        list(iter_city_rows(lines))
 
 
 def test_iter_city_rows_accepts_numbers_on_bounds() -> None:
     """iter_city_rows: полюса, линия перемены дат и нулевое население — допустимые значения."""
     lines = [_HEADER, "GeoNames:1,South,,AQ,-90,180,0", "GeoNames:2,North,,NO,90,-180,0"]
 
-    rows = list(iter_city_rows(lines=lines))
+    rows = list(iter_city_rows(lines))
 
     assert [(row[5], row[6], row[7]) for row in rows] == [(-90.0, 180.0, 0), (90.0, -180.0, 0)]
 
@@ -161,10 +161,10 @@ def test_iter_place_rows_parses_full_row() -> None:
     """iter_place_rows: строка файла → значения колонок; страны — список для массива, id из external_id."""
     lines = [_PLACE_HEADER, 'Wikidata:Q5474,mountain_range,Tian Shan,Тянь-Шань,"CN,KG,KZ,UZ",42.04,80.13,99']
 
-    [row] = list(iter_place_rows(lines=lines))
+    [row] = list(iter_place_rows(lines))
 
     assert row == (
-        gazetteer_id_for(external_id="Wikidata:Q5474"),
+        gazetteer_id_for("Wikidata:Q5474"),
         "Wikidata:Q5474",
         "mountain_range",
         "Tian Shan",
@@ -180,7 +180,7 @@ def test_iter_place_rows_empty_name_ru_becomes_none() -> None:
     """iter_place_rows: пустое name_ru — NULL, а не пустая строка."""
     lines = [_PLACE_HEADER, "Wikidata:Q20614802,lake,Seven Lakes,,TJ,39.14,67.85,4"]
 
-    [row] = list(iter_place_rows(lines=lines))
+    [row] = list(iter_place_rows(lines))
 
     assert row[4] is None
 
@@ -197,7 +197,7 @@ def test_iter_place_rows_empty_name_ru_becomes_none() -> None:
 def test_iter_place_rows_rejects_unexpected_columns(header: str) -> None:
     """iter_place_rows: набор колонок не как в формате places → DatasetColumnsError до разбора строк."""
     with pytest.raises(DatasetColumnsError):
-        list(iter_place_rows(lines=[header]))
+        list(iter_place_rows([header]))
 
 
 def test_iter_place_rows_rejects_place_without_english_name() -> None:
@@ -205,7 +205,7 @@ def test_iter_place_rows_rejects_place_without_english_name() -> None:
     lines = [_PLACE_HEADER, "Wikidata:Q1,lake,,Озеро,RU,55.0,37.0,5"]
 
     with pytest.raises(MissingEnglishNameError, match="Wikidata:Q1"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))
 
 
 def test_iter_place_rows_rejects_unknown_kind() -> None:
@@ -213,7 +213,7 @@ def test_iter_place_rows_rejects_unknown_kind() -> None:
     lines = [_PLACE_HEADER, "Wikidata:Q2,river,Volga,Волга,RU,55.0,37.0,5"]
 
     with pytest.raises(UnknownPlaceKindError, match="Wikidata:Q2"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))
 
 
 def test_iter_place_rows_rejects_place_without_countries() -> None:
@@ -221,7 +221,7 @@ def test_iter_place_rows_rejects_place_without_countries() -> None:
     lines = [_PLACE_HEADER, "Wikidata:Q3,glacier,Glacier,,,-75.0,0.0,5"]
 
     with pytest.raises(MissingCountryCodeError, match="Wikidata:Q3"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))
 
 
 def test_iter_place_rows_rejects_malformed_external_id() -> None:
@@ -229,7 +229,7 @@ def test_iter_place_rows_rejects_malformed_external_id() -> None:
     lines = [_PLACE_HEADER, "Q5474,mountain_range,Tian Shan,,KZ,42.04,80.13,99"]
 
     with pytest.raises(InvalidExternalIdError, match="Q5474"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))
 
 
 @pytest.mark.parametrize(
@@ -242,7 +242,7 @@ def test_iter_place_rows_rejects_invalid_country_code(country_codes: str) -> Non
     lines = [_PLACE_HEADER, f'Wikidata:Q4,lake,Lake,,"{country_codes}",55.0,37.0,5']
 
     with pytest.raises(InvalidCountryCodeError, match="Wikidata:Q4"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))
 
 
 @pytest.mark.parametrize("country_codes", ["RU,RU", "KZ,RU,KZ"], ids=["adjacent", "apart"])
@@ -251,7 +251,7 @@ def test_iter_place_rows_rejects_repeated_country(country_codes: str) -> None:
     lines = [_PLACE_HEADER, f'Wikidata:Q5,lake,Lake,,"{country_codes}",55.0,37.0,5']
 
     with pytest.raises(DuplicateCountryCodeError, match="Wikidata:Q5"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))
 
 
 @pytest.mark.parametrize(
@@ -271,4 +271,4 @@ def test_iter_place_rows_rejects_invalid_number(latitude: str, longitude: str, n
     lines = [_PLACE_HEADER, f"Wikidata:Q6,lake,Lake,,RU,{latitude},{longitude},{notability}"]
 
     with pytest.raises(InvalidNumberError, match="Wikidata:Q6"):
-        list(iter_place_rows(lines=lines))
+        list(iter_place_rows(lines))

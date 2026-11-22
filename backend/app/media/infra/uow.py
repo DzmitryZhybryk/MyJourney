@@ -11,4 +11,4 @@ class MediaUnitOfWork(BaseUnitOfWork, MediaUnitOfWorkPort):
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session=session)
-        self.media_config_repository = MediaConfigRepository(session=session)
+        self.media_config_repository = MediaConfigRepository(session)

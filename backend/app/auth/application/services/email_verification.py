@@ -57,7 +57,7 @@ class EmailVerificationService:
         """
         async with self._uow.transaction():
             user_credentials_entity = await self._uow.user_credentials_repository.find_user_credentials_by_user_id(
-                user_id=user_id
+                user_id
             )
             if user_credentials_entity is None:
                 raise AccountNotFoundError()
@@ -69,28 +69,26 @@ class EmailVerificationService:
                 challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
             )
             if existing_challenge_entity is not None and not existing_challenge_entity.is_expired():
-                existing_challenge_entity.ensure_not_exhausted(max_attempts=self._config.max_attempts)
+                existing_challenge_entity.ensure_not_exhausted(self._config.max_attempts)
                 existing_challenge_entity.ensure_resend_cooldown_passed(
-                    cooldown_seconds=self._config.resend_cooldown_seconds,
+                    self._config.resend_cooldown_seconds,
                 )
-                existing_challenge_entity.resend(ttl_minutes=self._config.ttl_minutes)
-                await self._uow.challenge_repository.update_challenge_by_id(challenge_entity=existing_challenge_entity)
+                existing_challenge_entity.resend(self._config.ttl_minutes)
+                await self._uow.challenge_repository.update_challenge_by_id(existing_challenge_entity)
                 challenge_entity = existing_challenge_entity
             else:
                 if existing_challenge_entity is not None:
                     existing_challenge_entity.mark_used()
-                    await self._uow.challenge_repository.update_challenge_by_id(
-                        challenge_entity=existing_challenge_entity
-                    )
+                    await self._uow.challenge_repository.update_challenge_by_id(existing_challenge_entity)
 
                 code = ChallengeEntity.generate_code()
                 challenge_entity = ChallengeEntity.create(
                     user_id=user_id,
                     challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
-                    code_ciphertext=self._secret_cipher.encrypt(secret=code),
+                    code_ciphertext=self._secret_cipher.encrypt(code),
                     ttl_minutes=self._config.ttl_minutes,
                 )
-                await self._uow.challenge_repository.insert_challenge(challenge_entity=challenge_entity)
+                await self._uow.challenge_repository.insert_challenge(challenge_entity)
 
             await self._task_bus.bind_to(self._uow.session).defer(
                 task_name=SEND_VERIFICATION_EMAIL_TASK,
@@ -128,7 +126,7 @@ class EmailVerificationService:
         """
         async with self._uow.transaction():
             user_credentials_entity = await self._uow.user_credentials_repository.find_user_credentials_by_user_id(
-                user_id=user_id
+                user_id
             )
             if user_credentials_entity is None:
                 raise AccountNotFoundError()
@@ -142,20 +140,18 @@ class EmailVerificationService:
             if challenge_entity is None:
                 raise ChallengeNotFoundError()
 
-            challenge_entity.ensure_can_attempt(max_attempts=self._config.max_attempts)
+            challenge_entity.ensure_can_attempt(self._config.max_attempts)
 
-            stored_code = self._secret_cipher.decrypt(ciphertext=challenge_entity.code_ciphertext)
+            stored_code = self._secret_cipher.decrypt(challenge_entity.code_ciphertext)
             # Байты, а не str: схема пропускает не-ASCII цифры, а compare_digest на таких str бросает TypeError.
             if not hmac.compare_digest(stored_code.encode(), command.code.get_secret_value().encode()):
                 challenge_entity.register_failed_attempt()
-                await self._uow.challenge_repository.update_challenge_by_id(challenge_entity=challenge_entity)
+                await self._uow.challenge_repository.update_challenge_by_id(challenge_entity)
                 await self._uow.commit()
                 raise VerificationCodeInvalidError()
 
             challenge_entity.mark_used()
             user_credentials_entity.mark_email_verified()
-            await self._uow.challenge_repository.update_challenge_by_id(challenge_entity=challenge_entity)
-            await self._uow.user_credentials_repository.update_user_credentials_by_user_id(
-                user_credentials_entity=user_credentials_entity
-            )
+            await self._uow.challenge_repository.update_challenge_by_id(challenge_entity)
+            await self._uow.user_credentials_repository.update_user_credentials_by_user_id(user_credentials_entity)
             await self._uow.commit()

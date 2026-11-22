@@ -11,7 +11,7 @@ class InternalUsersClient(UsersClientPort):
 
     async def create_user(self, request: CreateUserRequest) -> None:
         await self._user_service.create_user(
-            command=CreateUserCommand(
+            CreateUserCommand(
                 user_id=request.user_id,
                 display_name=request.display_name,
                 marketing_emails_consent=request.marketing_emails_consent,

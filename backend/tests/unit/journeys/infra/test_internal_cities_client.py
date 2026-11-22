@@ -22,10 +22,10 @@ async def test_find_city_locations_maps_known_cities_from_geo() -> None:
     city_repository = FakeCityRepository()
     city_repository.cities.extend([moscow, london])
     client = InternalCitiesClient(
-        city_service=CityService(uow=FakeGeoUnitOfWork(city_repository=city_repository)),
+        CityService(uow=FakeGeoUnitOfWork(city_repository)),
     )
 
-    locations = await client.find_city_locations(city_ids=(moscow.city_id, london.city_id, uuid4()))
+    locations = await client.find_city_locations((moscow.city_id, london.city_id, uuid4()))
 
     assert sorted(locations, key=lambda location: location.latitude) == [
         CityLocationResponse(city_id=london.city_id, country_code="GB", latitude=51.5, longitude=-0.12),

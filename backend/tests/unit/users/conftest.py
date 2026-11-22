@@ -13,4 +13,4 @@ from tests.fakes import FakeUserUnitOfWork
 
 @pytest.fixture
 def user_service(fake_user_uow: FakeUserUnitOfWork) -> UserService:
-    return UserService(uow=fake_user_uow)
+    return UserService(fake_user_uow)

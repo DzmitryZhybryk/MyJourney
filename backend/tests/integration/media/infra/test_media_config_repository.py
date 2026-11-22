@@ -24,7 +24,7 @@ ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000ad")
 
 async def test_find_latest_media_config_empty_table_returns_none(db_session: AsyncSession) -> None:
     """Пустая таблица — конфиг ещё не записан."""
-    assert await MediaConfigRepository(session=db_session).find_latest_media_config() is None
+    assert await MediaConfigRepository(db_session).find_latest_media_config() is None
 
 
 async def test_find_latest_media_config_returns_highest_version_with_snapshot(
@@ -33,13 +33,13 @@ async def test_find_latest_media_config_returns_highest_version_with_snapshot(
     """Последняя версия — с наибольшим номером; снапшот читается из JSONB той же моделью."""
     edited = make_media_config_snapshot(avatar_max_size_bytes=1_000)
     async with session_factory() as session:
-        repository = MediaConfigRepository(session=session)
+        repository = MediaConfigRepository(session)
         await repository.insert_media_config(version=1, snapshot=make_media_config_snapshot(), created_by=None)
         await repository.insert_media_config(version=2, snapshot=edited, created_by=ADMIN_ID)
         await session.commit()
 
     async with session_factory() as reader:
-        latest = await MediaConfigRepository(session=reader).find_latest_media_config()
+        latest = await MediaConfigRepository(reader).find_latest_media_config()
 
     assert latest is not None
     assert (latest.version, latest.snapshot, latest.created_by) == (2, edited, ADMIN_ID)
@@ -48,7 +48,7 @@ async def test_find_latest_media_config_returns_highest_version_with_snapshot(
 
 async def test_insert_media_config_existing_version_raises_conflict(db_session: AsyncSession) -> None:
     """Повтор номера версии — нарушение первичного ключа, переведённое в конфликт конфига."""
-    repository = MediaConfigRepository(session=db_session)
+    repository = MediaConfigRepository(db_session)
     await repository.insert_media_config(version=1, snapshot=make_media_config_snapshot(), created_by=None)
 
     with pytest.raises(ConfigVersionConflictError):
@@ -61,12 +61,12 @@ async def test_seed_media_config_second_run_keeps_edited_config(
     """Повторный деплой не перезаписывает конфиг: в таблице остаётся одна версия от первого seed."""
     for avatar_max_size_bytes in (1_000, 2_000):
         async with session_factory() as session:
-            await MediaConfigService(uow=MediaUnitOfWork(session=session)).seed_media_config(
-                SeedMediaConfigCommand(snapshot=make_media_config_snapshot(avatar_max_size_bytes=avatar_max_size_bytes))
+            await MediaConfigService(MediaUnitOfWork(session)).seed_media_config(
+                SeedMediaConfigCommand(make_media_config_snapshot(avatar_max_size_bytes=avatar_max_size_bytes))
             )
 
     async with session_factory() as reader:
-        latest = await MediaConfigRepository(session=reader).find_latest_media_config()
+        latest = await MediaConfigRepository(reader).find_latest_media_config()
 
     assert latest is not None
     assert (latest.version, latest.snapshot.avatar.max_size_bytes) == (1, 1_000)
@@ -87,8 +87,8 @@ async def test_seed_media_config_latest_row_of_old_shape_fails_and_writes_nothin
 
     async with session_factory() as session:
         with pytest.raises(ValidationError):
-            await MediaConfigService(uow=MediaUnitOfWork(session=session)).seed_media_config(
-                SeedMediaConfigCommand(snapshot=make_media_config_snapshot())
+            await MediaConfigService(MediaUnitOfWork(session)).seed_media_config(
+                SeedMediaConfigCommand(make_media_config_snapshot())
             )
 
     async with session_factory() as reader:

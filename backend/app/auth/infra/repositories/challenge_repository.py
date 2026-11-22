@@ -35,7 +35,7 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
         Args:
             challenge_entity: Доменная сущность challenge'а
         """
-        await self.insert(data=Challenge(**self._to_columns(challenge_entity=challenge_entity)))
+        await self.insert(Challenge(**self._to_columns(challenge_entity)))
 
     async def find_active_challenge_for_update(
         self,
@@ -66,8 +66,8 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
             )
             .with_for_update()
         )
-        challenge_model = await self._fetch_one(query=query)
-        return self._to_entity(challenge_model=challenge_model) if challenge_model else None
+        challenge_model = await self._fetch_one(query)
+        return self._to_entity(challenge_model) if challenge_model else None
 
     async def update_challenge_by_id(self, challenge_entity: ChallengeEntity) -> None:
         """
@@ -79,7 +79,7 @@ class ChallengeRepository(BaseDBRepository[Challenge], ChallengeRepositoryPort):
         Args:
             challenge_entity: Доменная сущность с уже обновлённым состоянием
         """
-        values = self._to_columns(challenge_entity=challenge_entity)
+        values = self._to_columns(challenge_entity)
         del values["id"]  # PK не входит в SET
         query = sa.update(Challenge).where(Challenge.id == challenge_entity.challenge_id).values(**values)
         await self._session.execute(query)

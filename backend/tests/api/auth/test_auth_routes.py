@@ -237,7 +237,7 @@ async def test_login_valid_credentials_returns_200_with_token_and_cookie(
     user_credentials_entity = make_user_credentials(
         email="user@example.com",
         username="user",
-        password=make_password(hash=fake_salted_hasher.hash(secret)),
+        password=make_password(fake_salted_hasher.hash(secret)),
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
 
@@ -259,7 +259,7 @@ async def test_login_with_surrounding_spaces_finds_account_returns_200(
     secret = "password123"
     user_credentials_entity = make_user_credentials(
         username="user",
-        password=make_password(hash=fake_salted_hasher.hash(secret)),
+        password=make_password(fake_salted_hasher.hash(secret)),
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
 
@@ -276,7 +276,7 @@ async def test_login_wrong_password_returns_401(
     """login с неверным паролем → 401 auth.invalid_credentials."""
     user_credentials_entity = make_user_credentials(
         email="user@example.com",
-        password=make_password(hash=fake_salted_hasher.hash("correct-password")),
+        password=make_password(fake_salted_hasher.hash("correct-password")),
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
 
@@ -321,7 +321,7 @@ async def test_logout_revokes_token_and_clears_cookie(
 ) -> None:
     """logout с активным refresh-токеном → 204, токен отозван, cookie очищена (Max-Age=0)."""
     secret = "active-refresh-secret"
-    refresh_token_entity = make_refresh_token(token_hash=deterministic_hasher.digest(secret=secret))
+    refresh_token_entity = make_refresh_token(token_hash=deterministic_hasher.digest(secret))
     fake_refresh_token_repository.by_hash[refresh_token_entity.token_hash] = refresh_token_entity
 
     response = await client.post("/v1/auth/logout/", headers={"Cookie": f"refresh_token={secret}"})
@@ -365,7 +365,7 @@ async def test_refresh_rotates_token_and_sets_new_cookie(
     secret = "old-refresh-secret"
     user_credentials_entity = make_user_credentials()
     refresh_token_entity = make_refresh_token(
-        user_id=user_credentials_entity.user_id, token_hash=deterministic_hasher.digest(secret=secret)
+        user_id=user_credentials_entity.user_id, token_hash=deterministic_hasher.digest(secret)
     )
     fake_user_credentials_repository.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
     fake_refresh_token_repository.by_hash[refresh_token_entity.token_hash] = refresh_token_entity
@@ -408,7 +408,7 @@ async def test_refresh_revoked_token_returns_401(
 ) -> None:
     """refresh уже отозванным токеном → 401 auth.invalid_refresh_token (reuse detection)."""
     secret = "revoked-refresh-secret"
-    refresh_token_entity = make_refresh_token(token_hash=deterministic_hasher.digest(secret=secret), revoked_at=past)
+    refresh_token_entity = make_refresh_token(token_hash=deterministic_hasher.digest(secret), revoked_at=past)
     fake_refresh_token_repository.by_hash[refresh_token_entity.token_hash] = refresh_token_entity
 
     response = await client.post("/v1/auth/refresh/", headers={"Cookie": f"refresh_token={secret}"})
@@ -425,7 +425,7 @@ async def test_refresh_expired_token_returns_401(
 ) -> None:
     """refresh истёкшим токеном → 401 auth.invalid_refresh_token."""
     secret = "expired-refresh-secret"
-    refresh_token_entity = make_refresh_token(token_hash=deterministic_hasher.digest(secret=secret), expires_at=past)
+    refresh_token_entity = make_refresh_token(token_hash=deterministic_hasher.digest(secret), expires_at=past)
     fake_refresh_token_repository.by_hash[refresh_token_entity.token_hash] = refresh_token_entity
 
     response = await client.post("/v1/auth/refresh/", headers={"Cookie": f"refresh_token={secret}"})

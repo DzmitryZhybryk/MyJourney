@@ -65,7 +65,7 @@ _MAX_LATITUDE: Final[float] = 90.0
 _MAX_LONGITUDE: Final[float] = 180.0
 
 
-def iter_city_rows(*, lines: Iterable[str]) -> Iterator[CityRow]:
+def iter_city_rows(lines: Iterable[str]) -> Iterator[CityRow]:
     """
     Разбирает CSV датасета в строки ``geo_cities``; пустые необязательные ячейки становятся NULL.
 
@@ -89,20 +89,20 @@ def iter_city_rows(*, lines: Iterable[str]) -> Iterator[CityRow]:
     reader = csv.DictReader(lines)
     columns = frozenset(reader.fieldnames or ())
     if columns != CITY_CSV_COLUMNS:
-        raise DatasetColumnsError(columns=columns)
+        raise DatasetColumnsError(columns)
 
     for row in reader:
         external_id = row["external_id"]
-        _check_external_id(external_id=external_id)
+        _check_external_id(external_id)
         if not row["name_en"]:
-            raise MissingEnglishNameError(external_id=external_id)
+            raise MissingEnglishNameError(external_id)
 
         if not row["country_code"]:
-            raise MissingCountryCodeError(external_id=external_id)
+            raise MissingCountryCodeError(external_id)
 
         _check_country_code(external_id=external_id, country_code=row["country_code"])
         yield (
-            gazetteer_id_for(external_id=external_id),
+            gazetteer_id_for(external_id),
             external_id,
             row["name_en"],
             row["name_ru"] or None,
@@ -113,7 +113,7 @@ def iter_city_rows(*, lines: Iterable[str]) -> Iterator[CityRow]:
         )
 
 
-def iter_place_rows(*, lines: Iterable[str]) -> Iterator[PlaceRow]:
+def iter_place_rows(lines: Iterable[str]) -> Iterator[PlaceRow]:
     """
     Разбирает CSV датасета в строки ``geo_places``; пустое ``name_ru`` становится NULL.
 
@@ -139,22 +139,22 @@ def iter_place_rows(*, lines: Iterable[str]) -> Iterator[PlaceRow]:
     reader = csv.DictReader(lines)
     columns = frozenset(reader.fieldnames or ())
     if columns != PLACE_CSV_COLUMNS:
-        raise DatasetColumnsError(columns=columns)
+        raise DatasetColumnsError(columns)
 
     for row in reader:
         external_id = row["external_id"]
-        _check_external_id(external_id=external_id)
+        _check_external_id(external_id)
         if not row["name_en"]:
-            raise MissingEnglishNameError(external_id=external_id)
+            raise MissingEnglishNameError(external_id)
 
         if row["kind"] not in PlaceKindEnum:
             raise UnknownPlaceKindError(external_id=external_id, kind=row["kind"])
 
         if not row["country_codes"]:
-            raise MissingCountryCodeError(external_id=external_id)
+            raise MissingCountryCodeError(external_id)
 
         yield (
-            gazetteer_id_for(external_id=external_id),
+            gazetteer_id_for(external_id),
             external_id,
             row["kind"],
             row["name_en"],
@@ -166,7 +166,7 @@ def iter_place_rows(*, lines: Iterable[str]) -> Iterator[PlaceRow]:
         )
 
 
-def _check_external_id(*, external_id: str) -> None:
+def _check_external_id(external_id: str) -> None:
     """
     Проверяет, что ключ строки — ключ поставщика с префиксом источника: из него выводится ``id``.
 
@@ -174,7 +174,7 @@ def _check_external_id(*, external_id: str) -> None:
         - загрузка газеттира в базу: при развёртывании до старта приложения и в дев-стеке
     """
     if not _EXTERNAL_ID.fullmatch(external_id):
-        raise InvalidExternalIdError(external_id=external_id)
+        raise InvalidExternalIdError(external_id)
 
 
 def _check_country_code(*, external_id: str, country_code: str) -> None:

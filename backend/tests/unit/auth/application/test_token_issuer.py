@@ -19,11 +19,11 @@ def test_hash_refresh_secret_is_deterministic(
     """`hash_refresh_secret` детерминирован и равен digest'у используемого hasher'а."""
     secret = "refresh-secret"
 
-    first = token_issuer.hash_refresh_secret(refresh_secret=secret)
-    second = token_issuer.hash_refresh_secret(refresh_secret=secret)
+    first = token_issuer.hash_refresh_secret(secret)
+    second = token_issuer.hash_refresh_secret(secret)
 
     assert first == second
-    assert first == deterministic_hasher.digest(secret=secret)
+    assert first == deterministic_hasher.digest(secret)
 
 
 def test_issue_refresh_token_stores_digest_and_propagates_metadata(
@@ -36,7 +36,7 @@ def test_issue_refresh_token_stores_digest_and_propagates_metadata(
 
     plaintext, refresh_token_entity = token_issuer.issue_refresh_token(user_id=user_id, client_metadata=metadata)
 
-    assert refresh_token_entity.token_hash == deterministic_hasher.digest(secret=plaintext)
+    assert refresh_token_entity.token_hash == deterministic_hasher.digest(plaintext)
     assert refresh_token_entity.user_id == user_id
     assert refresh_token_entity.ip_address == "10.0.0.1"
     assert refresh_token_entity.user_agent == "UA/1.0"

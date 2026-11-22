@@ -25,7 +25,7 @@ class DatasetSpec:
     sha256: str
 
 
-def read_manifest(*, path: Path = MANIFEST_PATH) -> tuple[DatasetSpec, ...]:
+def read_manifest(path: Path = MANIFEST_PATH) -> tuple[DatasetSpec, ...]:
     """
     Читает манифест датасетов.
 

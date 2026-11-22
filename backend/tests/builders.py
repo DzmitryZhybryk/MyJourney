@@ -34,8 +34,8 @@ MOSCOW_CITY_ID = UUID("00000000-0000-0000-0000-000000000001")
 LONDON_CITY_ID = UUID("00000000-0000-0000-0000-000000000002")
 
 
-def make_password(*, hash: str = "argon2-hash") -> Password:
-    return Password(hash=hash)
+def make_password(hash: str = "argon2-hash") -> Password:
+    return Password(hash)
 
 
 def make_user_entity(

@@ -30,7 +30,7 @@ def test_decode_access_token_roundtrips_claims(jwt_service: JWTService) -> None:
         email_verified=True,
     )
 
-    token = jwt_service.create_access_token(claims=claims)
+    token = jwt_service.create_access_token(claims)
 
     assert jwt_service.decode_access_token(token) == claims
 

@@ -77,7 +77,7 @@ def main() -> int:
     Returns:
         Код выхода процесса: 0 — датасет записан, 1 — вердикт или файл решений отвергнут
     """
-    configure_logging(include_debug=False)
+    configure_logging(False)
     args = _parse_args()
     with httpx.Client(follow_redirects=True, timeout=_HTTP_TIMEOUT_SECONDS) as http_client:
         input_path: Path = args.input or ensure_cached(
@@ -94,7 +94,7 @@ def main() -> int:
         geonames_ids = [
             geonames_id
             for row in rows
-            if (geonames_id := geonames_id_of(external_id=row["external_id"])) is not None
+            if (geonames_id := geonames_id_of(row["external_id"])) is not None
             and (row["name_ru"] or candidate_geonames_id(row=row, min_population=args.min_population))
         ]
         labels = fetch_ru_labels(geonames_ids=geonames_ids, http_client=http_client)
@@ -116,7 +116,7 @@ def main() -> int:
     enriched, report = enrich_rows(rows=decided, labels=labels, min_population=args.min_population)
     if args.disputes_out:
         args.disputes_out.write_text(
-            json.dumps([_dispute_to_json(dispute=dispute) for dispute in unresolved], ensure_ascii=False, indent=1),
+            json.dumps([_dispute_to_json(dispute) for dispute in unresolved], ensure_ascii=False, indent=1),
             encoding="utf-8",
         )
 
@@ -140,7 +140,7 @@ def main() -> int:
     return 0
 
 
-def _dispute_to_json(*, dispute: RuNameDispute) -> DictStrAny:
+def _dispute_to_json(dispute: RuNameDispute) -> DictStrAny:
     return {
         "id": dispute.external_id,
         "name_en": dispute.name_en,

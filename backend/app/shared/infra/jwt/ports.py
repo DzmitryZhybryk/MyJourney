@@ -33,7 +33,7 @@ class AccessTokenIssuerPort(Protocol):
     зависимость от неё.
     """
 
-    def create_access_token(self, *, claims: AccessTokenClaims) -> str:
+    def create_access_token(self, claims: AccessTokenClaims) -> str:
         """
         Подписывает access-токен пользователя.
 

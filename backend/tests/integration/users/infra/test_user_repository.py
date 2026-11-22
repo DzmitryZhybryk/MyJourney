@@ -34,11 +34,11 @@ async def test_insert_then_find_by_id_roundtrip(
         updated_at=_UPDATED_AT,
     )
     async with session_factory() as writer:
-        await UserRepository(session=writer).insert_user(user_entity=user_entity)
+        await UserRepository(writer).insert_user(user_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserRepository(session=reader).find_user_by_id(user_id=user_entity.user_id)
+        found = await UserRepository(reader).find_user_by_id(user_entity.user_id)
 
     assert found is not None
     assert found.user_id == user_entity.user_id
@@ -56,11 +56,11 @@ async def test_find_by_id_returns_soft_deleted_user(
     """Soft-deleted запись не фильтруется: репозиторий отдаёт её с ``deleted_at``."""
     user_entity = make_user_entity(deleted_at=_DELETED_AT)
     async with session_factory() as writer:
-        await UserRepository(session=writer).insert_user(user_entity=user_entity)
+        await UserRepository(writer).insert_user(user_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserRepository(session=reader).find_user_by_id(user_id=user_entity.user_id)
+        found = await UserRepository(reader).find_user_by_id(user_entity.user_id)
 
     assert found is not None
     assert found.deleted_at == _DELETED_AT
@@ -69,7 +69,7 @@ async def test_find_by_id_returns_soft_deleted_user(
 
 async def test_find_by_unknown_id_returns_none(db_session: AsyncSession) -> None:
     """Неизвестный id → ``None``."""
-    found = await UserRepository(session=db_session).find_user_by_id(user_id=uuid4())
+    found = await UserRepository(db_session).find_user_by_id(uuid4())
 
     assert found is None
 
@@ -80,11 +80,11 @@ async def test_find_user_by_id_for_update_locks_row(
     """``find_user_by_id_for_update`` берёт реальный row-лок: вторая сессия не возьмёт его под ``NOWAIT``."""
     user_entity = make_user_entity()
     async with session_factory() as writer:
-        await UserRepository(session=writer).insert_user(user_entity=user_entity)
+        await UserRepository(writer).insert_user(user_entity)
         await writer.commit()
 
     async with session_factory() as holder, session_factory() as contender:
-        locked = await UserRepository(session=holder).find_user_by_id_for_update(user_id=user_entity.user_id)
+        locked = await UserRepository(holder).find_user_by_id_for_update(user_entity.user_id)
         assert locked is not None
 
         nowait_query = sa.select(User).where(User.id == user_entity.user_id).with_for_update(nowait=True)
@@ -98,11 +98,11 @@ async def test_find_user_by_id_for_update_returns_soft_deleted_user(
     """Под локом soft-deleted запись тоже не фильтруется."""
     user_entity = make_user_entity(deleted_at=_DELETED_AT)
     async with session_factory() as writer:
-        await UserRepository(session=writer).insert_user(user_entity=user_entity)
+        await UserRepository(writer).insert_user(user_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserRepository(session=reader).find_user_by_id_for_update(user_id=user_entity.user_id)
+        found = await UserRepository(reader).find_user_by_id_for_update(user_entity.user_id)
 
     assert found is not None
     assert found.deleted_at == _DELETED_AT
@@ -110,7 +110,7 @@ async def test_find_user_by_id_for_update_returns_soft_deleted_user(
 
 async def test_find_user_by_id_for_update_unknown_id_returns_none(db_session: AsyncSession) -> None:
     """Неизвестный id под локом → ``None``."""
-    found = await UserRepository(session=db_session).find_user_by_id_for_update(user_id=uuid4())
+    found = await UserRepository(db_session).find_user_by_id_for_update(uuid4())
 
     assert found is None
 
@@ -126,19 +126,19 @@ async def test_update_user_by_id_persists_profile_changes(
         updated_at=_UPDATED_AT,
     )
     async with session_factory() as writer:
-        await UserRepository(session=writer).insert_user(user_entity=user_entity)
+        await UserRepository(writer).insert_user(user_entity)
         await writer.commit()
 
     async with session_factory() as editor:
-        repository = UserRepository(session=editor)
-        editable = await repository.find_user_by_id_for_update(user_id=user_entity.user_id)
+        repository = UserRepository(editor)
+        editable = await repository.find_user_by_id_for_update(user_entity.user_id)
         assert editable is not None
         editable.update_profile(display_name="Alice D.", marketing_emails_consent=False)
-        await repository.update_user_by_id(user_entity=editable)
+        await repository.update_user_by_id(editable)
         await editor.commit()
 
     async with session_factory() as reader:
-        found = await UserRepository(session=reader).find_user_by_id(user_id=user_entity.user_id)
+        found = await UserRepository(reader).find_user_by_id(user_entity.user_id)
 
     assert found is not None
     assert found.display_name == "Alice D."
@@ -156,18 +156,18 @@ async def test_update_user_by_id_leaves_other_users_untouched(
     target = make_user_entity(display_name="alice")
     neighbour = make_user_entity(display_name="bob")
     async with session_factory() as writer:
-        repository = UserRepository(session=writer)
-        await repository.insert_user(user_entity=target)
-        await repository.insert_user(user_entity=neighbour)
+        repository = UserRepository(writer)
+        await repository.insert_user(target)
+        await repository.insert_user(neighbour)
         await writer.commit()
 
     target.update_profile(display_name="Alice D.")
     async with session_factory() as editor:
-        await UserRepository(session=editor).update_user_by_id(user_entity=target)
+        await UserRepository(editor).update_user_by_id(target)
         await editor.commit()
 
     async with session_factory() as reader:
-        found = await UserRepository(session=reader).find_user_by_id(user_id=neighbour.user_id)
+        found = await UserRepository(reader).find_user_by_id(neighbour.user_id)
 
     assert found is not None
     assert found.display_name == "bob"

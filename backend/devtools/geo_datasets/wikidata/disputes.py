@@ -98,11 +98,11 @@ def find_disputes(
     """
     disputes: list[RuNameDispute] = []
     for row in rows:
-        geonames_id = geonames_id_of(external_id=row["external_id"])
+        geonames_id = geonames_id_of(row["external_id"])
         if not row["name_ru"] or geonames_id is None:
             continue
 
-        names = acceptable_ru_names(labels=labels.get(geonames_id, frozenset()))
+        names = acceptable_ru_names(labels.get(geonames_id, frozenset()))
         if not names or any(_same_name(left=row["name_ru"], right=name) for name in names):
             continue
 
@@ -173,7 +173,7 @@ def apply_decisions(
             if not decision.wikidata_ru and decision.geonames_ru == row["name_ru"]:
                 names_by_id[external_id] = decision.name_ru
             else:
-                unresolved.append(_stale_decision_dispute(row=row))
+                unresolved.append(_stale_decision_dispute(row))
 
         name = names_by_id.get(external_id)
         if name is not None:
@@ -297,7 +297,7 @@ def record_verdicts(
     return tuple(decisions)
 
 
-def read_decisions(*, path: Path = DECISIONS_PATH) -> dict[str, RuNameDecision]:
+def read_decisions(path: Path = DECISIONS_PATH) -> dict[str, RuNameDecision]:
     """
     Читает файл решений арбитра.
 
@@ -377,7 +377,7 @@ def _decides(*, decision: RuNameDecision, dispute: RuNameDispute) -> bool:
     }
 
 
-def _stale_decision_dispute(*, row: Mapping[str, str]) -> RuNameDispute:
+def _stale_decision_dispute(row: Mapping[str, str]) -> RuNameDispute:
     """
     Город устаревшего решения для повторного арбитража; метки Wikidata не передаются.
 
@@ -426,8 +426,8 @@ def _same_name(*, left: str, right: str) -> bool:
     Scenarios:
         - сборка новой версии датасета с русскими названиями из Wikidata: поиск споров
     """
-    return _normalize(name=left) == _normalize(name=right)
+    return _normalize(left) == _normalize(right)
 
 
-def _normalize(*, name: str) -> str:
+def _normalize(name: str) -> str:
     return _SPACES_AND_DASHES.sub(" ", name.replace("ё", "е").replace("Ё", "Е")).strip().lower()

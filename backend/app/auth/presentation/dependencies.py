@@ -42,13 +42,13 @@ def client_metadata_dependency(request: Request) -> ClientMetadata:
 def auth_uow_dependency(
     session: Annotated[AsyncSession, Depends(db_session_dependency)],
 ) -> AuthUnitOfWork:
-    return AuthUnitOfWork(session=session)
+    return AuthUnitOfWork(session)
 
 
 def users_client_dependency(
     user_service: Annotated[UserService, Depends(user_service_dependency)],
 ) -> InternalUsersClient:
-    return InternalUsersClient(user_service=user_service)
+    return InternalUsersClient(user_service)
 
 
 def email_verification_config_dependency() -> EmailVerificationConfig:
@@ -112,7 +112,7 @@ def optional_refresh_secret_dependency(request: Request) -> str | None:
     Scenarios:
         - выход из аккаунта
     """
-    return read_refresh_token_cookie(request=request)
+    return read_refresh_token_cookie(request)
 
 
 def required_refresh_secret_dependency(request: Request) -> str:
@@ -128,7 +128,7 @@ def required_refresh_secret_dependency(request: Request) -> str:
     Raises:
         InvalidRefreshTokenError: Cookie ``refresh_token`` отсутствует
     """
-    secret = read_refresh_token_cookie(request=request)
+    secret = read_refresh_token_cookie(request)
     if secret is None:
         raise InvalidRefreshTokenError()
 
@@ -153,7 +153,7 @@ def email_verification_service_dependency(
 def account_service_dependency(
     uow: Annotated[AuthUnitOfWork, Depends(auth_uow_dependency)],
 ) -> AccountService:
-    return AccountService(uow=uow)
+    return AccountService(uow)
 
 
 def token_issuer_dependency(
