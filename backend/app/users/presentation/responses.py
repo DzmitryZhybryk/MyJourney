@@ -4,10 +4,10 @@ from app.shared.exceptions import InternalError
 from app.shared.exceptions.examples import error_response_example
 from app.shared.exceptions.schemas import ErrorResponse
 from app.shared.infra.jwt import InvalidAccessTokenError
-from app.shared.types import DictStrAny
+from app.shared.types import OpenAPIResponses
 from app.users.exceptions import UserDeletedError, UserNotFoundError
 
-_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+_CURRENT_USER_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -46,6 +46,6 @@ _CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-GET_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {**_CURRENT_USER_RESPONSES}
+GET_CURRENT_USER_RESPONSES: Final[OpenAPIResponses] = {**_CURRENT_USER_RESPONSES}
 
-UPDATE_CURRENT_USER_RESPONSES: Final[dict[int | str, DictStrAny]] = {**_CURRENT_USER_RESPONSES}
+UPDATE_CURRENT_USER_RESPONSES: Final[OpenAPIResponses] = {**_CURRENT_USER_RESPONSES}

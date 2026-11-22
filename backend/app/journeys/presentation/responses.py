@@ -13,9 +13,9 @@ from app.shared.exceptions.examples import error_response_example
 from app.shared.exceptions.schemas import ErrorResponse
 from app.shared.infra.jwt import InvalidAccessTokenError
 from app.shared.pagination import InvalidCursorError
-from app.shared.types import DictStrAny
+from app.shared.types import DictStrAny, OpenAPIResponses
 
-CREATE_JOURNEY_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+CREATE_JOURNEY_RESPONSES: Final[OpenAPIResponses] = {
     400: {
         "description": "Ошибка валидации поездки",
         "model": ErrorResponse,
@@ -58,7 +58,7 @@ CREATE_JOURNEY_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-JOURNEYS_FEED_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+JOURNEYS_FEED_RESPONSES: Final[OpenAPIResponses] = {
     400: {
         "description": "Ошибка запроса ленты",
         "model": ErrorResponse,
@@ -97,7 +97,7 @@ JOURNEYS_FEED_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-JOURNEY_YEARS_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+JOURNEY_YEARS_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -118,7 +118,7 @@ JOURNEY_YEARS_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-JOURNEYS_MAP_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+JOURNEYS_MAP_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -139,7 +139,7 @@ JOURNEYS_MAP_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-JOURNEYS_GLOBE_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+JOURNEYS_GLOBE_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -160,7 +160,7 @@ JOURNEYS_GLOBE_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-MOVEMENTS_MAP_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+MOVEMENTS_MAP_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -181,7 +181,7 @@ MOVEMENTS_MAP_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     },
 }
 
-_AUTHENTICATED_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+_AUTHENTICATED_RESPONSES: Final[OpenAPIResponses] = {
     401: {
         "description": "Невалидный или истёкший access-токен",
         "model": ErrorResponse,
@@ -212,17 +212,17 @@ _JOURNEY_NOT_FOUND: Final[DictStrAny] = {
     },
 }
 
-UPDATE_JOURNEY_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+UPDATE_JOURNEY_RESPONSES: Final[OpenAPIResponses] = {
     **CREATE_JOURNEY_RESPONSES,
     404: _JOURNEY_NOT_FOUND,
 }
 
-DELETE_JOURNEY_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+DELETE_JOURNEY_RESPONSES: Final[OpenAPIResponses] = {
     **_AUTHENTICATED_RESPONSES,
     404: _JOURNEY_NOT_FOUND,
 }
 
-MOVE_JOURNEY_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+MOVE_JOURNEY_RESPONSES: Final[OpenAPIResponses] = {
     **_AUTHENTICATED_RESPONSES,
     400: {
         "description": "Соседа нет у пользователя, он удалён или это сама переносимая поездка",
@@ -236,7 +236,7 @@ MOVE_JOURNEY_RESPONSES: Final[dict[int | str, DictStrAny]] = {
     404: _JOURNEY_NOT_FOUND,
 }
 
-JOURNEY_DISTANCE_RESPONSES: Final[dict[int | str, DictStrAny]] = {
+JOURNEY_DISTANCE_RESPONSES: Final[OpenAPIResponses] = {
     **_AUTHENTICATED_RESPONSES,
     400: {
         "description": "Ошибка в городах маршрута",
