@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import REAL, Index, Integer, String, Uuid, column, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.models import BaseDBModel
+from app.shared.infra.db.postgres.models import BaseDBModel
 
 
 class GeoCity(BaseDBModel):

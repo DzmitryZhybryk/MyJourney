@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.geo.application.services.city import CityService
 from app.geo.infra.uow import GeoUnitOfWork
-from app.shared.infra.postgres.dependency import db_session_dependency
+from app.shared.infra.db.postgres.dependency import db_session_dependency
 
 
 def geo_uow_dependency(

@@ -9,9 +9,9 @@ from app.media.application.schemas.commands import SeedMediaConfigCommand
 from app.media.application.services.media_config import MediaConfigService
 from app.media.infra.uow import MediaUnitOfWork
 from app.shared.enums import AppEnvEnum
+from app.shared.infra.db.postgres.component import SessionMaker, SqlAlchemyComponent
 from app.shared.infra.di.lifecycle import run_components
 from app.shared.infra.di.registry import ComponentRegistry
-from app.shared.infra.postgres.component import SessionMaker, SqlAlchemyComponent
 from app.shared.logging import configure_logging
 from app.shared.settings import settings
 

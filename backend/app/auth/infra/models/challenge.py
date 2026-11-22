@@ -4,8 +4,7 @@ import uuid
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.models import BaseDBModel
-from app.shared.models.base_model import DateTimeMixin
+from app.shared.infra.db.postgres.models import BaseDBModel, DateTimeMixin
 
 
 class Challenge(DateTimeMixin, BaseDBModel):

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.media.application.ports.media_config_repository import MediaConfigRepositoryPort
 from app.media.application.ports.unit_of_work import MediaUnitOfWorkPort
 from app.media.infra.repositories import MediaConfigRepository
-from app.shared.infra.postgres.uow import BaseUnitOfWork
+from app.shared.infra.db.postgres.uow import BaseUnitOfWork
 
 
 class MediaUnitOfWork(BaseUnitOfWork, MediaUnitOfWorkPort):

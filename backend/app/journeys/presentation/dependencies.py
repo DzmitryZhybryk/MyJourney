@@ -8,7 +8,7 @@ from app.geo.presentation.dependencies import city_service_dependency
 from app.journeys.application.services.journey import JourneyService
 from app.journeys.infra.clients.internal_cities_client import InternalCitiesClient
 from app.journeys.infra.uow import JourneyUnitOfWork
-from app.shared.infra.postgres.dependency import db_session_dependency
+from app.shared.infra.db.postgres.dependency import db_session_dependency
 
 
 def journey_uow_dependency(

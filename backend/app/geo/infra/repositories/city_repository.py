@@ -8,7 +8,7 @@ from app.geo.application.ports.city_repository import CityRepositoryPort
 from app.geo.domain.entities import CityEntity
 from app.geo.domain.value_objects import LocalizedNames
 from app.geo.infra.models import GeoCity
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 
 # Бэкслеш как ESCAPE в LIKE: метасимволы пользовательского ввода (% _ \) экранируем,
 # чтобы они не работали как шаблон (юзер ищет литералы, а не wildcard'ы).

@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from sqlalchemy import literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.shared.models.pydantic_jsonb import PydanticJSONB
+from app.shared.infra.db.postgres.jsonb import PydanticJSONB
 
 
 class _Limits(BaseModel):

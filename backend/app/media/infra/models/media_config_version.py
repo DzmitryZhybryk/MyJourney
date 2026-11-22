@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.media.application.ports.media_config_repository import MediaConfigSnapshot
-from app.shared.models.pydantic_jsonb import PydanticJSONB
+from app.shared.infra.db.postgres.jsonb import PydanticJSONB
 from app.shared.versioned_config.models import VersionedConfigModel
 
 

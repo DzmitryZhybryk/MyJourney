@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import insert, select
 from sqlalchemy.exc import IntegrityError
 
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 from app.shared.versioned_config.exceptions import ConfigVersionConflictError
 from app.shared.versioned_config.models import VersionedConfigModel
 

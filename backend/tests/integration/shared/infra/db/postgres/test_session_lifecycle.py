@@ -14,9 +14,9 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.requests import Request
 
+from app.shared.infra.db.postgres.component import SessionMaker, SqlAlchemyComponent
+from app.shared.infra.db.postgres.dependency import db_session_dependency
 from app.shared.infra.di.registry import ComponentRegistry
-from app.shared.infra.postgres.component import SessionMaker, SqlAlchemyComponent
-from app.shared.infra.postgres.dependency import db_session_dependency
 from app.shared.settings import PostgresSettings
 
 
