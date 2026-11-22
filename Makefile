@@ -78,8 +78,8 @@ migrate-create: ## Создать миграцию (make migrate-create msg="des
 	echo "${GREEN}INFO :  ${AZURE}Creating migration: ${PURPLE}$$msg${RESET}"; \
 	$(COMPOSE) run --rm myjourney_migrate alembic revision --autogenerate -m "$$msg"
 
-migrate-upgrade: ## Накатить миграции, схему procrastinate и начальный конфиг media
-	@echo "${GREEN}INFO :  ${AZURE}Applying migrations, procrastinate schema and media config seed${RESET}"
+migrate-upgrade: ## Прогнать backend/bootstrap.sh: миграции, схема procrastinate, начальные конфиги
+	@echo "${GREEN}INFO :  ${AZURE}Running backend/bootstrap.sh${RESET}"
 	@$(COMPOSE) run --rm myjourney_migrate
 
 migrate-downgrade: ## Откатить одну миграцию или до ревизии (make migrate-downgrade [rev=<revision>])

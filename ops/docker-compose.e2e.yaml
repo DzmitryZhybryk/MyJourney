@@ -104,8 +104,7 @@ services:
       retries: 20
       start_period: 3s
 
-  # Админ для e2e админки: регистрация через API, роль — боевым скриптом первого админа (в
-  # одноразовой базе админа ещё нет). Учётные данные повторяет frontend/e2e/helpers/admin.ts.
+  # Админ для e2e админки; шаги и учётные данные — в backend/devtools/e2e_admin.sh.
   myjourney_e2e_admin:
     <<: *e2e-backend
     build:
@@ -113,10 +112,7 @@ services:
       dockerfile: Dockerfile
       target: dev
     env_file: .env
-    command: >-
-      sh -c "python -m devtools.e2e_admin --api-url http://app:8000
-      --username e2e_admin --email e2e-admin@example.com --password e2e-Admin-Password-1
-      && python -m app.auth.scripts.set_admin_role --email e2e-admin@example.com"
+    command: ./devtools/e2e_admin.sh
     depends_on:
       app:
         condition: service_healthy

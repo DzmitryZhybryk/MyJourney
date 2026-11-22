@@ -182,3 +182,14 @@
   conventions in one suite, for a speed-up nobody measured.
 - Revisit when: integration time becomes a bottleneck and a measurement shows engine setup is the cost.
 - Source: integration harness review, 2026-11-02
+
+## The one-shot steps before app and worker start are lines of `backend/bootstrap.sh`
+- POSIX `sh`, one `step` line per idempotent step; the first failing step stops the rest. Its own log lines
+  mimic the structlog JSON shape (`event`, `level`, `logger`, `timestamp`), so Alloy treats them like app lines.
+- Why: a new step (a domain's config seed) must not touch the compose command, and a failure must name its
+  step — a shell script does both with no app code.
+- Rejected: a Python orchestrator `python -m app.bootstrap` — more code, and alembic run in-process calls
+  `fileConfig` from `migrations/env.py`, which disables the loggers already configured; the language does not
+  bring the one-shot container's lines into Loki either.
+- Rejected: the gazetteer load as a bootstrap step — heavy and networked; a download failure would block migrations.
+- Source: task #60, 2026-11-22

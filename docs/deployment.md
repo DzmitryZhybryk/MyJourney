@@ -17,7 +17,7 @@
 - **Наружу открыт только Caddy** (80/443). Postgres/Grafana/Loki/app/frontend — без проброса портов,
   доступны лишь внутри docker-сети `myjourney-network`.
 - Образы `myjourney-backend`/`myjourney-frontend` собирает CI и пушит в **GHCR**; сервер их только `pull`-ит.
-- Миграции БД прогоняет one-shot `myjourney_migrate` (`alembic upgrade head` + схема procrastinate + начальный конфиг media) до старта app/worker.
+- Миграции БД прогоняет one-shot `myjourney_migrate` (`backend/bootstrap.sh`: `alembic upgrade head` + схема procrastinate + начальный конфиг media) до старта app/worker.
 - Газеттир загружает one-shot `myjourney_geo_load` (`python -m app.geo.scripts.load_datasets`) после миграций и до старта app: скачивает датасеты из `manifest.toml` (GitHub Release), проверяет sha256 и пропускает уже загруженные версии.
 
 ## Предпосылки
@@ -214,11 +214,13 @@ make prod-up`) выкатывают прод. Красные тесты → де
 ## 6. Миграции
 
 - Прогоняются автоматически one-shot сервисом `myjourney_migrate` — `app`/`worker`
-  стартуют только после его успешного завершения (`service_completed_successfully`). Он делает три шага:
-  `alembic upgrade head` (таблицы приложения), `python -m app.shared.infra.procrastinate` (таблицы очереди
-  задач) и `python -m app.media.scripts.seed_config` (начальные правила загрузки файлов из
-  `backend/app/media/scripts/config_defaults.json`). Без схемы очереди не работает ни worker, ни регистрация
-  в app: она кладёт письмо в очередь.
+  стартуют только после его успешного завершения (`service_completed_successfully`). Он запускает
+  `backend/bootstrap.sh`, а тот по порядку выполняет шаги: `alembic upgrade head` (таблицы приложения),
+  `python -m app.shared.infra.procrastinate` (таблицы очереди задач) и `python -m app.media.scripts.seed_config`
+  (начальные правила загрузки файлов из `backend/app/media/scripts/config_defaults.json`). Первый упавший шаг
+  останавливает остальные. Новый шаг (например, начальный конфиг другого домена) — строка `step` в скрипте,
+  compose не меняется. Без схемы очереди не работает ни worker, ни регистрация в app: она кладёт письмо в
+  очередь.
 - Начальный конфиг media записывается, только если в `media_config` ещё нет ни одной версии: правки
   администратора деплой не перезаписывает. Изменённый `config_defaults.json` на уже развёрнутую базу не
   влияет — меняйте правила в админке.
@@ -226,7 +228,9 @@ make prod-up`) выкатывают прод. Красные тесты → де
   procrastinate проверь `procrastinate/sql/migrations/` в установленном пакете — файлы новее прежней версии
   нужно применить к базе вручную до деплоя новой версии.
 - Если миграция упала — app не поднимется (это защита: не запускаем код на несовместимой схеме).
-  Смотри логи: `docker compose ... logs myjourney_migrate`.
+  Смотри логи: `docker compose ... logs myjourney_migrate`. Упавший шаг назван в строке
+  `"event":"bootstrap.step_failed"`, причина — в traceback над ней. В Grafana логов этого контейнера нет:
+  он завершается раньше, чем Alloy его замечает, поэтому только `docker logs` на сервере.
 - **Перед деплоем с рискованной миграцией сделай бэкап** (см. ниже).
 - После миграций one-shot `myjourney_geo_load` загружает газеттир; app тоже ждёт его успешного
   завершения. Повторный деплой без смены `manifest.toml` ничего не скачивает. Новая версия датасета =
