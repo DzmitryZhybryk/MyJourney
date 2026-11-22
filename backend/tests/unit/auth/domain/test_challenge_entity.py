@@ -13,6 +13,10 @@ from app.auth.exceptions import (
 )
 from tests.builders import make_challenge
 
+MAX_ATTEMPTS = 5
+RESEND_COOLDOWN_SECONDS = 60
+TTL_MINUTES = 15
+
 
 def test_generate_code_is_six_digits() -> None:
     """`generate_code` возвращает строку из 6 цифр."""
@@ -89,23 +93,23 @@ def test_ensure_resend_cooldown_passed_raises_within_cooldown() -> None:
     )
 
     with pytest.raises(ChallengeResendCooldownError):
-        challenge_entity.ensure_resend_cooldown_passed(60)
+        challenge_entity.ensure_resend_cooldown_passed(RESEND_COOLDOWN_SECONDS)
 
 
 def test_ensure_resend_cooldown_passed_ok_after_cooldown() -> None:
     """Молчит, когда с последней отправки прошёл cooldown."""
     challenge_entity = make_challenge(last_sent_at=dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=120))
 
-    challenge_entity.ensure_resend_cooldown_passed(60)
+    challenge_entity.ensure_resend_cooldown_passed(RESEND_COOLDOWN_SECONDS)
 
 
 def test_ensure_not_exhausted_raises_with_seconds_until_expiry() -> None:
     """Исчерпанные попытки → 429 с секундами до истечения кода в `details`."""
     expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=540)
-    challenge_entity = make_challenge(attempts=5, expires_at=expires_at)
+    challenge_entity = make_challenge(attempts=MAX_ATTEMPTS, expires_at=expires_at)
 
     with pytest.raises(ChallengeAttemptsExceededError) as exc_info:
-        challenge_entity.ensure_not_exhausted(5)
+        challenge_entity.ensure_not_exhausted(MAX_ATTEMPTS)
 
     checked_at = dt.datetime.now(tz=dt.UTC)
     details = exc_info.value.details
@@ -116,9 +120,9 @@ def test_ensure_not_exhausted_raises_with_seconds_until_expiry() -> None:
 
 def test_ensure_not_exhausted_ok_with_attempts_left() -> None:
     """Молчит, пока попытки остались."""
-    challenge_entity = make_challenge(attempts=4)
+    challenge_entity = make_challenge(attempts=MAX_ATTEMPTS - 1)
 
-    challenge_entity.ensure_not_exhausted(5)
+    challenge_entity.ensure_not_exhausted(MAX_ATTEMPTS)
 
 
 def test_resend_moves_last_sent_and_extends_expiry() -> None:
@@ -126,14 +130,14 @@ def test_resend_moves_last_sent_and_extends_expiry() -> None:
     old_sent_at = dt.datetime.now(tz=dt.UTC) - dt.timedelta(minutes=5)
     challenge_entity = make_challenge(
         last_sent_at=old_sent_at,
-        expires_at=old_sent_at + dt.timedelta(minutes=15),
+        expires_at=old_sent_at + dt.timedelta(minutes=TTL_MINUTES),
         updated_at=None,
     )
 
-    challenge_entity.resend(15)
+    challenge_entity.resend(TTL_MINUTES)
 
     assert challenge_entity.last_sent_at > old_sent_at
-    assert challenge_entity.expires_at == challenge_entity.last_sent_at + dt.timedelta(minutes=15)
+    assert challenge_entity.expires_at == challenge_entity.last_sent_at + dt.timedelta(minutes=TTL_MINUTES)
     assert challenge_entity.updated_at is not None
 
 
@@ -141,21 +145,21 @@ def test_ensure_can_attempt_raises_when_expired() -> None:
     """`ensure_can_attempt` бросает на истёкшем challenge'е."""
     challenge_entity = make_challenge(expires_at=dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=1))
     with pytest.raises(ChallengeExpiredError):
-        challenge_entity.ensure_can_attempt(5)
+        challenge_entity.ensure_can_attempt(MAX_ATTEMPTS)
 
 
 def test_ensure_can_attempt_raises_when_used() -> None:
     """`ensure_can_attempt` бросает на использованном challenge'е."""
     challenge_entity = make_challenge(used_at=dt.datetime.now(tz=dt.UTC))
     with pytest.raises(ChallengeExpiredError):
-        challenge_entity.ensure_can_attempt(5)
+        challenge_entity.ensure_can_attempt(MAX_ATTEMPTS)
 
 
 def test_ensure_can_attempt_raises_when_attempts_exhausted() -> None:
     """`ensure_can_attempt` бросает при исчерпании попыток, с секундами до нового кода."""
-    challenge_entity = make_challenge(attempts=5)
+    challenge_entity = make_challenge(attempts=MAX_ATTEMPTS)
     with pytest.raises(ChallengeAttemptsExceededError) as exc_info:
-        challenge_entity.ensure_can_attempt(5)
+        challenge_entity.ensure_can_attempt(MAX_ATTEMPTS)
 
     assert exc_info.value.details is not None
     assert "retry_after_seconds" in exc_info.value.details
@@ -164,7 +168,7 @@ def test_ensure_can_attempt_raises_when_attempts_exhausted() -> None:
 def test_ensure_can_attempt_ok_when_active_with_attempts_left() -> None:
     """`ensure_can_attempt` молчит, пока challenge активен и есть попытки."""
     challenge_entity = make_challenge(attempts=2)
-    challenge_entity.ensure_can_attempt(5)
+    challenge_entity.ensure_can_attempt(MAX_ATTEMPTS)
 
 
 def test_register_failed_attempt_increments_and_marks_updated() -> None:
