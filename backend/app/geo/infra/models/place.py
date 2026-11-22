@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import ARRAY, REAL, CheckConstraint, Index, Integer, String, Uuid, column, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.models import BaseDBModel
+from app.shared.infra.db.postgres.models import BaseDBModel
 
 
 class GeoPlace(BaseDBModel):

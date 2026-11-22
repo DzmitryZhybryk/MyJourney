@@ -8,7 +8,7 @@ from app.auth.domain.entities import UserCredentialsEntity
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
 from app.auth.infra.models import UserCredentials
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 from app.shared.types import DictStrAny
 
 

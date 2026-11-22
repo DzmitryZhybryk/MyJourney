@@ -13,7 +13,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.shared.infra.postgres.uow import BaseUnitOfWork
+from app.shared.infra.db.postgres.uow import BaseUnitOfWork
 
 
 async def test_transaction_commit_persists_across_sessions(

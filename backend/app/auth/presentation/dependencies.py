@@ -21,9 +21,9 @@ from app.shared.infra.crypto import (
     get_fernet_secret_cipher,
     get_sha256_deterministic_hasher,
 )
+from app.shared.infra.db.postgres.dependency import db_session_dependency
 from app.shared.infra.jwt.dependency import jwt_service_dependency
 from app.shared.infra.jwt.service import JWTService
-from app.shared.infra.postgres.dependency import db_session_dependency
 from app.shared.infra.procrastinate import TaskBusPort
 from app.shared.infra.procrastinate.bus import ProcrastinateTaskBus
 from app.shared.schemas.base import BFastAPI

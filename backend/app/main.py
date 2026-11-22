@@ -15,11 +15,11 @@ from app.media.presentation.admin.routes import media_admin_router
 from app.media.presentation.routes import media_router
 from app.shared.enums import AppEnvEnum
 from app.shared.exceptions.handlers import register_exception_handlers
+from app.shared.infra.db.postgres.component import SqlAlchemyComponent
 from app.shared.infra.di.base import BaseComponent
 from app.shared.infra.di.lifecycle import run_components
 from app.shared.infra.di.registry import ComponentRegistry
 from app.shared.infra.email.component import ResendComponent
-from app.shared.infra.postgres.component import SqlAlchemyComponent
 from app.shared.infra.procrastinate.bus_component import TaskBusComponent
 from app.shared.infra.procrastinate.component import ProcrastinateComponent
 from app.shared.infra.telemetry import get_api_telemetry_config

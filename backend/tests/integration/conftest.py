@@ -39,7 +39,7 @@ from app.auth.infra.repositories import UserCredentialsRepository
 from app.geo.infra import models as _geo_models  # noqa: F401
 from app.journeys.infra import models as _journey_models  # noqa: F401
 from app.media.infra import models as _media_models  # noqa: F401
-from app.shared.models import BaseDBModel
+from app.shared.infra.db.postgres.models import BaseDBModel
 from app.shared.settings import PostgresSettings
 from app.users.domain.entities import UserEntity  # noqa: F401 — гарантирует регистрацию users-модели
 from app.users.infra import models as _users_models  # noqa: F401

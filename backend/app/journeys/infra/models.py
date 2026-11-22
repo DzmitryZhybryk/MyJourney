@@ -4,7 +4,7 @@ from sqlalchemy import REAL, Index, SmallInteger, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.fractional_index.models import SortKeyModel
-from app.shared.models.base_model import DateTimeMixin
+from app.shared.infra.db.postgres.models import DateTimeMixin
 
 
 class Journey(DateTimeMixin, SortKeyModel):

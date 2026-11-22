@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.media.application.services.media_config import MediaConfigService
 from app.media.infra.uow import MediaUnitOfWork
-from app.shared.infra.postgres.dependency import db_session_dependency
+from app.shared.infra.db.postgres.dependency import db_session_dependency
 
 
 def media_uow_dependency(

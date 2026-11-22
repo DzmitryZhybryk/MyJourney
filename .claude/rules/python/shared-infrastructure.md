@@ -14,7 +14,7 @@ factory — `component-lifecycle.md`; what a package's `__init__` exports and ho
 it — `imports.md`.
 
 - The component container is `infra/di/` (`BaseComponent`, `ComponentRegistry`, `run_components`);
-  a pool-owning component to copy from — `infra/postgres/component.py`.
+  a pool-owning component to copy from — `infra/db/postgres/component.py`.
 - A vertical declares its own `*Port` Protocols in its `ports.py` (`TaskBusPort`,
   `EmailTransportPort`, `SaltedHasherPort`), not in a domain's `application/ports/` — the one
   exception to `layers.md`.

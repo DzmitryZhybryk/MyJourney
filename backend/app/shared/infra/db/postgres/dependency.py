@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.shared.infra.postgres.component import SessionMaker
+from app.shared.infra.db.postgres.component import SessionMaker
 from app.shared.schemas.base import BFastAPI
 
 __all__ = [

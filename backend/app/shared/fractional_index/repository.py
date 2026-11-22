@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from sqlalchemy import ColumnElement, func, select
 
 from app.shared.fractional_index.models import SortKeyModel
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 
 
 class BaseSortKeyRepository[ModelT: SortKeyModel, ScopeT](BaseDBRepository[ModelT], ABC):

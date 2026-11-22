@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from sqlalchemy.dialects import postgresql
 
-from app.shared.models.pydantic_jsonb import PydanticJSONB
+from app.shared.infra.db.postgres.jsonb import PydanticJSONB
 
 
 class _Limits(BaseModel):

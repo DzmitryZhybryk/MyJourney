@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 from app.shared.types import DictStrAny
 from app.users.application.ports.user_repository import UserRepositoryPort
 from app.users.domain.entities import UserEntity

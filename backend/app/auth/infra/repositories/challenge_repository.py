@@ -7,7 +7,7 @@ from app.auth.application.ports.challenge_repository import ChallengeRepositoryP
 from app.auth.domain.entities import ChallengeEntity
 from app.auth.domain.enums import ChallengeTypeEnum
 from app.auth.infra.models import Challenge
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 from app.shared.types import DictStrAny
 
 

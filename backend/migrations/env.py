@@ -14,7 +14,7 @@ from app.auth.infra import models as _auth_models  # noqa: F401
 from app.geo.infra import models as _geo_models  # noqa: F401
 from app.journeys.infra import models as _journeys_models  # noqa: F401
 from app.media.infra import models as _media_models  # noqa: F401
-from app.shared.models import BaseDBModel
+from app.shared.infra.db.postgres.models import BaseDBModel
 from app.shared.settings import settings
 from app.users.infra import models as _users_models  # noqa: F401
 from migrations.plugins import opclass_compare

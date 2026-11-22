@@ -9,7 +9,7 @@ from app.auth.infra.repositories import (
     RefreshTokenRepository,
     UserCredentialsRepository,
 )
-from app.shared.infra.postgres.uow import BaseUnitOfWork
+from app.shared.infra.db.postgres.uow import BaseUnitOfWork
 
 
 class AuthUnitOfWork(BaseUnitOfWork, AuthUnitOfWorkPort):

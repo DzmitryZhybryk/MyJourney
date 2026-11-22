@@ -1,7 +1,7 @@
 """
 Интеграционные тесты сборки ``AuthUnitOfWork`` против реального Postgres.
 
-Транзакционная модель проверена в ``tests/integration/shared/infra/postgres/test_uow.py``;
+Транзакционная модель проверена в ``tests/integration/shared/infra/db/postgres/test_uow.py``;
 здесь — то, что репозитории UoW работают на его сессии, и порядок вставок по FK внутри одной
 транзакции.
 """

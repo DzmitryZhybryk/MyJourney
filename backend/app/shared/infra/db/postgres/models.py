@@ -1,7 +1,11 @@
 import datetime as dt
 
 from sqlalchemy import DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class BaseDBModel(DeclarativeBase):
+    """Базовый класс декларативных моделей. Используется в миграциях Alembic."""
 
 
 class DateTimeMixin:
