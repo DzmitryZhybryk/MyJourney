@@ -1,8 +1,14 @@
+from typing import Final
+
 import pytest
 
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.domain.permissions import PLAN_PERMISSIONS, ROLE_PERMISSIONS, expand_permissions
 from app.shared.infra.jwt import PermissionEnum
+
+_ADMIN_PERMISSIONS: Final[frozenset[PermissionEnum]] = frozenset(
+    {PermissionEnum.MEDIA_CONFIG_EDIT, PermissionEnum.AUTH_ACCOUNTS_READ},
+)
 
 
 @pytest.mark.parametrize(
@@ -10,8 +16,8 @@ from app.shared.infra.jwt import PermissionEnum
     [
         (UserRoleEnum.USER, UserPlanEnum.FREE, frozenset()),
         (UserRoleEnum.USER, UserPlanEnum.PREMIUM, frozenset()),
-        (UserRoleEnum.ADMIN, UserPlanEnum.FREE, frozenset({PermissionEnum.MEDIA_CONFIG_EDIT})),
-        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({PermissionEnum.MEDIA_CONFIG_EDIT})),
+        (UserRoleEnum.ADMIN, UserPlanEnum.FREE, _ADMIN_PERMISSIONS),
+        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, _ADMIN_PERMISSIONS),
     ],
 )
 def test_expand_permissions_by_role_and_plan(

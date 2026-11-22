@@ -78,7 +78,11 @@ def test_build_token_pair_access_token_decodes_back_to_user(
     ("role", "plan", "expected_permissions"),
     [
         (UserRoleEnum.USER, UserPlanEnum.FREE, frozenset()),
-        (UserRoleEnum.ADMIN, UserPlanEnum.PREMIUM, frozenset({PermissionEnum.MEDIA_CONFIG_EDIT})),
+        (
+            UserRoleEnum.ADMIN,
+            UserPlanEnum.PREMIUM,
+            frozenset({PermissionEnum.MEDIA_CONFIG_EDIT, PermissionEnum.AUTH_ACCOUNTS_READ}),
+        ),
     ],
 )
 def test_build_token_pair_access_token_carries_role_plan_and_expanded_permissions(

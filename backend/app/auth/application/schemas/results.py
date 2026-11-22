@@ -1,9 +1,12 @@
 import datetime as dt
 from dataclasses import dataclass
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, SecretStr
 
 __all__ = [
+    "Account",
+    "AccountsResult",
     "CurrentAccountResult",
     "IssuedRefreshToken",
     "TokenPairResult",
@@ -15,6 +18,20 @@ class CurrentAccountResult:
     email: str
     username: str
     email_verified: bool
+
+
+@dataclass(frozen=True, slots=True)
+class Account:
+    id: UUID
+    email: str
+    is_deleted: bool
+
+
+@dataclass(frozen=True, slots=True)
+class AccountsResult:
+    """Найденные учётные записи в произвольном порядке; id без записи в нём нет."""
+
+    accounts: tuple[Account, ...]
 
 
 class IssuedRefreshToken(BaseModel):

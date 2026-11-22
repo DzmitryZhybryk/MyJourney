@@ -8,7 +8,7 @@ from app.shared.infra.jwt import PermissionEnum
 ROLE_PERMISSIONS: Final[Mapping[UserRoleEnum, frozenset[PermissionEnum]]] = MappingProxyType(
     {
         UserRoleEnum.USER: frozenset(),
-        UserRoleEnum.ADMIN: frozenset({PermissionEnum.MEDIA_CONFIG_EDIT}),
+        UserRoleEnum.ADMIN: frozenset({PermissionEnum.MEDIA_CONFIG_EDIT, PermissionEnum.AUTH_ACCOUNTS_READ}),
     },
 )
 

@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createJourney, deleteJourney, estimateJourneyDistance, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMediaConfig, getMovementsMap, getUploadRules, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, updateMediaConfig, verifyEmail } from '../sdk.gen';
-import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMediaConfigData, GetMediaConfigError, GetMediaConfigResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, GetUploadRulesData, GetUploadRulesError, GetUploadRulesResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, UpdateMediaConfigData, UpdateMediaConfigError, UpdateMediaConfigResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
+import { createJourney, deleteJourney, estimateJourneyDistance, findAccountsByIds, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMediaConfig, getMovementsMap, getUploadRules, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, updateMediaConfig, verifyEmail } from '../sdk.gen';
+import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, FindAccountsByIdsData, FindAccountsByIdsError, FindAccountsByIdsResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMediaConfigData, GetMediaConfigError, GetMediaConfigResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, GetUploadRulesData, GetUploadRulesError, GetUploadRulesResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, UpdateMediaConfigData, UpdateMediaConfigError, UpdateMediaConfigResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
   Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -442,6 +442,23 @@ export const updateCurrentUserMutation = (options?: Partial<Options<UpdateCurren
   };
   return mutationOptions;
 };
+
+export const findAccountsByIdsQueryKey = (options: Options<FindAccountsByIdsData>) => createQueryKey('findAccountsByIds', options);
+
+/**
+ * Find Accounts By Ids
+ *
+ * Учётные записи по id, удалённые с `isDeleted: true`; id без записи пропускается. Право `auth.accounts.read`.
+ */
+export const findAccountsByIdsOptions = (options: Options<FindAccountsByIdsData>) => queryOptions<FindAccountsByIdsResponse, FindAccountsByIdsError, FindAccountsByIdsResponse, ReturnType<typeof findAccountsByIdsQueryKey>>({
+  queryFn: async ({ queryKey, signal }) => await findAccountsByIds({
+    ...options,
+    ...queryKey[0],
+    signal,
+    throwOnError: true
+  }),
+  queryKey: findAccountsByIdsQueryKey(options)
+});
 
 export const getMediaConfigQueryKey = (options?: Options<GetMediaConfigData>) => createQueryKey('getMediaConfig', options);
 

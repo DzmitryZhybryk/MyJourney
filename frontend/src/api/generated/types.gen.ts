@@ -5,6 +5,36 @@ export type ClientOptions = {
 };
 
 /**
+ * AccountItem
+ */
+export type AccountItem = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Email
+   */
+  email: string;
+  /**
+   * Isdeleted
+   */
+  isDeleted: boolean;
+};
+
+/**
+ * AccountsResponse
+ *
+ * Найденные учётные записи в произвольном порядке; id без записи в ответе нет.
+ */
+export type AccountsResponse = {
+  /**
+   * Accounts
+   */
+  accounts: Array<AccountItem>;
+};
+
+/**
  * CityName
  *
  * Название города на языке запроса.
@@ -1620,6 +1650,48 @@ export type UpdateCurrentUserResponses = {
 };
 
 export type UpdateCurrentUserResponse = UpdateCurrentUserResponses[keyof UpdateCurrentUserResponses];
+
+export type FindAccountsByIdsData = {
+  body?: never;
+  path?: never;
+  query: {
+    /**
+     * Ids
+     */
+    ids: Array<string>;
+  };
+  url: '/v1/admin/auth/accounts/';
+};
+
+export type FindAccountsByIdsErrors = {
+  /**
+   * Невалидный или истёкший access-токен
+   */
+  401: ErrorResponse;
+  /**
+   * В токене нет права на просмотр учётных записей
+   */
+  403: ErrorResponse;
+  /**
+   * Ошибка валидации запроса
+   */
+  422: ErrorResponse;
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type FindAccountsByIdsError = FindAccountsByIdsErrors[keyof FindAccountsByIdsErrors];
+
+export type FindAccountsByIdsResponses = {
+  /**
+   * Successful Response
+   */
+  200: AccountsResponse;
+};
+
+export type FindAccountsByIdsResponse = FindAccountsByIdsResponses[keyof FindAccountsByIdsResponses];
 
 export type GetMediaConfigData = {
   body?: never;

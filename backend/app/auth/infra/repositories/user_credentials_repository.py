@@ -68,6 +68,14 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         user_credentials_model = await self._fetch_one(query)
         return self._to_entity(user_credentials_model) if user_credentials_model else None
 
+    async def find_user_credentials_by_user_ids(
+        self,
+        user_ids: frozenset[UUID],
+    ) -> tuple[UserCredentialsEntity, ...]:
+        query = sa.select(UserCredentials).where(UserCredentials.user_id.in_(user_ids))
+        result = await self._session.execute(query)
+        return tuple(self._to_entity(user_credentials_model) for user_credentials_model in result.scalars())
+
     async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
         """
         Загружает учётные данные по email без учёта регистра.
@@ -161,6 +169,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             - вход и обновление сессии
             - отправка и ввод кода в диалоге «Подтвердите email»
             - данные входа текущего пользователя
+            - подпись аккаунта по его id в админке
 
         Args:
             user_credentials_model: ORM-модель из БД

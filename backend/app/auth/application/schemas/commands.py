@@ -1,6 +1,10 @@
+from dataclasses import dataclass
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, SecretStr
 
 __all__ = [
+    "FindAccountsByIdsCommand",
     "LoginCommand",
     "RegistrationCommand",
     "VerifyEmailCommand",
@@ -29,3 +33,10 @@ class VerifyEmailCommand(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     code: SecretStr
+
+
+@dataclass(frozen=True, slots=True)
+class FindAccountsByIdsCommand:
+    """Id учётных записей, которые нужно показать в админке."""
+
+    user_ids: frozenset[UUID]

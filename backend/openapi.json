@@ -2037,6 +2037,106 @@
         ]
       }
     },
+    "/v1/admin/auth/accounts/": {
+      "get": {
+        "tags": [
+          "admin: auth"
+        ],
+        "summary": "Find Accounts By Ids",
+        "description": "Учётные записи по id, удалённые с `isDeleted: true`; id без записи пропускается. Право `auth.accounts.read`.",
+        "operationId": "find_accounts_by_ids",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 100,
+              "title": "Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Невалидный или истёкший access-токен",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "auth.invalid_access_token",
+                  "message": "Невалидный или истёкший access-токен",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "В токене нет права на просмотр учётных записей",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "permission_required",
+                  "message": "Недостаточно прав",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/media/config/": {
       "get": {
         "tags": [
@@ -2210,6 +2310,47 @@
   },
   "components": {
     "schemas": {
+      "AccountItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "title": "Isdeleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "isDeleted"
+        ],
+        "title": "AccountItem"
+      },
+      "AccountsResponse": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountItem"
+            },
+            "type": "array",
+            "title": "Accounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accounts"
+        ],
+        "title": "AccountsResponse",
+        "description": "Найденные учётные записи в произвольном порядке; id без записи в ответе нет."
+      },
       "CityName": {
         "properties": {
           "cityId": {

@@ -15,6 +15,8 @@ import {
   type SideAxisEnum,
   type UploadRulesResponse,
 } from "../../api/sdk";
+import { AccountLabel } from "../AccountLabel";
+import { useAccountsByIds } from "../useAccountsByIds";
 import { RuleNumber } from "./RuleNumber";
 import {
   bytesToMegabytes,
@@ -185,6 +187,7 @@ interface VersionFactsProps {
 
 function VersionFacts({ config }: VersionFactsProps) {
   const { t, i18n } = useTranslation("admin");
+  const findAccount = useAccountsByIds(config.createdBy === null ? [] : [config.createdBy]);
   const savedAt = new Intl.DateTimeFormat(i18n.language, { dateStyle: "long", timeStyle: "short" }).format(
     new Date(config.createdAt),
   );
@@ -205,7 +208,7 @@ function VersionFacts({ config }: VersionFactsProps) {
           {config.createdBy === null ? (
             t("version.initial")
           ) : (
-            <span title={config.createdBy}>{config.createdBy}</span>
+            <AccountLabel accountId={config.createdBy} account={findAccount(config.createdBy)} />
           )}
         </dd>
       </div>

@@ -3,6 +3,24 @@
 import * as z from 'zod/mini';
 
 /**
+ * AccountItem
+ */
+export const zAccountItem = z.object({
+  id: z.uuid(),
+  email: z.string(),
+  isDeleted: z.boolean()
+});
+
+/**
+ * AccountsResponse
+ *
+ * Найденные учётные записи в произвольном порядке; id без записи в ответе нет.
+ */
+export const zAccountsResponse = z.object({
+  accounts: z.array(zAccountItem)
+});
+
+/**
  * CityName
  *
  * Название города на языке запроса.
@@ -660,6 +678,15 @@ export const zUpdateCurrentUserBody = zUpdateCurrentUserRequest;
  * Successful Response
  */
 export const zUpdateCurrentUserResponse = zCurrentUserResponse;
+
+export const zFindAccountsByIdsQuery = z.object({
+  ids: z.array(z.uuid()).check(z.minLength(1), z.maxLength(100))
+});
+
+/**
+ * Successful Response
+ */
+export const zFindAccountsByIdsResponse = zAccountsResponse;
 
 /**
  * Successful Response

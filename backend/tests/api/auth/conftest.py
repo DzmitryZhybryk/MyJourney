@@ -2,8 +2,9 @@
 Auth-данные для generic api-проводки (``tests/api/conftest.py``).
 
 Здесь только то, чьё определение **импортирует auth**: три data-фикстуры, которыми
-generic-фикстура ``app`` собирает приложение — ``router`` (auth-роутер), ``router_prefix``
-(``/v1/auth``) и ``dependency_overrides`` (какие листовые auth-deps чем подменить). Сам
+generic-фикстура ``app`` собирает приложение — ``router`` (обёртка над публичным и админским
+auth-роутерами под их боевыми префиксами), ``router_prefix`` (``/v1``) и ``dependency_overrides``
+(какие листовые auth-deps чем подменить). Сам
 механизм сборки ``app``, ``client``, фейки shared-инфры (salted/deterministic hasher,
 task-bus) и ``mint_access_token`` живут в родительском ``tests/api/conftest.py``; фейки
 I/O-границы (UoW, users-client, email-настройки) — в корневом ``tests/conftest.py``.
@@ -24,6 +25,7 @@ import pytest
 from fastapi import APIRouter
 
 from app.auth.application.config import EmailVerificationConfig
+from app.auth.presentation.admin.routes import auth_admin_router
 from app.auth.presentation.dependencies import (
     auth_uow_dependency,
     email_verification_config_dependency,
@@ -39,17 +41,18 @@ from tests.fakes import (
     FakeUsersClient,
 )
 
-_AUTH_ROUTER_PREFIX = "/v1/auth"
-
 
 @pytest.fixture
 def router() -> APIRouter:
-    return auth_router
+    wrapper = APIRouter()
+    wrapper.include_router(auth_router, prefix="/auth")
+    wrapper.include_router(auth_admin_router, prefix="/admin/auth")
+    return wrapper
 
 
 @pytest.fixture
 def router_prefix() -> str:
-    return _AUTH_ROUTER_PREFIX
+    return "/v1"
 
 
 @pytest.fixture
