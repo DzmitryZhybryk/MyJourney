@@ -49,4 +49,4 @@ class ResolveCitiesResponse(CamelModel):
 
     model_config = ConfigDict(frozen=True)
 
-    items: tuple[CityName, ...]
+    items: frozenset[CityName]

@@ -204,3 +204,28 @@ async def test_update_persists_email_verified_at(
 
     assert found is not None
     assert found.email_verified_at == _VERIFIED_AT
+
+
+async def test_find_by_user_ids_returns_matching_rows_incl_deleted_and_skips_unknown(
+    db_session: AsyncSession,
+) -> None:
+    """``find_user_credentials_by_user_ids`` отдаёт строки по набору id, удалённые тоже; неизвестный id пропускает."""
+    repository = UserCredentialsRepository(db_session)
+    active_entity = make_user_credentials(email="uc-ids-active@example.com", username="uc_ids_active")
+    deleted_entity = make_user_credentials(
+        email="uc-ids-deleted@example.com",
+        username="uc_ids_deleted",
+        deleted_at=_VERIFIED_AT,
+    )
+    other_entity = make_user_credentials(email="uc-ids-other@example.com", username="uc_ids_other")
+    for user_credentials_entity in (active_entity, deleted_entity, other_entity):
+        await repository.insert_user_credentials(user_credentials_entity)
+
+    found = await repository.find_user_credentials_by_user_ids(
+        frozenset({active_entity.user_id, deleted_entity.user_id, uuid4()}),
+    )
+
+    assert {(entity.user_id, entity.is_deleted) for entity in found} == {
+        (active_entity.user_id, False),
+        (deleted_entity.user_id, True),
+    }

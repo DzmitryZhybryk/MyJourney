@@ -42,7 +42,7 @@ class ResolvedCity:
 class ResolveCitiesResult:
     """Названия найденных городов."""
 
-    items: tuple[ResolvedCity, ...]
+    items: frozenset[ResolvedCity]
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +57,6 @@ class CityLocation:
 
 @dataclass(frozen=True, slots=True)
 class CitiesByIdsResult:
-    """Найденные города в произвольном порядке; несуществующих id здесь нет."""
+    """Найденные города; несуществующих id здесь нет."""
 
-    items: tuple[CityLocation, ...]
+    items: frozenset[CityLocation]

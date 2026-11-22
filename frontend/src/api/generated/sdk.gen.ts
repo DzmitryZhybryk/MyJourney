@@ -4,8 +4,8 @@ import * as z from 'zod/mini';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateJourneyData, CreateJourneyErrors, CreateJourneyResponses, DeleteJourneyData, DeleteJourneyErrors, DeleteJourneyResponses, EstimateJourneyDistanceData, EstimateJourneyDistanceErrors, EstimateJourneyDistanceResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetJourneysGlobeData, GetJourneysGlobeErrors, GetJourneysGlobeResponses, GetJourneysMapData, GetJourneysMapErrors, GetJourneysMapResponses, GetJourneyYearsData, GetJourneyYearsErrors, GetJourneyYearsResponses, GetMediaConfigData, GetMediaConfigErrors, GetMediaConfigResponses, GetMovementsMapData, GetMovementsMapErrors, GetMovementsMapResponses, GetUploadRulesData, GetUploadRulesErrors, GetUploadRulesResponses, HealthzData, HealthzResponses, ListJourneysData, ListJourneysErrors, ListJourneysResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MoveJourneyData, MoveJourneyErrors, MoveJourneyResponses, RefreshData, RefreshErrors, RefreshResponses, RegisterData, RegisterErrors, RegisterResponses, ResolveCitiesData, ResolveCitiesErrors, ResolveCitiesResponses, SearchCitiesData, SearchCitiesErrors, SearchCitiesResponses, SendEmailVerificationData, SendEmailVerificationErrors, SendEmailVerificationResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateJourneyData, UpdateJourneyErrors, UpdateJourneyResponses, UpdateMediaConfigData, UpdateMediaConfigErrors, UpdateMediaConfigResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
-import { zCreateJourneyBody, zDeleteJourneyPath, zDeleteJourneyResponse, zEstimateJourneyDistanceQuery, zEstimateJourneyDistanceResponse, zGetCurrentAccountResponse, zGetCurrentUserResponse, zGetJourneysGlobeResponse, zGetJourneysMapResponse, zGetJourneyYearsResponse, zGetMediaConfigResponse, zGetMovementsMapQuery, zGetMovementsMapResponse, zGetUploadRulesResponse, zListJourneysQuery, zListJourneysResponse, zLoginBody, zLoginResponse, zLogoutResponse, zMoveJourneyBody, zMoveJourneyPath, zMoveJourneyResponse2, zRefreshResponse, zRegisterBody, zRegisterResponse, zResolveCitiesBody, zResolveCitiesResponse2, zSearchCitiesQuery, zSearchCitiesResponse, zUpdateCurrentUserBody, zUpdateCurrentUserResponse, zUpdateJourneyBody, zUpdateJourneyPath, zUpdateJourneyResponse, zUpdateMediaConfigBody, zUpdateMediaConfigResponse, zVerifyEmailBody, zVerifyEmailResponse } from './zod.gen';
+import type { CreateJourneyData, CreateJourneyErrors, CreateJourneyResponses, DeleteJourneyData, DeleteJourneyErrors, DeleteJourneyResponses, EstimateJourneyDistanceData, EstimateJourneyDistanceErrors, EstimateJourneyDistanceResponses, FindAccountsByIdsData, FindAccountsByIdsErrors, FindAccountsByIdsResponses, GetCurrentAccountData, GetCurrentAccountErrors, GetCurrentAccountResponses, GetCurrentUserData, GetCurrentUserErrors, GetCurrentUserResponses, GetJourneysGlobeData, GetJourneysGlobeErrors, GetJourneysGlobeResponses, GetJourneysMapData, GetJourneysMapErrors, GetJourneysMapResponses, GetJourneyYearsData, GetJourneyYearsErrors, GetJourneyYearsResponses, GetMediaConfigData, GetMediaConfigErrors, GetMediaConfigResponses, GetMovementsMapData, GetMovementsMapErrors, GetMovementsMapResponses, GetUploadRulesData, GetUploadRulesErrors, GetUploadRulesResponses, HealthzData, HealthzResponses, ListJourneysData, ListJourneysErrors, ListJourneysResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, MoveJourneyData, MoveJourneyErrors, MoveJourneyResponses, RefreshData, RefreshErrors, RefreshResponses, RegisterData, RegisterErrors, RegisterResponses, ResolveCitiesData, ResolveCitiesErrors, ResolveCitiesResponses, SearchCitiesData, SearchCitiesErrors, SearchCitiesResponses, SendEmailVerificationData, SendEmailVerificationErrors, SendEmailVerificationResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateJourneyData, UpdateJourneyErrors, UpdateJourneyResponses, UpdateMediaConfigData, UpdateMediaConfigErrors, UpdateMediaConfigResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
+import { zCreateJourneyBody, zDeleteJourneyPath, zDeleteJourneyResponse, zEstimateJourneyDistanceQuery, zEstimateJourneyDistanceResponse, zFindAccountsByIdsQuery, zFindAccountsByIdsResponse, zGetCurrentAccountResponse, zGetCurrentUserResponse, zGetJourneysGlobeResponse, zGetJourneysMapResponse, zGetJourneyYearsResponse, zGetMediaConfigResponse, zGetMovementsMapQuery, zGetMovementsMapResponse, zGetUploadRulesResponse, zListJourneysQuery, zListJourneysResponse, zLoginBody, zLoginResponse, zLogoutResponse, zMoveJourneyBody, zMoveJourneyPath, zMoveJourneyResponse2, zRefreshResponse, zRegisterBody, zRegisterResponse, zResolveCitiesBody, zResolveCitiesResponse2, zSearchCitiesQuery, zSearchCitiesResponse, zUpdateCurrentUserBody, zUpdateCurrentUserResponse, zUpdateJourneyBody, zUpdateJourneyPath, zUpdateJourneyResponse, zUpdateMediaConfigBody, zUpdateMediaConfigResponse, zVerifyEmailBody, zVerifyEmailResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
   /**
@@ -423,6 +423,24 @@ export const updateCurrentUser = <ThrowOnError extends boolean = false>(options:
     'Content-Type': 'application/json',
     ...options.headers
   }
+});
+
+/**
+ * Find Accounts By Ids
+ *
+ * Учётные записи по id, удалённые с `isDeleted: true`; id без записи пропускается. Право `auth.accounts.read`.
+ */
+export const findAccountsByIds = <ThrowOnError extends boolean = false>(options: Options<FindAccountsByIdsData, ThrowOnError>): RequestResult<FindAccountsByIdsResponses, FindAccountsByIdsErrors, ThrowOnError, 'data'> => (options.client ?? client).get<FindAccountsByIdsResponses, FindAccountsByIdsErrors, ThrowOnError, 'data'>({
+  requestValidator: async (data) => await z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: zFindAccountsByIdsQuery
+  }).parseAsync(data),
+  responseValidator: async (data) => await zFindAccountsByIdsResponse.parseAsync(data),
+  responseStyle: 'data',
+  security: [{ scheme: 'bearer', type: 'http' }],
+  url: '/v1/admin/auth/accounts/',
+  ...options
 });
 
 /**

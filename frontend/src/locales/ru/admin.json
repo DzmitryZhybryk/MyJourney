@@ -10,6 +10,10 @@
     "savedBy": "Кем",
     "initial": "Начальное значение"
   },
+  "account": {
+    "missing": "Удалённый аккаунт",
+    "deleted": "{{email}} (удалён)"
+  },
   "kinds": {
     "avatar": "Аватар",
     "journeyPhoto": "Фото поездок",

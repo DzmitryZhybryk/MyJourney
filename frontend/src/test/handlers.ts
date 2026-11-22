@@ -13,6 +13,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 import type {
+  AccountItem,
   CitySearchItem,
   CurrentAccountResponse,
   CurrentUserResponse,
@@ -34,6 +35,13 @@ export const TEST_MEDIA_CONFIG: MediaConfigResponse = {
     journeyPhoto: { maxSizeBytes: 30 * MEGABYTE, formats: ["image/jpeg"], minSide: 1280 },
     journeyVideo: { maxSizeBytes: 200 * MEGABYTE, formats: ["video/mp4"] },
   },
+};
+
+/** The admin account the accounts-by-ids handler knows; any other id is omitted, like the backend. */
+export const TEST_ADMIN_ACCOUNT: AccountItem = {
+  id: "22222222-2222-4222-8222-222222222222",
+  email: "admin@example.com",
+  isDeleted: false,
 };
 
 /** Public upload rules matching `TEST_MEDIA_CONFIG`, with the side axis from backend code. */
@@ -273,6 +281,10 @@ export const handlers = [
   http.get("/v1/admin/media/config/", () => HttpResponse.json(TEST_MEDIA_CONFIG)),
   http.put("/v1/admin/media/config/", () => new HttpResponse(null, { status: 204 })),
   http.get("/v1/media/config/", () => HttpResponse.json(TEST_UPLOAD_RULES)),
+  http.get("/v1/admin/auth/accounts/", ({ request }) => {
+    const ids = new URL(request.url).searchParams.getAll("ids");
+    return HttpResponse.json({ accounts: ids.includes(TEST_ADMIN_ACCOUNT.id) ? [TEST_ADMIN_ACCOUNT] : [] });
+  }),
 ];
 
 export const server = setupServer(...handlers);

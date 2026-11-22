@@ -6,6 +6,7 @@ or proposing an alternative, read its file: the alternative may already have bee
 | File | Questions it answers |
 |---|---|
 | `accounts.md` | which domain stores email, username and the profile; what a valid token without an account gets; how registration spans auth and users; where user preferences live; how one-time codes are resent, stored and locked out; how access and the first admin work |
+| `permissions.md` | how a route checks a permission; how one is named; what `user` gets; what a missing one answers |
 | `admin.md` | where admin routes live; admin vs public schemas; the SPA admin |
 | `config.md` | how a domain stores, seeds, edits config |
 | `domains.md` | whether tables of different domains may reference each other; where an HTTP status is decided; what PUT and PATCH answer |

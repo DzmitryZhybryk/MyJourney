@@ -1,17 +1,31 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import type { UpdateMediaConfigRequest } from "../../api/sdk";
-import { server, TEST_MEDIA_CONFIG } from "../../test/handlers";
-import { makeAuthValue, renderWithProviders, screen, waitFor, within } from "../../test/render";
+import { findAccountsByIdsQueryKey, type UpdateMediaConfigRequest } from "../../api/sdk";
+import { server, TEST_ADMIN_ACCOUNT, TEST_MEDIA_CONFIG } from "../../test/handlers";
+import {
+  createTestQueryClient,
+  makeAuthValue,
+  renderWithProviders,
+  screen,
+  waitFor,
+  within,
+} from "../../test/render";
 import { MediaConfigPage } from "./MediaConfigPage";
 
 const MEGABYTE = 1024 * 1024;
 
-function renderPage() {
+function renderPage(queryClient = createTestQueryClient()) {
   return renderWithProviders(<MediaConfigPage />, {
     authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+    queryClient,
   });
+}
+
+function serveConfigSavedBy(accountId: string) {
+  server.use(
+    http.get("/v1/admin/media/config/", () => HttpResponse.json({ ...TEST_MEDIA_CONFIG, createdBy: accountId })),
+  );
 }
 
 describe("MediaConfigPage", () => {
@@ -106,5 +120,48 @@ describe("MediaConfigPage", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Someone saved these rules while you were editing");
+  });
+
+  it("автор версии показан email'ом, полный id — в подсказке", async () => {
+    serveConfigSavedBy(TEST_ADMIN_ACCOUNT.id);
+    renderPage();
+
+    expect(await screen.findByText("admin@example.com")).toHaveAttribute("title", TEST_ADMIN_ACCOUNT.id);
+  });
+
+  it("удалённый автор показан email'ом с пометкой", async () => {
+    serveConfigSavedBy(TEST_ADMIN_ACCOUNT.id);
+    server.use(
+      http.get("/v1/admin/auth/accounts/", () =>
+        HttpResponse.json({ accounts: [{ ...TEST_ADMIN_ACCOUNT, isDeleted: true }] }),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByText("admin@example.com (deleted)")).toBeInTheDocument();
+  });
+
+  it("автор, которого auth не знает, показан как удалённый аккаунт", async () => {
+    const unknownId = "33333333-3333-4333-8333-333333333333";
+    serveConfigSavedBy(unknownId);
+    renderPage();
+
+    expect(await screen.findByText("Deleted account")).toHaveAttribute("title", unknownId);
+  });
+
+  it("если auth не ответил, остаётся id автора, а не «удалённый аккаунт»", async () => {
+    serveConfigSavedBy(TEST_ADMIN_ACCOUNT.id);
+    server.use(
+      http.get("/v1/admin/auth/accounts/", () =>
+        HttpResponse.json({ code: "internal", message: "x" }, { status: 500 }),
+      ),
+    );
+    const queryClient = createTestQueryClient();
+    renderPage(queryClient);
+
+    const accountsKey = findAccountsByIdsQueryKey({ query: { ids: [TEST_ADMIN_ACCOUNT.id] } });
+    await waitFor(() => expect(queryClient.getQueryState(accountsKey)?.status).toBe("error"));
+    expect(screen.getByText(TEST_ADMIN_ACCOUNT.id)).toBeInTheDocument();
+    expect(screen.queryByText("Deleted account")).toBeNull();
   });
 });

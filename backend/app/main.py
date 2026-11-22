@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi.routing import APIRoute
 
+from app.auth.presentation.admin.routes import auth_admin_router
 from app.auth.presentation.routes import auth_router
 from app.blueprints import TASK_BLUEPRINTS
 from app.geo.presentation.routes import geo_router
@@ -142,6 +143,7 @@ def create_app() -> BFastAPI:
     app.include_router(media_router, prefix="/v1/media", tags=["media"])
     app.include_router(users_router, prefix="/v1/users", tags=["users"])
 
+    app.include_router(auth_admin_router, prefix="/v1/admin/auth", tags=["admin: auth"])
     app.include_router(media_admin_router, prefix="/v1/admin/media", tags=["admin: media"])
 
     return app

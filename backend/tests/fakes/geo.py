@@ -31,8 +31,8 @@ class FakeCityRepository(CityRepositoryPort):
         matched.sort(key=lambda city_entity: (city_entity.population is None, -(city_entity.population or 0)))
         return tuple(matched[:limit])
 
-    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
-        return tuple(city_entity for city_entity in self.cities if city_entity.city_id in city_ids)
+    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> frozenset[CityEntity]:
+        return frozenset(city_entity for city_entity in self.cities if city_entity.city_id in city_ids)
 
     @staticmethod
     def _matches_prefix(*, city_entity: CityEntity, prefix: str) -> bool:

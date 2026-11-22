@@ -63,7 +63,6 @@ Frontend — из `frontend/`: `make lint | typecheck | test | coverage | check 
 
 Любой commit, push, PR, ветка, бамп версии или запись в CHANGELOG — сначала skill **`git-workflow`**
 (формат коммитов, раздельное версионирование фронта и бэка, `uv lock`, гейт покрытия 90%).
-Обход pre-commit hook'а через `--no-verify` — не вариант.
 
 ## UI
 

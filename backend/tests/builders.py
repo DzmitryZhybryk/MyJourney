@@ -95,6 +95,7 @@ def make_user_credentials(
     email_verified_at: dt.datetime | None = None,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
+    deleted_at: dt.datetime | None = None,
 ) -> UserCredentialsEntity:
     return UserCredentialsEntity(
         user_id=user_id or uuid4(),
@@ -106,6 +107,7 @@ def make_user_credentials(
         email_verified_at=email_verified_at,
         created_at=created_at,
         updated_at=updated_at,
+        deleted_at=deleted_at,
     )
 
 

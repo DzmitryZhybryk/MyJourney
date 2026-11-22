@@ -50,6 +50,24 @@ class UserCredentialsRepositoryPort(Protocol):
         """
         ...
 
+    async def find_user_credentials_by_user_ids(
+        self,
+        user_ids: frozenset[UUID],
+    ) -> frozenset[UserCredentialsEntity]:
+        """
+        Находит учётные данные по набору id пользователей; удалённые тоже находятся.
+
+        Scenarios:
+            - подпись аккаунта по его id в админке: кто последним сохранил настройки
+
+        Args:
+            user_ids: Id пользователей
+
+        Returns:
+            Найденные учётные данные; id без записи пропускаются
+        """
+        ...
+
     async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
         """
         Находит учётные данные по email без учёта регистра.
