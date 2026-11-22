@@ -25,16 +25,16 @@ async def main() -> None:
     Scenarios:
         - начальное значение конфига при развёртывании, до старта приложения
     """
-    configure_logging(include_debug=settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
+    configure_logging(settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
     snapshot = MediaConfigSnapshot.model_validate_json(_DEFAULTS_PATH.read_text(encoding="utf-8"))
 
     registry = ComponentRegistry()
     async with (
-        run_components(components=[SqlAlchemyComponent(settings=settings)], registry=registry),
+        run_components(components=[SqlAlchemyComponent(settings)], registry=registry),
         registry.get(SessionMaker)() as session,
     ):
-        media_config_service = MediaConfigService(uow=MediaUnitOfWork(session=session))
-        await media_config_service.seed_media_config(command=SeedMediaConfigCommand(snapshot=snapshot))
+        media_config_service = MediaConfigService(MediaUnitOfWork(session))
+        await media_config_service.seed_media_config(SeedMediaConfigCommand(snapshot))
 
 
 if __name__ == "__main__":

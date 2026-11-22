@@ -51,7 +51,6 @@ class _PlaceDraft:
 
 
 def collect_places(
-    *,
     class_bindings: Iterable[tuple[PlaceKindEnum, Sequence[DictStrAny]]],
 ) -> tuple[tuple[ExportedPlace, ...], Counter[tuple[PlaceKindEnum, ExportOutcomeEnum]]]:
     """
@@ -125,7 +124,7 @@ def _finish(*, qid: str, draft: _PlaceDraft) -> tuple[ExportedPlace | None, Expo
     if not draft.country_codes:
         return None, ExportOutcomeEnum.NO_COUNTRY
 
-    name_en = strip_qualifier(label=draft.label_en or "")
+    name_en = strip_qualifier(draft.label_en or "")
     if not name_en:
         return None, ExportOutcomeEnum.NO_EN
 
@@ -137,7 +136,7 @@ def _finish(*, qid: str, draft: _PlaceDraft) -> tuple[ExportedPlace | None, Expo
         external_id=f"{_EXTERNAL_ID_PREFIX}{qid}",
         kind=draft.kind,
         name_en=name_en,
-        name_ru=None if draft.label_ru is None else acceptable_ru_name(label=draft.label_ru),
+        name_ru=None if draft.label_ru is None else acceptable_ru_name(draft.label_ru),
         country_codes=tuple(sorted(draft.country_codes)),
         latitude=latitude,
         longitude=longitude,

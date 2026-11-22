@@ -39,7 +39,7 @@ def test_configure_logging_sets_info_level_and_single_handler(restore_logging: N
 
 def test_configure_logging_debug_enables_debug_level(restore_logging: None) -> None:
     """``include_debug=True`` поднимает root-logger на DEBUG."""
-    configure_logging(include_debug=True)
+    configure_logging(True)
 
     assert logging.getLogger().level == logging.DEBUG
 

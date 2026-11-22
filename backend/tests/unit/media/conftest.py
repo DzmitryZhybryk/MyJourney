@@ -13,4 +13,4 @@ from tests.fakes import FakeMediaUnitOfWork
 
 @pytest.fixture
 def media_config_service(fake_media_uow: FakeMediaUnitOfWork) -> MediaConfigService:
-    return MediaConfigService(uow=fake_media_uow)
+    return MediaConfigService(fake_media_uow)

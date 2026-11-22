@@ -22,18 +22,18 @@ class CityRepository(BaseDBRepository[GeoCity], CityRepositoryPort):
         super().__init__(session=session, model=GeoCity)
 
     async def search_cities_by_name(self, *, search_text: str, limit: int) -> tuple[CityEntity, ...]:
-        query = self._prefix_query(search_text=search_text)
+        query = self._prefix_query(search_text)
         # По убыванию населения (без населения — в конце), tie-break по external_id.
         query = query.order_by(GeoCity.population.desc().nulls_last(), GeoCity.external_id).limit(limit)
         result = await self._session.execute(query)
-        return tuple(self._to_entity(city_model=city_model) for city_model in result.scalars())
+        return tuple(self._to_entity(city_model) for city_model in result.scalars())
 
-    async def find_cities_by_ids(self, *, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
+    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
         query = select(GeoCity).where(GeoCity.id.in_(city_ids))
         result = await self._session.execute(query)
-        return tuple(self._to_entity(city_model=city_model) for city_model in result.scalars())
+        return tuple(self._to_entity(city_model) for city_model in result.scalars())
 
-    def _prefix_query(self, *, search_text: str) -> Select[GeoCity]:
+    def _prefix_query(self, search_text: str) -> Select[GeoCity]:
         """
         Префиксный матч ``lower(name) LIKE 'q%'`` по ``name_en``/``name_ru``.
 
@@ -66,7 +66,7 @@ class CityRepository(BaseDBRepository[GeoCity], CityRepositoryPort):
         )
 
     @staticmethod
-    def _to_entity(*, city_model: GeoCity) -> CityEntity:
+    def _to_entity(city_model: GeoCity) -> CityEntity:
         return CityEntity(
             city_id=city_model.id,
             names=LocalizedNames(en=city_model.name_en, ru=city_model.name_ru),

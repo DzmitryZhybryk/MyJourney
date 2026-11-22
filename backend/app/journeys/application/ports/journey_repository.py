@@ -128,7 +128,7 @@ class JourneyRepositoryPort(SortKeyRepositoryPort[JourneyOrderScope], Protocol):
         """
         ...
 
-    async def find_visited_cities_by_user_id(self, *, user_id: UUID) -> tuple[VisitedCity, ...]:
+    async def find_visited_cities_by_user_id(self, user_id: UUID) -> tuple[VisitedCity, ...]:
         """
         Возвращает города, где пользователь побывал, — по одному на город.
 

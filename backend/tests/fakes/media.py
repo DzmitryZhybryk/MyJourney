@@ -47,7 +47,7 @@ class FakeMediaConfigRepository(MediaConfigRepositoryPort):
 class FakeMediaUnitOfWork(MediaUnitOfWorkPort):
     """In-memory UoW media: фейк-репозиторий конфига + мокнутый ``commit`` и no-op ``transaction``."""
 
-    def __init__(self, *, media_config_repository: MediaConfigRepositoryPort) -> None:
+    def __init__(self, media_config_repository: MediaConfigRepositoryPort) -> None:
         self.media_config_repository = media_config_repository
         self.commit_mock = AsyncMock()
 

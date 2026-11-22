@@ -32,14 +32,14 @@ async def test_ensure_procrastinate_schema_applies_then_is_idempotent(
     await procrastinate_app.open_async()
     try:
         # Прекондиция: свежий контейнер — procrastinate-схемы ещё нет (лоудно ловит контаминацию).
-        assert await _procrastinate_jobs_oid(procrastinate_app=procrastinate_app) is None
+        assert await _procrastinate_jobs_oid(procrastinate_app) is None
 
         # Ветка 1: пусто → схема применяется.
-        await ensure_procrastinate_schema(procrastinate_app=procrastinate_app)
-        assert await _procrastinate_jobs_oid(procrastinate_app=procrastinate_app) is not None
+        await ensure_procrastinate_schema(procrastinate_app)
+        assert await _procrastinate_jobs_oid(procrastinate_app) is not None
 
         # Ветка 2: повтор на мигрированной БД → no-op, дублирующие CREATE не выполняются.
-        await ensure_procrastinate_schema(procrastinate_app=procrastinate_app)
-        assert await _procrastinate_jobs_oid(procrastinate_app=procrastinate_app) is not None
+        await ensure_procrastinate_schema(procrastinate_app)
+        assert await _procrastinate_jobs_oid(procrastinate_app) is not None
     finally:
         await procrastinate_app.close_async()

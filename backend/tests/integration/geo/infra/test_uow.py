@@ -34,8 +34,8 @@ async def test_city_repository_read_works_inside_uow_transaction(
         await writer.commit()
 
     async with session_factory() as session:
-        uow = GeoUnitOfWork(session=session)
+        uow = GeoUnitOfWork(session)
         async with uow.transaction():
-            cities = await uow.city_repository.find_cities_by_ids(city_ids=(city_id,))
+            cities = await uow.city_repository.find_cities_by_ids((city_id,))
 
     assert [city_entity.city_id for city_entity in cities] == [city_id]

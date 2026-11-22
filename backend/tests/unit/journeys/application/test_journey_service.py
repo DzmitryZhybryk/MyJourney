@@ -133,9 +133,9 @@ async def test_create_journey_matches_geo_cities_by_id_not_by_order(
 
 async def test_get_journeys_map_no_journeys_returns_empty(journey_service: JourneyService) -> None:
     """get_journeys_map: у пользователя нет поездок → пустой агрегат без стран."""
-    result = await journey_service.get_journeys_map(user_id=uuid4())
+    result = await journey_service.get_journeys_map(uuid4())
 
-    assert result == JourneysMapResult(countries=())
+    assert result == JourneysMapResult(())
 
 
 async def test_get_journeys_map_groups_cities_by_country(
@@ -154,10 +154,10 @@ async def test_get_journeys_map_groups_cities_by_country(
         VisitedCity(city=_MOSCOW, years=(2019,)),
     ]
 
-    result = await journey_service.get_journeys_map(user_id=user_id)
+    result = await journey_service.get_journeys_map(user_id)
 
     assert result == JourneysMapResult(
-        countries=(
+        (
             MapCountryVisits(
                 country_code="FR",
                 cities=(MapCityVisit(city_id=paris_id, latitude=48.85, longitude=2.35, years=(2021,)),),
@@ -188,7 +188,7 @@ async def test_get_journeys_map_keeps_several_cities_of_one_country_together(
         VisitedCity(city=petersburg, years=(2021,)),
     ]
 
-    result = await journey_service.get_journeys_map(user_id=user_id)
+    result = await journey_service.get_journeys_map(user_id)
 
     assert [country.country_code for country in result.countries] == ["RU"]
     assert [city.city_id for city in result.countries[0].cities] == [MOSCOW_CITY_ID, petersburg_id]
@@ -206,7 +206,7 @@ async def test_get_journeys_globe_returns_cities_without_years(
         VisitedCity(city=_MOSCOW, years=(2019,)),
     ]
 
-    result = await journey_service.get_journeys_globe(user_id=user_id)
+    result = await journey_service.get_journeys_globe(user_id)
 
     assert [city.city_id for city in result.cities] == [LONDON_CITY_ID, MOSCOW_CITY_ID]
     assert result.cities[1].latitude == pytest.approx(55.75)
@@ -227,7 +227,7 @@ async def test_get_movements_map_returns_connections_and_year_bounds(
         make_journey(user_id=user_id, traveled_year=2017),
     ]
     fake_journey_repository.movement_connections_by_user_id[user_id] = [connection]
-    command = GetMovementsMapCommand(transport_types=frozenset({TransportTypeEnum.AIR}))
+    command = GetMovementsMapCommand(frozenset({TransportTypeEnum.AIR}))
 
     result = await journey_service.get_movements_map(user_id=user_id, command=command)
 
@@ -245,7 +245,7 @@ async def test_get_movements_map_without_journeys_skips_connections_query(
 ) -> None:
     """get_movements_map: поездок нет → пустой ответ без годов, маршруты не запрашиваются; чтение в транзакции."""
     user_id = uuid4()
-    command = GetMovementsMapCommand(transport_types=None)
+    command = GetMovementsMapCommand(None)
 
     result = await journey_service.get_movements_map(user_id=user_id, command=command)
 
@@ -472,7 +472,7 @@ async def test_move_journey_places_key_between_neighbor_and_next_in_year(
         command=MoveJourneyCommand(neighbor_journey_id=year_entities[neighbor_key].journey_id, placement=placement),
     )
 
-    assert result == MoveJourneyResult(traveled_year=2020)
+    assert result == MoveJourneyResult(2020)
     assert lower is None or moved_entity.sort_key > lower
     assert upper is None or moved_entity.sort_key < upper
     fake_journey_uow.commit_mock.assert_awaited_once()
@@ -494,7 +494,7 @@ async def test_move_journey_into_another_year_takes_neighbor_year(
         command=MoveJourneyCommand(neighbor_journey_id=neighbor_entity.journey_id, placement=MovePlacementEnum.AFTER),
     )
 
-    assert result == MoveJourneyResult(traveled_year=2018)
+    assert result == MoveJourneyResult(2018)
     assert moved_entity.traveled_year == 2018
     assert moved_entity.sort_key > "m"
 
@@ -668,9 +668,9 @@ async def test_get_journey_years_returns_repository_years(
         make_journey(user_id=user_id, traveled_year=2015, deleted_at=_DELETED_AT),
     ]
 
-    result = await journey_service.get_journey_years(user_id=user_id)
+    result = await journey_service.get_journey_years(user_id)
 
-    assert result == JourneyYearsResult(years=(2019, 2021))
+    assert result == JourneyYearsResult((2019, 2021))
     assert fake_journey_uow.transactions_started == 1
 
 
@@ -680,7 +680,7 @@ async def test_estimate_journey_distance_uses_geo_coordinates(
 ) -> None:
     """estimate_journey_distance: ~2500 км Москва → Лондон по координатам geo; своих данных нет — без транзакции."""
     result = await journey_service.estimate_journey_distance(
-        command=EstimateJourneyDistanceCommand(origin_city_id=MOSCOW_CITY_ID, destination_city_id=LONDON_CITY_ID),
+        EstimateJourneyDistanceCommand(origin_city_id=MOSCOW_CITY_ID, destination_city_id=LONDON_CITY_ID),
     )
 
     assert result.distance_km == pytest.approx(2500, abs=60)
@@ -696,7 +696,7 @@ async def test_estimate_journey_distance_unknown_city_raises(
 
     with pytest.raises(UnknownCityError) as exc_info:
         await journey_service.estimate_journey_distance(
-            command=EstimateJourneyDistanceCommand(origin_city_id=MOSCOW_CITY_ID, destination_city_id=LONDON_CITY_ID),
+            EstimateJourneyDistanceCommand(origin_city_id=MOSCOW_CITY_ID, destination_city_id=LONDON_CITY_ID),
         )
 
     assert exc_info.value.details == {"city_ids": frozenset({LONDON_CITY_ID})}

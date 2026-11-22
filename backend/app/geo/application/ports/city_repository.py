@@ -30,7 +30,7 @@ class CityRepositoryPort(Protocol):
         """
         ...
 
-    async def find_cities_by_ids(self, *, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
+    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
         """
         Находит города по id; несуществующие id пропускаются.
 

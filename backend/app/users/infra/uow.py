@@ -13,4 +13,4 @@ class UserUnitOfWork(BaseUnitOfWork, UserUnitOfWorkPort):
 
     def __init__(self, session: AsyncSession):
         super().__init__(session=session)
-        self.user_repository = UserRepository(session=session)
+        self.user_repository = UserRepository(session)

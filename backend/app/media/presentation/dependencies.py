@@ -11,10 +11,10 @@ from app.shared.infra.postgres.dependency import db_session_dependency
 def media_uow_dependency(
     session: Annotated[AsyncSession, Depends(db_session_dependency)],
 ) -> MediaUnitOfWork:
-    return MediaUnitOfWork(session=session)
+    return MediaUnitOfWork(session)
 
 
 def media_config_service_dependency(
     uow: Annotated[MediaUnitOfWork, Depends(media_uow_dependency)],
 ) -> MediaConfigService:
-    return MediaConfigService(uow=uow)
+    return MediaConfigService(uow)

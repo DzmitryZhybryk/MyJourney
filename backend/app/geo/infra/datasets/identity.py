@@ -5,7 +5,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 GAZETTEER_NAMESPACE: Final[UUID] = uuid5(NAMESPACE_URL, "urn:myjourney:geo-place")
 
 
-def gazetteer_id_for(*, external_id: str) -> UUID:
+def gazetteer_id_for(external_id: str) -> UUID:
     """
     Выводит id объекта газеттира из ключа поставщика (uuid5): одинаковый на любом окружении.
 

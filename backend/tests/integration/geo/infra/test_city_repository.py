@@ -54,9 +54,9 @@ async def test_search_matches_en_prefix_ordered_by_population(db_session: AsyncS
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).search_cities_by_name(search_text="Mos", limit=10)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text="Mos", limit=10)
 
-    assert [city_entity.display_name(language=LanguageEnum.EN) for city_entity in cities] == ["Moscow", "Mostar"]
+    assert [city_entity.display_name(LanguageEnum.EN) for city_entity in cities] == ["Moscow", "Mostar"]
 
 
 async def test_search_matches_ru_prefix(db_session: AsyncSession) -> None:
@@ -88,7 +88,7 @@ async def test_search_matches_ru_prefix(db_session: AsyncSession) -> None:
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).search_cities_by_name(search_text="Мос", limit=10)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text="Мос", limit=10)
 
     assert [city_entity.city_id for city_entity in cities] == [moscow_id]
 
@@ -109,7 +109,7 @@ async def test_search_prefix_does_not_match_substring(db_session: AsyncSession) 
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).search_cities_by_name(search_text="York", limit=10)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text="York", limit=10)
 
     assert cities == ()
 
@@ -143,7 +143,7 @@ async def test_search_escapes_like_metacharacters(db_session: AsyncSession) -> N
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).search_cities_by_name(search_text="A%", limit=10)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text="A%", limit=10)
 
     assert [city_entity.city_id for city_entity in cities] == [literal_id]
 
@@ -165,7 +165,7 @@ async def test_search_respects_limit(db_session: AsyncSession) -> None:
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).search_cities_by_name(search_text="Mos", limit=2)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text="Mos", limit=2)
 
     assert [city_entity.population for city_entity in cities] == [300, 200]
 
@@ -199,7 +199,7 @@ async def test_search_puts_cities_without_population_last(db_session: AsyncSessi
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).search_cities_by_name(search_text="Mo", limit=10)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text="Mo", limit=10)
 
     assert [city_entity.city_id for city_entity in cities] == [town_id, unknown_id]
 
@@ -233,8 +233,8 @@ async def test_find_cities_by_ids_returns_only_existing(db_session: AsyncSession
     )
     await db_session.commit()
 
-    cities = await CityRepository(session=db_session).find_cities_by_ids(city_ids=frozenset({moscow_id, uuid4()}))
+    cities = await CityRepository(db_session).find_cities_by_ids(frozenset({moscow_id, uuid4()}))
 
     [moscow] = cities
     assert moscow.city_id == moscow_id
-    assert moscow.display_name(language=LanguageEnum.RU) == "Москва"
+    assert moscow.display_name(LanguageEnum.RU) == "Москва"

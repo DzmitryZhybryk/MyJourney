@@ -24,7 +24,7 @@ async def get_current_user(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     user_service: Annotated[UserService, Depends(user_service_dependency)],
 ) -> CurrentUserResponse:
-    result = await user_service.get_current_user(user_id=user_id)
+    result = await user_service.get_current_user(user_id)
     return CurrentUserResponse.model_validate(result, from_attributes=True)
 
 

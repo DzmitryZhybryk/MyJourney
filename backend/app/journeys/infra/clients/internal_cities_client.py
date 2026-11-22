@@ -12,9 +12,9 @@ class InternalCitiesClient(CitiesClientPort):
     def __init__(self, city_service: CityService) -> None:
         self._city_service = city_service
 
-    async def find_city_locations(self, *, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
+    async def find_city_locations(self, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
         result = await self._city_service.get_cities_by_ids(
-            command=GetCitiesByIdsCommand(city_ids=frozenset(city_ids)),
+            GetCitiesByIdsCommand(frozenset(city_ids)),
         )
         return tuple(
             CityLocationResponse(

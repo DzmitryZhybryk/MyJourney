@@ -11,4 +11,4 @@ from app.users.infra.uow import UserUnitOfWork
 def user_service_dependency(
     session: Annotated[AsyncSession, Depends(db_session_dependency)],
 ) -> UserService:
-    return UserService(uow=UserUnitOfWork(session=session))
+    return UserService(UserUnitOfWork(session))

@@ -137,7 +137,7 @@ async def estimate_journey_distance(
         origin_city_id=query.origin_city_id,
         destination_city_id=query.destination_city_id,
     )
-    result = await journey_service.estimate_journey_distance(command=command)
+    result = await journey_service.estimate_journey_distance(command)
     return JourneyDistanceResponse.model_validate(result, from_attributes=True)
 
 
@@ -174,7 +174,7 @@ async def get_journey_years(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     journey_service: Annotated[JourneyService, Depends(journey_service_dependency)],
 ) -> JourneyYearsResponse:
-    result = await journey_service.get_journey_years(user_id=user_id)
+    result = await journey_service.get_journey_years(user_id)
     return JourneyYearsResponse.model_validate(result, from_attributes=True)
 
 
@@ -188,7 +188,7 @@ async def get_journeys_map(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     journey_service: Annotated[JourneyService, Depends(journey_service_dependency)],
 ) -> JourneysMapResponse:
-    result = await journey_service.get_journeys_map(user_id=user_id)
+    result = await journey_service.get_journeys_map(user_id)
     return JourneysMapResponse.model_validate(result, from_attributes=True)
 
 
@@ -202,7 +202,7 @@ async def get_journeys_globe(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     journey_service: Annotated[JourneyService, Depends(journey_service_dependency)],
 ) -> JourneysGlobeResponse:
-    result = await journey_service.get_journeys_globe(user_id=user_id)
+    result = await journey_service.get_journeys_globe(user_id)
     return JourneysGlobeResponse.model_validate(result, from_attributes=True)
 
 
@@ -217,6 +217,6 @@ async def get_movements_map(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     journey_service: Annotated[JourneyService, Depends(journey_service_dependency)],
 ) -> MovementsMapResponse:
-    command = GetMovementsMapCommand(transport_types=filters.transport_type)
+    command = GetMovementsMapCommand(filters.transport_type)
     result = await journey_service.get_movements_map(user_id=user_id, command=command)
     return MovementsMapResponse.model_validate(result, from_attributes=True)

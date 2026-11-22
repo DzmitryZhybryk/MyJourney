@@ -29,7 +29,7 @@ class ResendClient(BaseHTTPClient):
         super().__init__(config=config)
         self._default_from = default_from
 
-    async def send(self, *, message: EmailMessage) -> None:
+    async def send(self, message: EmailMessage) -> None:
         """
         Отправляет письмо через Resend.
 

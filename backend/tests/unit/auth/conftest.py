@@ -62,7 +62,7 @@ def auth_service(
 
 @pytest.fixture
 def account_service(fake_uow: FakeAuthUnitOfWork) -> AccountService:
-    return AccountService(uow=fake_uow)
+    return AccountService(fake_uow)
 
 
 @pytest.fixture

@@ -75,7 +75,7 @@ def frontend_origin() -> str:
 
 @pytest.fixture
 async def media_storage_registry(media_storage_settings: MediaStorageSettings) -> AsyncIterator[ComponentRegistry]:
-    component = MediaStorageComponent(settings=media_storage_settings)
+    component = MediaStorageComponent(media_storage_settings)
     registry = ComponentRegistry()
     await component.startup(registry)
     yield registry

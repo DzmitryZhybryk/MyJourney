@@ -152,7 +152,7 @@ def mint_access_token() -> Callable[..., str]:
         email_verified: bool = False,
     ) -> str:
         return jwt_service.create_access_token(
-            claims=AccessTokenClaims(
+            AccessTokenClaims(
                 user_id=user_id,
                 role=role,
                 plan=plan,

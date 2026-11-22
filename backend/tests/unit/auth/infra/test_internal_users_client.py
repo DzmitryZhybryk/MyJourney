@@ -18,14 +18,14 @@ from tests.fakes import FakeUserRepository, FakeUserUnitOfWork
 async def test_create_user_maps_fields_and_persists_via_user_service() -> None:
     """create_user маппит поля в users-команду и кладёт пользователя через UserService (commit — за вызывающим)."""
     user_repository = FakeUserRepository()
-    uow = FakeUserUnitOfWork(user_repository=user_repository)
-    client = InternalUsersClient(user_service=UserService(uow=uow))
+    uow = FakeUserUnitOfWork(user_repository)
+    client = InternalUsersClient(UserService(uow))
 
     user_id = uuid4()
     terms_accepted_at = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
     await client.create_user(
-        request=CreateUserRequest(
+        CreateUserRequest(
             user_id=user_id,
             display_name="newuser",
             marketing_emails_consent=True,

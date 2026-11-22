@@ -23,7 +23,7 @@ async def test_transaction_commit_persists_across_sessions(
     """``commit()`` внутри ``transaction()`` фиксирует запись — она видна из новой сессии."""
     row_id = uuid4()
     async with session_factory() as session:
-        uow = BaseUnitOfWork(session=session)
+        uow = BaseUnitOfWork(session)
         async with uow.transaction():
             await uow.session.execute(sa.insert(uow_probe_table).values(id=row_id))
             await uow.commit()
@@ -41,7 +41,7 @@ async def test_transaction_without_commit_rolls_back(
     """Выход из ``transaction()`` без ``commit()`` откатывает запись — commit после выхода её не сохраняет."""
     row_id = uuid4()
     async with session_factory() as session:
-        uow = BaseUnitOfWork(session=session)
+        uow = BaseUnitOfWork(session)
         async with uow.transaction():
             await uow.session.execute(sa.insert(uow_probe_table).values(id=row_id))
         # Без rollback'а на выходе из transaction() этот commit сохранил бы запись.
@@ -60,7 +60,7 @@ async def test_exception_in_transaction_rolls_back(
     """Исключение внутри ``transaction()`` пробрасывается и откатывает незакоммиченную запись."""
     row_id = uuid4()
     async with session_factory() as session:
-        uow = BaseUnitOfWork(session=session)
+        uow = BaseUnitOfWork(session)
         # PT012: блок намеренно составной — проверяем, что исключение проходит сквозь
         # transaction() (и откатывает), поэтому raise обязан быть внутри async with.
         with pytest.raises(RuntimeError, match="boom"):  # noqa: PT012
@@ -78,6 +78,6 @@ async def test_exception_in_transaction_rolls_back(
 
 async def test_session_property_returns_underlying_session(db_session: AsyncSession) -> None:
     """``session``-property отдаёт ту же сессию — шов для atomic-defer (``task_bus.bind_to(uow.session)``)."""
-    uow = BaseUnitOfWork(session=db_session)
+    uow = BaseUnitOfWork(db_session)
 
     assert uow.session is db_session

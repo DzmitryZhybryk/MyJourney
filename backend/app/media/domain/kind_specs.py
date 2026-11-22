@@ -13,5 +13,5 @@ class ImageKindSpec:
     min_side_axis: SideAxisEnum
 
 
-AVATAR_SPEC: Final[ImageKindSpec] = ImageKindSpec(min_side_axis=SideAxisEnum.SHORT)
-JOURNEY_PHOTO_SPEC: Final[ImageKindSpec] = ImageKindSpec(min_side_axis=SideAxisEnum.LONG)
+AVATAR_SPEC: Final[ImageKindSpec] = ImageKindSpec(SideAxisEnum.SHORT)
+JOURNEY_PHOTO_SPEC: Final[ImageKindSpec] = ImageKindSpec(SideAxisEnum.LONG)

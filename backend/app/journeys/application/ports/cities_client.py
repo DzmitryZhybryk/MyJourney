@@ -24,7 +24,7 @@ class CityLocationResponse:
 class CitiesClientPort(Protocol):
     """Исходящий вызов в geo, справочник городов."""
 
-    async def find_city_locations(self, *, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
+    async def find_city_locations(self, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
         """
         Находит страну и координаты городов по id: поездка хранит их из справочника, а не те, что
         прислал клиент.

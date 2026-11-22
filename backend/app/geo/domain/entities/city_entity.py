@@ -29,7 +29,7 @@ class CityEntity:
         self.longitude = longitude
         self.population = population
 
-    def localized_name(self, *, language: LanguageEnum) -> str | None:
+    def localized_name(self, language: LanguageEnum) -> str | None:
         """
         Возвращает собственное имя города на языке ``language`` (без фоллбэка).
 
@@ -45,9 +45,9 @@ class CityEntity:
         Returns:
             Имя на ``language`` либо ``None``, если перевода нет
         """
-        return self.names.get(language=language)
+        return self.names.get(language)
 
-    def display_name(self, *, language: LanguageEnum) -> str:
+    def display_name(self, language: LanguageEnum) -> str:
         """
         Возвращает отображаемое имя города под ``language`` с фоллбэком на ``name_en``.
 
@@ -61,4 +61,4 @@ class CityEntity:
         Returns:
             Имя на ``language``, иначе канонический ``name_en``
         """
-        return self.names.display(language=language)
+        return self.names.display(language)

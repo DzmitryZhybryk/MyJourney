@@ -19,7 +19,7 @@ from app.shared.settings import ResendSettings
 async def test_startup_registers_resend_client_and_shutdown_closes_it() -> None:
     """startup регистрирует ``ResendClient`` под ``EmailTransportPort``; shutdown закрывает его без ошибок."""
     component = ResendComponent(
-        settings=ResendSettings(RESEND_API_KEY=SecretStr("test-key"), RESEND_FROM_EMAIL="noreply@app.test"),
+        ResendSettings(RESEND_API_KEY=SecretStr("test-key"), RESEND_FROM_EMAIL="noreply@app.test"),
     )
     registry = ComponentRegistry()
 

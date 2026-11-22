@@ -52,7 +52,7 @@ async def current_user_claims_dependency(
         raise InvalidAccessTokenError()
 
     try:
-        claims = jwt_service.decode_access_token(token=credentials.credentials)
+        claims = jwt_service.decode_access_token(credentials.credentials)
     except JWTDecodeError as exc:
         raise InvalidAccessTokenError() from exc
 

@@ -21,7 +21,6 @@ media_admin_router = APIRouter()
     dependencies=[Depends(PermissionChecker(PermissionEnum.MEDIA_CONFIG_EDIT))],
 )
 async def get_media_config(
-    *,
     media_config_service: Annotated[MediaConfigService, Depends(media_config_service_dependency)],
 ) -> MediaConfigResponse:
     """Последняя версия конфига для правки. Нужно право `media.config.edit`."""

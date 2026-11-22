@@ -12,7 +12,7 @@ class EmailTransportPort(Protocol):
     под ключом ``EmailTransportPort``.
     """
 
-    async def send(self, *, message: EmailMessage) -> None:
+    async def send(self, message: EmailMessage) -> None:
         """
         Отправляет письмо.
 

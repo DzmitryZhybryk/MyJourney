@@ -40,11 +40,11 @@ async def test_insert_then_find_active_for_update_roundtrip(
         last_sent_at=_LAST_SENT_AT,
     )
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).insert_challenge(challenge_entity=challenge_entity)
+        await ChallengeRepository(writer).insert_challenge(challenge_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await ChallengeRepository(session=reader).find_active_challenge_for_update(
+        found = await ChallengeRepository(reader).find_active_challenge_for_update(
             user_id=user_id,
             challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
         )
@@ -73,11 +73,11 @@ async def test_find_active_excludes_used_challenge(
         used_at=_USED_AT,
     )
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).insert_challenge(challenge_entity=used_challenge)
+        await ChallengeRepository(writer).insert_challenge(used_challenge)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await ChallengeRepository(session=reader).find_active_challenge_for_update(
+        found = await ChallengeRepository(reader).find_active_challenge_for_update(
             user_id=user_id,
             challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
         )
@@ -101,7 +101,7 @@ async def test_update_challenge_persists_attempts_and_resend(
         attempts=0,
     )
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).insert_challenge(challenge_entity=challenge_entity)
+        await ChallengeRepository(writer).insert_challenge(challenge_entity)
         await writer.commit()
 
     resent_at = _LAST_SENT_AT + dt.timedelta(minutes=5)
@@ -114,11 +114,11 @@ async def test_update_challenge_persists_attempts_and_resend(
         attempts=3,
     )
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).update_challenge_by_id(challenge_entity=incremented)
+        await ChallengeRepository(writer).update_challenge_by_id(incremented)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await ChallengeRepository(session=reader).find_active_challenge_for_update(
+        found = await ChallengeRepository(reader).find_active_challenge_for_update(
             user_id=user_id,
             challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
         )
@@ -138,14 +138,14 @@ async def test_second_active_same_type_raises_integrity_error(
     await seed_user_credentials(user_id=user_id, email="ch-unique@example.com", username="ch_unique")
     first = make_challenge(user_id=user_id, challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION, expires_at=_EXPIRES_AT)
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).insert_challenge(challenge_entity=first)
+        await ChallengeRepository(writer).insert_challenge(first)
         await writer.commit()
 
     second = make_challenge(
         user_id=user_id, challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION, expires_at=_EXPIRES_AT
     )
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).insert_challenge(challenge_entity=second)
+        await ChallengeRepository(writer).insert_challenge(second)
         with pytest.raises(IntegrityError):
             await writer.commit()
 
@@ -163,12 +163,12 @@ async def test_find_active_for_update_locks_row(
         expires_at=_EXPIRES_AT,
     )
     async with session_factory() as writer:
-        await ChallengeRepository(session=writer).insert_challenge(challenge_entity=challenge_entity)
+        await ChallengeRepository(writer).insert_challenge(challenge_entity)
         await writer.commit()
 
     async with session_factory() as holder, session_factory() as contender:
         # holder берёт row-лок через FOR UPDATE и держит транзакцию открытой
-        locked = await ChallengeRepository(session=holder).find_active_challenge_for_update(
+        locked = await ChallengeRepository(holder).find_active_challenge_for_update(
             user_id=user_id,
             challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
         )

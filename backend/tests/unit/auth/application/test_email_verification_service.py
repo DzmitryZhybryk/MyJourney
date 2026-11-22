@@ -43,9 +43,9 @@ async def test_request_creates_challenge_and_defers_email_atomically(
 ) -> None:
     """request: создаёт challenge, кладёт шифротекст кода (код уходит в письмо), defer'ит в сессии UoW, коммитит."""
     user_credentials_entity = make_user_credentials(email="neo@example.com", email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
-    await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+    await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     assert len(fake_challenge_repository.challenges) == 1
     challenge_entity = fake_challenge_repository.challenges[0]
@@ -61,7 +61,7 @@ async def test_request_creates_challenge_and_defers_email_atomically(
 
     assert deferred.kwargs["code_ciphertext"] == challenge_entity.code_ciphertext
     assert deferred.kwargs["expires_at"] == challenge_entity.expires_at.isoformat()
-    code = secret_cipher.decrypt(ciphertext=challenge_entity.code_ciphertext)
+    code = secret_cipher.decrypt(challenge_entity.code_ciphertext)
     assert code.isdigit()
     assert len(code) == _VERIFICATION_CODE_LENGTH
 
@@ -77,7 +77,7 @@ async def test_request_raises_when_user_not_found(
 ) -> None:
     """request: нет учётной записи → AccountNotFoundError, без challenge, defer'а и коммита."""
     with pytest.raises(AccountNotFoundError):
-        await email_verification_service.request_email_verification(user_id=uuid4())
+        await email_verification_service.request_email_verification(uuid4())
 
     assert fake_challenge_repository.challenges == []
     assert fake_task_bus.bound.deferred == []
@@ -92,10 +92,10 @@ async def test_request_raises_when_email_already_verified(
 ) -> None:
     """request: email уже подтверждён → EmailAlreadyVerifiedError, без challenge и коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=dt.datetime.now(tz=dt.UTC))
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
     with pytest.raises(EmailAlreadyVerifiedError):
-        await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+        await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     assert fake_challenge_repository.challenges == []
     fake_uow.commit_mock.assert_not_awaited()
@@ -109,16 +109,16 @@ async def test_request_raises_when_resend_cooldown_active(
 ) -> None:
     """request: активный challenge свежее cooldown'а → ChallengeResendCooldownError, без нового challenge и коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     existing = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
         last_sent_at=dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=10),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=existing)
+    await fake_challenge_repository.insert_challenge(existing)
 
     with pytest.raises(ChallengeResendCooldownError):
-        await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+        await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     assert len(fake_challenge_repository.challenges) == 1
     assert existing.used_at is None
@@ -135,24 +135,24 @@ async def test_request_resends_same_code_and_extends_expiry_when_code_live(
 ) -> None:
     """request: живой код после cooldown'а уходит тот же, срок продлевается, нового challenge'а нет."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     now = dt.datetime.now(tz=dt.UTC)
     previous = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
         last_sent_at=now - dt.timedelta(seconds=120),
         expires_at=now + dt.timedelta(minutes=13),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=previous)
+    await fake_challenge_repository.insert_challenge(previous)
 
-    await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+    await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     assert fake_challenge_repository.challenges == [previous]
     assert previous.used_at is None
     assert previous.expires_at == previous.last_sent_at + dt.timedelta(minutes=15)
     deferred = fake_task_bus.bound.deferred[0]
-    assert secret_cipher.decrypt(ciphertext=deferred.kwargs["code_ciphertext"]) == "123456"
+    assert secret_cipher.decrypt(deferred.kwargs["code_ciphertext"]) == "123456"
     assert deferred.kwargs["expires_at"] == previous.expires_at.isoformat()
     fake_uow.commit_mock.assert_awaited_once()
 
@@ -168,7 +168,7 @@ async def test_request_replaces_expired_challenge_with_new_code(
 ) -> None:
     """request: истёкший код (с попытками или без) гасится, выдаётся и уходит в письмо новый."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     now = dt.datetime.now(tz=dt.UTC)
     previous = make_challenge(
         user_id=user_credentials_entity.user_id,
@@ -177,9 +177,9 @@ async def test_request_replaces_expired_challenge_with_new_code(
         last_sent_at=now - dt.timedelta(minutes=20),
         expires_at=now - dt.timedelta(minutes=5),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=previous)
+    await fake_challenge_repository.insert_challenge(previous)
 
-    await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+    await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     assert previous.used_at is not None
     active = [c for c in fake_challenge_repository.challenges if c.used_at is None]
@@ -197,7 +197,7 @@ async def test_request_raises_attempts_exceeded_when_live_code_exhausted(
 ) -> None:
     """request: живой код исчерпан → 429 с секундами до его истечения; без письма, продления и коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     now = dt.datetime.now(tz=dt.UTC)
     expires_at = now + dt.timedelta(seconds=300)
     previous = make_challenge(
@@ -207,10 +207,10 @@ async def test_request_raises_attempts_exceeded_when_live_code_exhausted(
         last_sent_at=now - dt.timedelta(seconds=120),
         expires_at=expires_at,
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=previous)
+    await fake_challenge_repository.insert_challenge(previous)
 
     with pytest.raises(ChallengeAttemptsExceededError) as exc_info:
-        await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+        await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     checked_at = dt.datetime.now(tz=dt.UTC)
     details = exc_info.value.details
@@ -229,17 +229,17 @@ async def test_request_reports_exhausted_code_before_cooldown(
 ) -> None:
     """request: исчерпанный код внутри cooldown'а → «попытки исчерпаны» со временем, а не «подождите»."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     previous = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
         attempts=5,
         last_sent_at=dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=10),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=previous)
+    await fake_challenge_repository.insert_challenge(previous)
 
     with pytest.raises(ChallengeAttemptsExceededError):
-        await email_verification_service.request_email_verification(user_id=user_credentials_entity.user_id)
+        await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
 
 # --- verify_email -----------------------------------------------------------
@@ -254,13 +254,13 @@ async def test_verify_marks_email_verified_on_correct_code(
 ) -> None:
     """verify: верный код помечает email подтверждённым, закрывает challenge, коммитит."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=challenge_entity)
+    await fake_challenge_repository.insert_challenge(challenge_entity)
 
     await email_verification_service.verify_email(
         user_id=user_credentials_entity.user_id,
@@ -281,14 +281,14 @@ async def test_verify_increments_attempts_and_raises_on_wrong_code(
 ) -> None:
     """verify: неверный код инкрементит счётчик попыток, коммитит инкремент и бросает VerificationCodeInvalidError."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
         attempts=0,
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=challenge_entity)
+    await fake_challenge_repository.insert_challenge(challenge_entity)
 
     with pytest.raises(VerificationCodeInvalidError):
         await email_verification_service.verify_email(
@@ -321,7 +321,7 @@ async def test_verify_raises_when_email_already_verified(
 ) -> None:
     """verify: email уже подтверждён → EmailAlreadyVerifiedError, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=dt.datetime.now(tz=dt.UTC))
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
     with pytest.raises(EmailAlreadyVerifiedError):
         await email_verification_service.verify_email(
@@ -339,7 +339,7 @@ async def test_verify_raises_when_no_active_challenge(
 ) -> None:
     """verify: у пользователя нет активного challenge'а → ChallengeNotFoundError, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
     with pytest.raises(ChallengeNotFoundError):
         await email_verification_service.verify_email(
@@ -359,16 +359,16 @@ async def test_verify_raises_when_attempts_exhausted(
 ) -> None:
     """verify: лимит исчерпан → 429 с секундами до нового кода ещё до сверки кода, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420)
     challenge_entity = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
         attempts=5,
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
         expires_at=expires_at,
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=challenge_entity)
+    await fake_challenge_repository.insert_challenge(challenge_entity)
 
     with pytest.raises(ChallengeAttemptsExceededError) as exc_info:
         await email_verification_service.verify_email(
@@ -392,13 +392,13 @@ async def test_verify_non_ascii_digits_count_as_wrong_code(
 ) -> None:
     """verify: не-ASCII цифры — обычный неверный код (попытка списана), а не падение сравнения."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=challenge_entity)
+    await fake_challenge_repository.insert_challenge(challenge_entity)
 
     with pytest.raises(VerificationCodeInvalidError):
         await email_verification_service.verify_email(
@@ -418,14 +418,14 @@ async def test_verify_raises_when_challenge_expired(
 ) -> None:
     """verify: срок действия challenge'а истёк → ChallengeExpiredError, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
-    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
         user_id=user_credentials_entity.user_id,
         used_at=None,
         expires_at=dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=1),
-        code_ciphertext=secret_cipher.encrypt(secret="123456"),
+        code_ciphertext=secret_cipher.encrypt("123456"),
     )
-    await fake_challenge_repository.insert_challenge(challenge_entity=challenge_entity)
+    await fake_challenge_repository.insert_challenge(challenge_entity)
 
     with pytest.raises(ChallengeExpiredError):
         await email_verification_service.verify_email(

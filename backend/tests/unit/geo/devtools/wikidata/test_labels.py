@@ -99,7 +99,7 @@ def test_enrich_rows_fills_when_only_one_label_is_acceptable() -> None:
 )
 def test_acceptable_ru_names(labels: set[str], expected: set[str]) -> None:
     """acceptable_ru_names: скобки в конце срезаются; латиница и имена с запятой отбрасываются."""
-    assert acceptable_ru_names(labels=labels) == expected
+    assert acceptable_ru_names(labels) == expected
 
 
 @pytest.mark.parametrize(
@@ -117,7 +117,7 @@ def test_acceptable_ru_names(labels: set[str], expected: set[str]) -> None:
 )
 def test_acceptable_ru_name(label: str, expected: str | None) -> None:
     """acceptable_ru_name: уточнение и пробелы по краям срезаются; не влезающее в колонку имени отбрасывается."""
-    assert acceptable_ru_name(label=label) == expected
+    assert acceptable_ru_name(label) == expected
 
 
 def test_fetch_ru_labels_batches_ids_and_groups_labels() -> None:

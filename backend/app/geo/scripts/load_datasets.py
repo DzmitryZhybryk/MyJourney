@@ -20,7 +20,7 @@ def main() -> None:
     Scenarios:
         - загрузка газеттира в базу: при развёртывании до старта приложения и в дев-стеке
     """
-    configure_logging(include_debug=settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
+    configure_logging(settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
     with httpx.Client(follow_redirects=True, timeout=_DOWNLOAD_TIMEOUT_SECONDS) as http_client:
         load_datasets(
             datasets=read_manifest(),

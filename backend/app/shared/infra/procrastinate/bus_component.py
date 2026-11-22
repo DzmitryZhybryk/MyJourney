@@ -19,7 +19,7 @@ from app.shared.infra.procrastinate.component import ProcrastinateApp
 class TaskBusComponent(BaseComponent):
     async def startup(self, registry: ComponentRegistry) -> None:
         app = registry.get(ProcrastinateApp)
-        registry.set(key=ProcrastinateTaskBus, value=ProcrastinateTaskBus(app=app))
+        registry.set(key=ProcrastinateTaskBus, value=ProcrastinateTaskBus(app))
 
     async def shutdown(self) -> None:
         pass

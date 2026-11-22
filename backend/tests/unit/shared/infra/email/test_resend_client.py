@@ -40,7 +40,7 @@ async def test_send_posts_email_payload_to_resend(install_mock_transport: _Insta
     install_mock_transport(handler)
 
     await _client().send(
-        message=EmailMessage(to="user@example.com", subject="Привет", html="<b>код 123</b>", text="код 123"),
+        EmailMessage(to="user@example.com", subject="Привет", html="<b>код 123</b>", text="код 123"),
     )
 
     assert captured["url"] == f"{_BASE_URL}/emails"
@@ -61,4 +61,4 @@ async def test_send_propagates_persistent_error_on_client_error(
     install_mock_transport(lambda request: httpx.Response(422, json={"message": "invalid recipient"}))
 
     with pytest.raises(ExternalAPIPersistentError):
-        await _client().send(message=EmailMessage(to="bad", subject="s", html="h", text="t"))
+        await _client().send(EmailMessage(to="bad", subject="s", html="h", text="t"))

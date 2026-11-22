@@ -37,4 +37,4 @@ def router_prefix() -> str:
 def dependency_overrides(
     fake_user_uow: FakeUserUnitOfWork,
 ) -> dict[Callable[..., Any], Callable[..., Any]]:
-    return {user_service_dependency: lambda: UserService(uow=fake_user_uow)}
+    return {user_service_dependency: lambda: UserService(fake_user_uow)}

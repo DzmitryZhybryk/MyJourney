@@ -18,11 +18,11 @@ async def main() -> None:
     Scenarios:
         - схема очереди фоновых задач при развёртывании, до старта приложения и воркера
     """
-    configure_logging(include_debug=settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
+    configure_logging(settings.ENVIRONMENT in (AppEnvEnum.LOCAL, AppEnvEnum.DEVELOPMENT))
 
     registry = ComponentRegistry()
     async with run_components(components=[ProcrastinateComponent(settings=settings)], registry=registry):
-        await ensure_procrastinate_schema(procrastinate_app=registry.get(ProcrastinateApp))
+        await ensure_procrastinate_schema(registry.get(ProcrastinateApp))
 
 
 if __name__ == "__main__":

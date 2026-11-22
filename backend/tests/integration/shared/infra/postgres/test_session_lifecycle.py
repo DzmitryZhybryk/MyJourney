@@ -24,7 +24,7 @@ async def test_sqlalchemy_component_startup_registers_working_sessionmaker(
     postgres_settings: PostgresSettings,
 ) -> None:
     """``startup`` регистрирует ``SessionMaker`` в registry, а его сессия реально ходит в БД."""
-    component = SqlAlchemyComponent(settings=postgres_settings)
+    component = SqlAlchemyComponent(postgres_settings)
     registry = ComponentRegistry()
     try:
         await component.startup(registry)
@@ -44,7 +44,7 @@ async def test_db_session_dependency_yields_working_session(db_engine: AsyncEngi
     scope: dict[str, Any] = {"type": "http", "app": SimpleNamespace(registry=registry)}
     request = Request(scope)
 
-    generator = db_session_dependency(request=request)
+    generator = db_session_dependency(request)
     session = await anext(generator)
     try:
         result = await session.execute(sa.text("SELECT 1"))

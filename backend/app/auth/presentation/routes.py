@@ -93,8 +93,8 @@ async def logout(
     refresh_secret: Annotated[str | None, Depends(optional_refresh_secret_dependency)],
     auth_service: Annotated[AuthService, Depends(auth_service_dependency)],
 ) -> None:
-    await auth_service.logout(refresh_secret=refresh_secret)
-    clear_refresh_token_cookie(response=response)
+    await auth_service.logout(refresh_secret)
+    clear_refresh_token_cookie(response)
 
 
 @auth_router.post(
@@ -125,7 +125,7 @@ async def get_current_account(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     account_service: Annotated[AccountService, Depends(account_service_dependency)],
 ) -> CurrentAccountResponse:
-    result = await account_service.get_current_account(user_id=user_id)
+    result = await account_service.get_current_account(user_id)
     return CurrentAccountResponse.model_validate(result, from_attributes=True)
 
 
@@ -139,7 +139,7 @@ async def send_email_verification(
     user_id: Annotated[UUID, Depends(current_user_id_dependency)],
     email_verification_service: Annotated[EmailVerificationService, Depends(email_verification_service_dependency)],
 ) -> Response:
-    await email_verification_service.request_email_verification(user_id=user_id)
+    await email_verification_service.request_email_verification(user_id)
     # Явно пустое тело: 202 = «принято в асинхронную обработку» (письмо ставится в
     # очередь воркеру), клиенту нечего возвращать. Без этого FastAPI сериализовал бы
     # None в JSON `null` — не пустой, но и бессмысленный payload.

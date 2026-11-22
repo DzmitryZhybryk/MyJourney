@@ -21,6 +21,6 @@ class AuthUnitOfWork(BaseUnitOfWork, AuthUnitOfWorkPort):
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session=session)
-        self.user_credentials_repository = UserCredentialsRepository(session=session)
-        self.refresh_token_repository = RefreshTokenRepository(session=session)
-        self.challenge_repository = ChallengeRepository(session=session)
+        self.user_credentials_repository = UserCredentialsRepository(session)
+        self.refresh_token_repository = RefreshTokenRepository(session)
+        self.challenge_repository = ChallengeRepository(session)

@@ -32,13 +32,11 @@ async def test_insert_then_find_by_user_id_roundtrip(
         plan=UserPlanEnum.PREMIUM,
     )
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(
-            user_credentials_entity=user_credentials_entity
-        )
+        await UserCredentialsRepository(writer).insert_user_credentials(user_credentials_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
 
     assert found is not None
     assert found.user_id == user_id
@@ -58,17 +56,15 @@ async def test_find_by_email_ignores_case(
     """``find_user_credentials_by_email`` находит запись в любом регистре и не задевает соседей."""
     user_id = uuid4()
     async with session_factory() as writer:
-        repository = UserCredentialsRepository(session=writer)
+        repository = UserCredentialsRepository(writer)
         await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(user_id=user_id, email="first@example.com", username="first")
+            make_user_credentials(user_id=user_id, email="first@example.com", username="first")
         )
-        await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(email="second@example.com", username="second")
-        )
+        await repository.insert_user_credentials(make_user_credentials(email="second@example.com", username="second"))
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_email(email=lookup_email)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_email(lookup_email)
 
     assert found is not None
     assert found.user_id == user_id
@@ -82,19 +78,15 @@ async def test_find_by_username_ignores_case(
     """``find_user_credentials_by_username`` находит запись в любом регистре и не задевает соседей."""
     user_id = uuid4()
     async with session_factory() as writer:
-        repository = UserCredentialsRepository(session=writer)
+        repository = UserCredentialsRepository(writer)
         await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(user_id=user_id, email="neo@example.com", username="Neo")
+            make_user_credentials(user_id=user_id, email="neo@example.com", username="Neo")
         )
-        await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(email="trinity@example.com", username="Trinity")
-        )
+        await repository.insert_user_credentials(make_user_credentials(email="trinity@example.com", username="Trinity"))
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_username(
-            username=lookup_username
-        )
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_username(lookup_username)
 
     assert found is not None
     assert found.user_id == user_id
@@ -108,17 +100,15 @@ async def test_find_by_login_matches_email_or_username_ignoring_case(
     """``find_user_credentials_by_login`` находит учётку и по email, и по username в любом регистре."""
     user_id = uuid4()
     async with session_factory() as writer:
-        repository = UserCredentialsRepository(session=writer)
+        repository = UserCredentialsRepository(writer)
         await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(user_id=user_id, email="neo@example.com", username="Neo")
+            make_user_credentials(user_id=user_id, email="neo@example.com", username="Neo")
         )
-        await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(email="trinity@example.com", username="Trinity")
-        )
+        await repository.insert_user_credentials(make_user_credentials(email="trinity@example.com", username="Trinity"))
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_login(login=login)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_login(login)
 
     assert found is not None
     assert found.user_id == user_id
@@ -130,19 +120,17 @@ async def test_find_by_login_prefers_email_owner_over_matching_username(
     """Логин — чей-то email и одновременно чужой username → возвращается владелец email."""
     email_owner_id = uuid4()
     async with session_factory() as writer:
-        repository = UserCredentialsRepository(session=writer)
+        repository = UserCredentialsRepository(writer)
         await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(
-                user_id=email_owner_id, email="bob@example.com", username="bob"
-            )
+            make_user_credentials(user_id=email_owner_id, email="bob@example.com", username="bob")
         )
         await repository.insert_user_credentials(
-            user_credentials_entity=make_user_credentials(email="other@example.com", username="bob@example.com")
+            make_user_credentials(email="other@example.com", username="bob@example.com")
         )
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_login(login="BOB@example.com")
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_login("BOB@example.com")
 
     assert found is not None
     assert found.user_id == email_owner_id
@@ -150,11 +138,11 @@ async def test_find_by_login_prefers_email_owner_over_matching_username(
 
 async def test_find_by_email_username_and_login_no_match_returns_none(db_session: AsyncSession) -> None:
     """Поиск без совпадений возвращает ``None``, а не падает."""
-    repository = UserCredentialsRepository(session=db_session)
+    repository = UserCredentialsRepository(db_session)
 
-    assert await repository.find_user_credentials_by_email(email="nobody@example.com") is None
-    assert await repository.find_user_credentials_by_username(username="nobody") is None
-    assert await repository.find_user_credentials_by_login(login="nobody") is None
+    assert await repository.find_user_credentials_by_email("nobody@example.com") is None
+    assert await repository.find_user_credentials_by_username("nobody") is None
+    assert await repository.find_user_credentials_by_login("nobody") is None
 
 
 async def test_insert_email_differing_only_by_case_raises_integrity_error(
@@ -163,12 +151,12 @@ async def test_insert_email_differing_only_by_case_raises_integrity_error(
     """Email, отличающийся только регистром, нарушает unique-индекс по lower(email) — ``IntegrityError``."""
     existing = make_user_credentials(email="dup@example.com", username="original_user")
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=existing)
+        await UserCredentialsRepository(writer).insert_user_credentials(existing)
         await writer.commit()
 
     duplicate = make_user_credentials(email="DUP@Example.com", username="another_user")
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=duplicate)
+        await UserCredentialsRepository(writer).insert_user_credentials(duplicate)
         with pytest.raises(IntegrityError):
             await writer.commit()
 
@@ -179,12 +167,12 @@ async def test_insert_username_differing_only_by_case_raises_integrity_error(
     """Username, отличающийся только регистром, нарушает unique-индекс по lower(username) — ``IntegrityError``."""
     existing = make_user_credentials(email="original@example.com", username="dup_user")
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=existing)
+        await UserCredentialsRepository(writer).insert_user_credentials(existing)
         await writer.commit()
 
     duplicate = make_user_credentials(email="another@example.com", username="DUP_User")
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=duplicate)
+        await UserCredentialsRepository(writer).insert_user_credentials(duplicate)
         with pytest.raises(IntegrityError):
             await writer.commit()
 
@@ -198,9 +186,7 @@ async def test_update_persists_email_verified_at(
         user_id=user_id, email="uc-update@example.com", username="uc_update"
     )
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(
-            user_credentials_entity=user_credentials_entity
-        )
+        await UserCredentialsRepository(writer).insert_user_credentials(user_credentials_entity)
         await writer.commit()
 
     verified = make_user_credentials(
@@ -210,13 +196,11 @@ async def test_update_persists_email_verified_at(
         email_verified_at=_VERIFIED_AT,
     )
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).update_user_credentials_by_user_id(
-            user_credentials_entity=verified
-        )
+        await UserCredentialsRepository(writer).update_user_credentials_by_user_id(verified)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
 
     assert found is not None
     assert found.email_verified_at == _VERIFIED_AT

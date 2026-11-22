@@ -15,7 +15,7 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
         super().__init__(session=session, model=User)
 
     async def insert_user(self, user_entity: UserEntity) -> None:
-        await self.insert(data=User(**self._to_columns(user_entity=user_entity)))
+        await self.insert(User(**self._to_columns(user_entity)))
 
     async def update_user_by_id(self, user_entity: UserEntity) -> None:
         """
@@ -27,7 +27,7 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
         Args:
             user_entity: Доменная сущность с уже обновлённым состоянием
         """
-        values = self._to_columns(user_entity=user_entity)
+        values = self._to_columns(user_entity)
         del values["id"]
         query = update(User).where(User.id == user_entity.user_id).values(**values)
         await self._session.execute(query)
@@ -45,8 +45,8 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
             Доменная сущность пользователя либо ``None``, если запись не найдена
         """
         query = select(User).where(User.id == user_id).with_for_update()
-        user_model = await self._fetch_one(query=query)
-        return self._to_entity(user_model=user_model) if user_model else None
+        user_model = await self._fetch_one(query)
+        return self._to_entity(user_model) if user_model else None
 
     async def find_user_by_id(self, user_id: UUID) -> UserEntity | None:
         """
@@ -62,8 +62,8 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
             Доменная сущность пользователя либо ``None``, если запись не найдена
         """
         query = select(User).where(User.id == user_id)
-        user_model = await self._fetch_one(query=query)
-        return self._to_entity(user_model=user_model) if user_model else None
+        user_model = await self._fetch_one(query)
+        return self._to_entity(user_model) if user_model else None
 
     def _to_entity(self, user_model: User) -> UserEntity:
         return UserEntity(

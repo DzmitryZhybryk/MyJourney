@@ -12,9 +12,7 @@ from app.shared.settings import PostgresSettings
 
 async def _find_role(*, session_factory: async_sessionmaker[AsyncSession], user_id: UUID) -> UserRoleEnum:
     async with session_factory() as session:
-        user_credentials_entity = await UserCredentialsRepository(session=session).find_user_credentials_by_user_id(
-            user_id
-        )
+        user_credentials_entity = await UserCredentialsRepository(session).find_user_credentials_by_user_id(user_id)
     assert user_credentials_entity is not None
     return user_credentials_entity.role
 

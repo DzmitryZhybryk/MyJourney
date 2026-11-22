@@ -31,15 +31,15 @@ class FakeCityRepository(CityRepositoryPort):
         matched.sort(key=lambda city_entity: (city_entity.population is None, -(city_entity.population or 0)))
         return tuple(matched[:limit])
 
-    async def find_cities_by_ids(self, *, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
+    async def find_cities_by_ids(self, city_ids: Collection[UUID]) -> tuple[CityEntity, ...]:
         return tuple(city_entity for city_entity in self.cities if city_entity.city_id in city_ids)
 
     @staticmethod
     def _matches_prefix(*, city_entity: CityEntity, prefix: str) -> bool:
         """Совпадение, если имя на en ИЛИ ru начинается с префикса (как ``LIKE 'q%'`` в боевом репо)."""
         names = (
-            city_entity.localized_name(language=LanguageEnum.EN),
-            city_entity.localized_name(language=LanguageEnum.RU),
+            city_entity.localized_name(LanguageEnum.EN),
+            city_entity.localized_name(LanguageEnum.RU),
         )
         return any(name is not None and name.lower().startswith(prefix) for name in names)
 
@@ -47,7 +47,7 @@ class FakeCityRepository(CityRepositoryPort):
 class FakeGeoUnitOfWork(GeoUnitOfWorkPort):
     """In-memory UoW geo: фейк-репозиторий и no-op ``transaction``, считающая открытые области."""
 
-    def __init__(self, *, city_repository: CityRepositoryPort) -> None:
+    def __init__(self, city_repository: CityRepositoryPort) -> None:
         self.city_repository = city_repository
         self.transactions_started = 0
 

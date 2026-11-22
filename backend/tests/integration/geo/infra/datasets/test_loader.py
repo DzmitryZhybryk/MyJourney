@@ -72,7 +72,7 @@ async def test_load_datasets_inserts_cities_and_records_load(
     assert await _cities(db_engine) == {"GeoNames:524901": ("Moscow", "Москва"), "GeoNames:3194828": ("Mostar", None)}
     async with db_engine.connect() as connection:
         moscow_id = await connection.scalar(sa.text("SELECT id FROM geo_cities WHERE external_id = 'GeoNames:524901'"))
-    assert moscow_id == gazetteer_id_for(external_id="GeoNames:524901")
+    assert moscow_id == gazetteer_id_for("GeoNames:524901")
     assert await _loads(db_engine) == [(spec.name, spec.version)]
 
 
@@ -189,7 +189,7 @@ async def test_load_datasets_inserts_places_with_country_arrays(
         tian_shan_id = await connection.scalar(
             sa.text("SELECT id FROM geo_places WHERE external_id = 'Wikidata:Q5474'")
         )
-    assert tian_shan_id == gazetteer_id_for(external_id="Wikidata:Q5474")
+    assert tian_shan_id == gazetteer_id_for("Wikidata:Q5474")
     assert await _loads(db_engine) == [("test-places", spec.version)]
 
 

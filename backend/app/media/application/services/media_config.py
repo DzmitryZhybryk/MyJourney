@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 class MediaConfigService:
     """Правила загрузки видов файлов: что можно загрузить и какого размера."""
 
-    def __init__(self, *, uow: MediaUnitOfWorkPort) -> None:
+    def __init__(self, uow: MediaUnitOfWorkPort) -> None:
         """
         Args:
             uow: Транзакция и репозиторий конфига
@@ -49,7 +49,7 @@ class MediaConfigService:
         return UploadRulesResult(
             avatar=_image_upload_rules(kind_rules=snapshot.avatar, kind_spec=AVATAR_SPEC),
             journey_photo=_image_upload_rules(kind_rules=snapshot.journey_photo, kind_spec=JOURNEY_PHOTO_SPEC),
-            journey_video=_video_upload_rules(kind_rules=snapshot.journey_video),
+            journey_video=_video_upload_rules(snapshot.journey_video),
         )
 
     async def seed_media_config(self, command: SeedMediaConfigCommand) -> None:

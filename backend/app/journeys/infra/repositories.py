@@ -26,7 +26,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
         super().__init__(session=session, model=Journey)
 
     async def insert_journey(self, journey_entity: JourneyEntity) -> None:
-        await self.insert(data=Journey(**self._to_columns(journey_entity=journey_entity)))
+        await self.insert(Journey(**self._to_columns(journey_entity)))
 
     async def update_journey_by_id(self, journey_entity: JourneyEntity) -> None:
         """
@@ -37,7 +37,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
         Args:
             journey_entity: Поездка с уже изменённым состоянием
         """
-        values = self._to_columns(journey_entity=journey_entity)
+        values = self._to_columns(journey_entity)
         del values["id"]  # PK не входит в SET
         query = update(Journey).where(Journey.id == journey_entity.journey_id).values(**values)
         await self._session.execute(query)
@@ -61,8 +61,8 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
             Поездка; ``None``, если у пользователя такой нет
         """
         query = select(Journey).where(Journey.id == journey_id, Journey.user_id == user_id).with_for_update()
-        journey_model = await self._fetch_one(query=query)
-        return self._to_entity(journey_model=journey_model) if journey_model else None
+        journey_model = await self._fetch_one(query)
+        return self._to_entity(journey_model) if journey_model else None
 
     async def find_journey_by_id_and_user_id(self, *, journey_id: UUID, user_id: UUID) -> JourneyEntity | None:
         """
@@ -78,8 +78,8 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
             Поездка; ``None``, если у пользователя такой нет
         """
         query = select(Journey).where(Journey.id == journey_id, Journey.user_id == user_id)
-        journey_model = await self._fetch_one(query=query)
-        return self._to_entity(journey_model=journey_model) if journey_model else None
+        journey_model = await self._fetch_one(query)
+        return self._to_entity(journey_model) if journey_model else None
 
     def _sort_key_scope(self, scope: JourneyOrderScope) -> Sequence[ColumnElement[bool]]:
         return (
@@ -88,7 +88,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
             Journey.deleted_at.is_(None),
         )
 
-    async def find_visited_cities_by_user_id(self, *, user_id: UUID) -> tuple[VisitedCity, ...]:
+    async def find_visited_cities_by_user_id(self, user_id: UUID) -> tuple[VisitedCity, ...]:
         """
         Возвращает города, где пользователь побывал, — по одному на город.
 
@@ -101,7 +101,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
         Returns:
             Посещённые города (пустой список, если поездок нет)
         """
-        visits = self._city_visits(user_id=user_id)
+        visits = self._city_visits(user_id)
         visit_year = visits.c.traveled_year
         # Поездки копируют страну и координаты города из справочника, копии одного города могут
         # слегка разойтись после его обновления — берём одну копию целиком, первую попавшуюся.
@@ -259,7 +259,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
             limit=page.limit,
             cursor_values=lambda journey_model: (str(journey_model.traveled_year), journey_model.sort_key),
         )
-        journey_entities = tuple(self._to_entity(journey_model=journey_model) for journey_model in page_models)
+        journey_entities = tuple(self._to_entity(journey_model) for journey_model in page_models)
         return CursorPage(items=journey_entities, next_cursor=next_cursor)
 
     async def find_journey_years_by_user_id(self, user_id: UUID) -> tuple[int, ...]:
@@ -282,7 +282,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
         return tuple(result)
 
     @staticmethod
-    def _city_visits(*, user_id: UUID) -> Subquery:
+    def _city_visits(user_id: UUID) -> Subquery:
         """
         Визиты городов: каждая неудалённая поездка пользователя даёт два — отправление и назначение.
 

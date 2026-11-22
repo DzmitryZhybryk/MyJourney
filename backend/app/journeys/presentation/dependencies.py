@@ -14,13 +14,13 @@ from app.shared.infra.postgres.dependency import db_session_dependency
 def journey_uow_dependency(
     session: Annotated[AsyncSession, Depends(db_session_dependency)],
 ) -> JourneyUnitOfWork:
-    return JourneyUnitOfWork(session=session)
+    return JourneyUnitOfWork(session)
 
 
 def cities_client_dependency(
     city_service: Annotated[CityService, Depends(city_service_dependency)],
 ) -> InternalCitiesClient:
-    return InternalCitiesClient(city_service=city_service)
+    return InternalCitiesClient(city_service)
 
 
 def journey_service_dependency(

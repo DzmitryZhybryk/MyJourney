@@ -39,7 +39,7 @@ class EnrichmentReport:
     rejected: int
 
 
-def geonames_id_of(*, external_id: str) -> str | None:
+def geonames_id_of(external_id: str) -> str | None:
     """
     Достаёт id GeoNames из ключа города.
 
@@ -76,10 +76,10 @@ def candidate_geonames_id(*, row: Mapping[str, str], min_population: int) -> str
     if row["name_ru"] or not population or int(population) < min_population:
         return None
 
-    return geonames_id_of(external_id=row["external_id"])
+    return geonames_id_of(row["external_id"])
 
 
-def strip_qualifier(*, label: str) -> str:
+def strip_qualifier(label: str) -> str:
     """
     Срезает уточнение в скобках в конце метки Wikidata и пробелы по краям: «Белуха (гора)» → «Белуха».
 
@@ -96,7 +96,7 @@ def strip_qualifier(*, label: str) -> str:
     return _TRAILING_QUALIFIER.sub("", label).strip()
 
 
-def acceptable_ru_name(*, label: str) -> str | None:
+def acceptable_ru_name(label: str) -> str | None:
     """
     Чистит метку ``ru`` для русского имени города или места.
 
@@ -114,14 +114,14 @@ def acceptable_ru_name(*, label: str) -> str | None:
     Returns:
         Имя или ``None``, если метка не годится
     """
-    name = strip_qualifier(label=label)
+    name = strip_qualifier(label)
     if not _CYRILLIC.search(name) or "," in name or len(name) > MAX_NAME_LENGTH:
         return None
 
     return name
 
 
-def acceptable_ru_names(*, labels: Iterable[str]) -> frozenset[str]:
+def acceptable_ru_names(labels: Iterable[str]) -> frozenset[str]:
     """
     Отбирает из меток Wikidata те, что годятся в русское имя города (правила — ``acceptable_ru_name``).
 
@@ -134,7 +134,7 @@ def acceptable_ru_names(*, labels: Iterable[str]) -> frozenset[str]:
     Returns:
         Годные имена; больше одного — id привязан к разным объектам
     """
-    names = (acceptable_ru_name(label=label) for label in labels)
+    names = (acceptable_ru_name(label) for label in labels)
     return frozenset(name for name in names if name is not None)
 
 
@@ -194,7 +194,7 @@ def enrich_rows(
         if geonames_id is not None:
             candidates += 1
             found = labels.get(geonames_id, frozenset())
-            names = acceptable_ru_names(labels=found)
+            names = acceptable_ru_names(found)
             if len(names) == 1:
                 [new_row["name_ru"]] = names
                 filled += 1

@@ -10,7 +10,7 @@ async def test_media_storage_component_publishes_storage_of_each_bucket(
     media_storage_settings: MediaStorageSettings,
 ) -> None:
     """Старт кладёт в реестр хранилище приватного и хранилище публичного бакета — два разных объекта."""
-    component = MediaStorageComponent(settings=media_storage_settings)
+    component = MediaStorageComponent(media_storage_settings)
     registry = ComponentRegistry()
 
     await component.startup(registry)

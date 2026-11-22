@@ -36,7 +36,7 @@ def ensure_cached(*, spec: DatasetSpec, cache_dir: Path, http_client: httpx.Clie
     """
     path = cache_dir / f"{spec.name}-{spec.version}.csv.gz"
     if path.exists():
-        if _sha256_of(path=path) == spec.sha256:
+        if _sha256_of(path) == spec.sha256:
             return path
 
         path.unlink()
@@ -53,7 +53,7 @@ def ensure_cached(*, spec: DatasetSpec, cache_dir: Path, http_client: httpx.Clie
             temp_path.unlink(missing_ok=True)
             raise
 
-    actual_sha256 = _sha256_of(path=temp_path)
+    actual_sha256 = _sha256_of(temp_path)
     if actual_sha256 != spec.sha256:
         temp_path.unlink()
         raise DatasetChecksumError(spec=spec, actual_sha256=actual_sha256)
@@ -62,7 +62,7 @@ def ensure_cached(*, spec: DatasetSpec, cache_dir: Path, http_client: httpx.Clie
     return path
 
 
-def _sha256_of(*, path: Path) -> str:
+def _sha256_of(path: Path) -> str:
     """
     Считает sha256 файла потоково, не загружая его в память целиком.
 

@@ -29,7 +29,7 @@ sha256 = "bbb"
         encoding="utf-8",
     )
 
-    datasets = read_manifest(path=manifest_path)
+    datasets = read_manifest(manifest_path)
 
     assert datasets == (
         DatasetSpec(
@@ -74,7 +74,7 @@ sha256 = "aaa"
     )
 
     with pytest.raises(error):
-        read_manifest(path=manifest_path)
+        read_manifest(manifest_path)
 
 
 def test_read_manifest_default_path_reads_shipped_manifest() -> None:

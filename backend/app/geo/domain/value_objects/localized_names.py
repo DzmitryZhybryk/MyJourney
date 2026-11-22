@@ -18,7 +18,7 @@ class LocalizedNames:
         if ru is not None:
             self._by_language[LanguageEnum.RU] = ru
 
-    def get(self, *, language: LanguageEnum) -> str | None:
+    def get(self, language: LanguageEnum) -> str | None:
         """
         Возвращает собственное имя на языке ``language`` без фоллбэка.
 
@@ -33,7 +33,7 @@ class LocalizedNames:
         """
         return self._by_language.get(language)
 
-    def display(self, *, language: LanguageEnum) -> str:
+    def display(self, language: LanguageEnum) -> str:
         """
         Возвращает имя под ``language`` с фоллбэком на канонический ``LanguageEnum.EN``.
 

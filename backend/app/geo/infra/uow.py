@@ -11,4 +11,4 @@ class GeoUnitOfWork(BaseUnitOfWork, GeoUnitOfWorkPort):
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session=session)
-        self.city_repository = CityRepository(session=session)
+        self.city_repository = CityRepository(session)

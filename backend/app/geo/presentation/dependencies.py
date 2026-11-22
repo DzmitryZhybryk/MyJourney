@@ -11,7 +11,7 @@ from app.shared.infra.postgres.dependency import db_session_dependency
 def geo_uow_dependency(
     session: Annotated[AsyncSession, Depends(db_session_dependency)],
 ) -> GeoUnitOfWork:
-    return GeoUnitOfWork(session=session)
+    return GeoUnitOfWork(session)
 
 
 def city_service_dependency(

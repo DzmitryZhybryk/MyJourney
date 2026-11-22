@@ -51,7 +51,7 @@ class TokenIssuer:
         Returns:
             Hex-строка hash'а, по которой ищется запись в refresh_tokens
         """
-        return self._deterministic_hasher.digest(secret=refresh_secret)
+        return self._deterministic_hasher.digest(refresh_secret)
 
     def issue_refresh_token(
         self,
@@ -81,7 +81,7 @@ class TokenIssuer:
         plaintext = secrets.token_urlsafe(_REFRESH_TOKEN_SECRET_BYTES)
         refresh_token_entity = RefreshTokenEntity.create(
             user_id=user_id,
-            token_hash=self._deterministic_hasher.digest(secret=plaintext),
+            token_hash=self._deterministic_hasher.digest(plaintext),
             ttl_days=self._refresh_token_ttl_days,
             ip_address=client_metadata.ip_address,
             user_agent=client_metadata.user_agent,
@@ -112,7 +112,7 @@ class TokenIssuer:
             Готовый к отдаче через presentation-слой результат
         """
         access_token = self._access_token_issuer.create_access_token(
-            claims=AccessTokenClaims(
+            AccessTokenClaims(
                 user_id=user_credentials_entity.user_id,
                 role=user_credentials_entity.role.value,
                 plan=user_credentials_entity.plan.value,

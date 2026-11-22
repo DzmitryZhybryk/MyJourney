@@ -61,7 +61,7 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
         expires_in: dt.timedelta,
     ) -> SignedUpload:
         signed_at = dt.datetime.now(dt.UTC)
-        required_headers = _signed_upload_headers(content_type=content_type)
+        required_headers = _signed_upload_headers(content_type)
         try:
             url = await self._client.generate_presigned_url(
                 ClientMethod="put_object",
@@ -146,7 +146,7 @@ class S3ObjectStorage(PrivateStoragePort, PublicStoragePort):
                 raise error_class(details={"failed_keys": failed_keys})
 
 
-def _signed_upload_headers(*, content_type: str) -> dict[str, str]:
+def _signed_upload_headers(content_type: str) -> dict[str, str]:
     return {"Content-Type": content_type, "If-None-Match": "*"}
 
 

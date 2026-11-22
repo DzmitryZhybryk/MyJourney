@@ -34,7 +34,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         Args:
             user_credentials_entity: Доменная сущность учётных данных
         """
-        await self.insert(data=UserCredentials(**self._to_columns(user_credentials_entity=user_credentials_entity)))
+        await self.insert(UserCredentials(**self._to_columns(user_credentials_entity)))
 
     async def update_user_credentials_by_user_id(self, user_credentials_entity: UserCredentialsEntity) -> None:
         """
@@ -45,7 +45,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         Args:
             user_credentials_entity: Доменная сущность с уже обновлённым состоянием
         """
-        values = self._to_columns(user_credentials_entity=user_credentials_entity)
+        values = self._to_columns(user_credentials_entity)
         del values["user_id"]  # PK не входит в SET
         query = (
             sa.update(UserCredentials)
@@ -65,8 +65,8 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             Доменная сущность учётных данных либо ``None``, если запись не найдена
         """
         query = sa.select(UserCredentials).where(UserCredentials.user_id == user_id)
-        user_credentials_model = await self._fetch_one(query=query)
-        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
         """
@@ -79,8 +79,8 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             Доменная сущность учётных данных либо ``None``, если запись не найдена
         """
         query = sa.select(UserCredentials).where(sa.func.lower(UserCredentials.email) == sa.func.lower(email))
-        user_credentials_model = await self._fetch_one(query=query)
-        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     async def find_user_credentials_by_username(self, username: str) -> UserCredentialsEntity | None:
         """
@@ -93,8 +93,8 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             Доменная сущность учётных данных либо ``None``, если запись не найдена
         """
         query = sa.select(UserCredentials).where(sa.func.lower(UserCredentials.username) == sa.func.lower(username))
-        user_credentials_model = await self._fetch_one(query=query)
-        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     async def find_user_credentials_by_login(self, login: str) -> UserCredentialsEntity | None:
         """
@@ -118,8 +118,8 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             .order_by(email_matches.desc())
             .limit(1)
         )
-        user_credentials_model = await self._fetch_one(query=query)
-        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     def _to_columns(self, user_credentials_entity: UserCredentialsEntity) -> DictStrAny:
         """
@@ -172,7 +172,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             user_id=user_credentials_model.user_id,
             email=user_credentials_model.email,
             username=user_credentials_model.username,
-            password=Password(hash=user_credentials_model.password_hash),
+            password=Password(user_credentials_model.password_hash),
             role=UserRoleEnum(user_credentials_model.role),
             plan=UserPlanEnum(user_credentials_model.plan),
             email_verified_at=user_credentials_model.email_verified_at,
