@@ -124,7 +124,6 @@ Frontend — из `frontend/`: `make lint | typecheck | test | coverage | check 
 | `style-audit` | проверка фронта на токен-политику дизайна |
 | `seo-meta-tags` | `<head>` HTML-файлов |
 | `dead-code-audit` | поиск и удаление мёртвого кода |
-| `frontend-design:frontend-design` (плагин) | проектирование нового UI и редизайн — вызывать сразу, без напоминания |
 | глобальные | `/feature-plan`, `backlog` (отложить задачу, идею, заметку; что в бэклоге), `postgres` (дизайн схемы и запросов), `debugging`, `merge-review`, `graphify`, `decision-records` (записать или изменить решение; закрытие плана или задачи из `.plan/`), `prompt-audit` (ревизия конфигурации Claude; раз в 30 дней напоминает хук) |
 
 ### Агенты и ревью

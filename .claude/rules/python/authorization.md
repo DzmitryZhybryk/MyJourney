@@ -15,3 +15,4 @@ Extends `common/security.md`.
 - **Every list query is scoped to the owner** (`*_by_user_id`).
 - **Cross-domain clients pass ids, not trust.** A domain receiving an id from another domain
   (cities, users) re-checks it in its own store before writing it (`journeys.unknown_city`).
+- **Exception:** an admin route guarded by `PermissionChecker` reads any owner's rows (`decisions/admin.md`).

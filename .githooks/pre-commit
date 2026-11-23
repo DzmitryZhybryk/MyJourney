@@ -8,7 +8,6 @@
 # правках результат может отличаться от содержимого коммита.
 #
 # Активация (разово): make hooks   (== git config core.hooksPath .githooks)
-# Обход в исключительном случае: git commit --no-verify
 #
 set -e
 

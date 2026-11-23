@@ -18,7 +18,8 @@ client.setConfig({ baseUrl: window.location.origin, fetch: appFetch, throwOnErro
 // failure to parse a successful response (bad JSON, zod validation): without this seam a
 // SyntaxError or ZodError would bypass applyApiError and the error i18n.
 client.interceptors.error.use((error, response) => {
-  // No response means a network failure or abort; applyApiError reports it as network, leave it.
+  // No response means a network failure, an abort or a request our schema rejected before sending;
+  // leave it as is.
   if (error instanceof ApiError || !response) {
     return error;
   }
