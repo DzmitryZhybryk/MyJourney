@@ -27,7 +27,9 @@ async def test_find_city_locations_maps_known_cities_from_geo() -> None:
 
     locations = await client.find_city_locations((moscow.city_id, london.city_id, uuid4()))
 
-    assert sorted(locations, key=lambda location: location.latitude) == [
-        CityLocationResponse(city_id=london.city_id, country_code="GB", latitude=51.5, longitude=-0.12),
-        CityLocationResponse(city_id=moscow.city_id, country_code="RU", latitude=55.75, longitude=37.62),
-    ]
+    assert locations == frozenset(
+        {
+            CityLocationResponse(city_id=london.city_id, country_code="GB", latitude=51.5, longitude=-0.12),
+            CityLocationResponse(city_id=moscow.city_id, country_code="RU", latitude=55.75, longitude=37.62),
+        }
+    )

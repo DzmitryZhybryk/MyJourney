@@ -197,17 +197,12 @@ class FakeJourneyUnitOfWork(JourneyUnitOfWorkPort):
 
 
 class FakeCitiesClient(CitiesClientPort):
-    """
-    Фейк клиента journeys → geo: хранит города справочника и записывает вызовы.
-
-    Найденные города отдаёт в порядке хранения, а не запроса — как geo, у которого порядок
-    произвольный; тест может переставить ``locations``, чтобы проверить сопоставление по id.
-    """
+    """Фейк клиента journeys → geo: хранит города справочника и записывает вызовы."""
 
     def __init__(self, locations: Collection[CityLocationResponse] = ()) -> None:
         self.locations = {location.city_id: location for location in locations}
         self.calls: list[tuple[UUID, ...]] = []
 
-    async def find_city_locations(self, city_ids: Collection[UUID]) -> tuple[CityLocationResponse, ...]:
+    async def find_city_locations(self, city_ids: Collection[UUID]) -> frozenset[CityLocationResponse]:
         self.calls.append(tuple(city_ids))
-        return tuple(location for city_id, location in self.locations.items() if city_id in city_ids)
+        return frozenset(location for city_id, location in self.locations.items() if city_id in city_ids)

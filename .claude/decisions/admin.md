@@ -18,6 +18,16 @@
   shared schema leaks that to anonymous clients the day a field is added for the admin.
 - Source: #51, 2026-11-21
 
+## Admin routes behind `PermissionChecker` may read other users' rows
+- The owner-scoping invariants of `rules/python/authorization.md` bind user-facing routes; an admin
+  route's guard is its permission (`find_user_credentials_by_user_ids` behind `auth.accounts.read`).
+- Why: owner-scoping protects a user from other users, and the operator's job is exactly other users'
+  data (account emails in "Кем").
+- Rejected: owner-scoping admin reads too — an admin screen could show nothing but the admin's own rows.
+- Rejected: routing such reads through a separate service — another boundary with the same guard; why
+  not recorded.
+- Source: #64 / PR #239, 2026-11-23
+
 ## The SPA admin is one section with its own menu; the UI checks the role
 - The avatar menu has one "Admin" entry; `/admin` is a layout with a section menu on the left
   (`frontend/src/admin/adminSections.ts`), a new screen is one entry there plus a route.

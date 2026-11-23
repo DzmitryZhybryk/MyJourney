@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "./errors";
 import { createQueryClient, shouldRetry } from "./queryClient";
+import { zFindAccountsByIdsQuery } from "./sdk";
 
 /** An `ApiError` with the given status; code and text do not matter for the retry policy. */
 function apiError(status: number): ApiError {
@@ -21,6 +22,14 @@ describe("shouldRetry", () => {
 
   it.each([500, 502, 503])("повторяет ApiError со статусом %i", (status) => {
     expect(shouldRetry(0, apiError(status))).toBe(true);
+  });
+
+  it("не повторяет запрос, который схема отклонила ещё на клиенте", () => {
+    const tooManyIds = Array.from({ length: 101 }, () => crypto.randomUUID());
+    const { error } = zFindAccountsByIdsQuery.safeParse({ ids: tooManyIds });
+
+    expect(error).toBeDefined();
+    expect(shouldRetry(0, error as Error)).toBe(false);
   });
 
   it("повторяет сетевую ошибку (не ApiError)", () => {

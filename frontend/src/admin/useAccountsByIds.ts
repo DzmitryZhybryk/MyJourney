@@ -17,7 +17,11 @@ const NOTHING_LOADED: AccountLookup = () => undefined;
 
 /**
  * Accounts by id for admin screens that store only an author id. Ids are normalized, so order and
- * duplicates do not change the request or the cache. The backend accepts at most 100 ids.
+ * duplicates do not change the request or the cache.
+ *
+ * Pass the ids of one screen page, never of a whole collection: the backend accepts at most 100,
+ * and a list that can grow past that is paginated, so one page stays within the limit. More ids
+ * fail without a request and the labels stay raw ids.
  */
 export function useAccountsByIds(accountIds: Iterable<string>): AccountLookup {
   const idsKey = [...new Set(accountIds)].sort().join(",");
