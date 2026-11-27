@@ -15,6 +15,7 @@ from procrastinate.jobs import Job
 from app.auth.domain.entities import ChallengeEntity, RefreshTokenEntity, UserCredentialsEntity
 from app.auth.domain.enums import ChallengeTypeEnum, UserPlanEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
+from app.backoffice.application.ports.account_repository import AccountAuthPart, AccountFilters, AccountProfilePart
 from app.geo.domain.entities import CityEntity
 from app.geo.domain.value_objects import LocalizedNames
 from app.geo.infra.datasets.manifest import DatasetFormatEnum, DatasetSpec
@@ -44,6 +45,7 @@ def make_user_entity(
     display_name: str = "user",
     terms_accepted_at: dt.datetime | None = None,
     marketing_emails_consent: bool = False,
+    version: int = 1,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
     deleted_at: dt.datetime | None = None,
@@ -53,6 +55,7 @@ def make_user_entity(
         display_name=display_name,
         terms_accepted_at=terms_accepted_at or dt.datetime.now(tz=dt.UTC),
         marketing_emails_consent=marketing_emails_consent,
+        version=version,
         created_at=created_at,
         updated_at=updated_at,
         deleted_at=deleted_at,
@@ -93,6 +96,7 @@ def make_user_credentials(
     role: UserRoleEnum = UserRoleEnum.USER,
     plan: UserPlanEnum = UserPlanEnum.FREE,
     email_verified_at: dt.datetime | None = None,
+    version: int = 1,
     created_at: dt.datetime | None = None,
     updated_at: dt.datetime | None = None,
     deleted_at: dt.datetime | None = None,
@@ -105,6 +109,7 @@ def make_user_credentials(
         role=role,
         plan=plan,
         email_verified_at=email_verified_at,
+        version=version,
         created_at=created_at,
         updated_at=updated_at,
         deleted_at=deleted_at,
@@ -254,4 +259,60 @@ def make_media_config_snapshot(
         avatar=ImageKindRules(max_size_bytes=avatar_max_size_bytes, formats=image_formats, min_side=avatar_min_side),
         journey_photo=ImageKindRules(max_size_bytes=31_457_280, formats=image_formats, min_side=1280),
         journey_video=VideoKindRules(max_size_bytes=209_715_200, formats=frozenset(VideoFormatEnum)),
+    )
+
+
+def make_account_auth_part(
+    *,
+    email: str = "user@example.com",
+    username: str = "user",
+    role: str = "user",
+    plan: str = "free",
+    email_verified_at: dt.datetime | None = None,
+    registered_at: dt.datetime = dt.datetime(2026, 1, 1, tzinfo=dt.UTC),
+    deleted_at: dt.datetime | None = None,
+    version: int = 1,
+) -> AccountAuthPart:
+    return AccountAuthPart(
+        email=email,
+        username=username,
+        role=role,
+        plan=plan,
+        email_verified_at=email_verified_at,
+        registered_at=registered_at,
+        deleted_at=deleted_at,
+        version=version,
+    )
+
+
+def make_account_profile_part(
+    *,
+    display_name: str = "user",
+    marketing_emails_consent: bool = False,
+    terms_accepted_at: dt.datetime = dt.datetime(2026, 1, 1, tzinfo=dt.UTC),
+    version: int = 1,
+) -> AccountProfilePart:
+    return AccountProfilePart(
+        display_name=display_name,
+        marketing_emails_consent=marketing_emails_consent,
+        terms_accepted_at=terms_accepted_at,
+        version=version,
+    )
+
+
+def make_account_filters(
+    *,
+    email_contains: str | None = None,
+    display_name_contains: str | None = None,
+    role: str | None = None,
+    marketing_emails_consent: bool | None = None,
+    include_deleted: bool = False,
+) -> AccountFilters:
+    """Фильтр списка аккаунтов; без аргументов — все неудалённые."""
+    return AccountFilters(
+        email_contains=email_contains,
+        display_name_contains=display_name_contains,
+        role=role,
+        marketing_emails_consent=marketing_emails_consent,
+        include_deleted=include_deleted,
     )

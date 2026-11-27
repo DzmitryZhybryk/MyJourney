@@ -14,11 +14,13 @@ from app.auth.exceptions import (
     InvalidRefreshTokenError,
     UsernameAlreadyExistError,
 )
+from app.shared.events import AccountChangedEvent
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
 from tests.builders import make_password, make_refresh_token, make_user_credentials
 from tests.fakes import (
     FakeAuthUnitOfWork,
     FakeEmailVerificationService,
+    FakeEventPublisher,
     FakeRefreshTokenRepository,
     FakeSaltedHasher,
     FakeUserCredentialsRepository,
@@ -69,6 +71,39 @@ async def test_register_persists_credentials_calls_users_and_requests_verificati
 
     fake_uow.commit_mock.assert_awaited_once()
     assert fake_email_verification_service.requested_user_ids == [stored.user_id]
+
+
+async def test_register_publishes_account_changed_with_first_version(
+    auth_service: AuthService,
+    fake_uow: FakeAuthUnitOfWork,
+    fake_user_credentials_repository: FakeUserCredentialsRepository,
+    fake_event_publisher: FakeEventPublisher,
+) -> None:
+    """register: в сессии UoW публикуется снимок новой учётной записи с версией 1."""
+    command = RegistrationCommand(
+        username="neo",
+        email="neo@example.com",
+        password=SecretStr("pw"),
+        marketing_emails_consent=False,
+    )
+
+    await auth_service.register(command=command, client_metadata=_CLIENT_METADATA)
+
+    stored = next(iter(fake_user_credentials_repository.by_user_id.values()))
+    assert fake_event_publisher.bound_session is fake_uow.session
+    assert fake_event_publisher.bound.published == [
+        AccountChangedEvent(
+            user_id=stored.user_id,
+            email="neo@example.com",
+            username="neo",
+            role="user",
+            plan="free",
+            email_verified_at=None,
+            registered_at=stored.created_at,
+            deleted_at=None,
+            version=1,
+        ),
+    ]
 
 
 @pytest.mark.parametrize("email", ["neo@example.com", "NEO@Example.com"])

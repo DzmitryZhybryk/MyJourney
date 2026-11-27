@@ -12,6 +12,35 @@ export const zAccountItem = z.object({
 });
 
 /**
+ * AccountListEntry
+ *
+ * Аккаунт в списке; пустое поле — данные учётной записи или профиля ещё не дошли до списка.
+ */
+export const zAccountListEntry = z.object({
+  userId: z.uuid(),
+  email: z.nullable(z.string()),
+  username: z.nullable(z.string()),
+  role: z.nullable(z.string()),
+  plan: z.nullable(z.string()),
+  emailVerifiedAt: z.nullable(z.iso.datetime()),
+  registeredAt: z.nullable(z.iso.datetime()),
+  deletedAt: z.nullable(z.iso.datetime()),
+  displayName: z.nullable(z.string()),
+  marketingEmailsConsent: z.nullable(z.boolean()),
+  termsAcceptedAt: z.nullable(z.iso.datetime())
+});
+
+/**
+ * AccountsListResponse
+ *
+ * Страница списка аккаунтов и число всех аккаунтов под фильтром.
+ */
+export const zAccountsListResponse = z.object({
+  items: z.array(zAccountListEntry),
+  total: z.int()
+});
+
+/**
  * AccountsResponse
  *
  * Найденные учётные записи; id без записи в ответе нет.
@@ -331,6 +360,11 @@ export const zImageUploadRules = z.object({
 });
 
 /**
+ * SortDirectionEnum
+ */
+export const zSortDirectionEnum = z.enum(['asc', 'desc']);
+
+/**
  * TokenResponse
  */
 export const zTokenResponse = z.object({
@@ -408,6 +442,30 @@ export const zUpdateJourneyRequest = z.object({
   destinationCityId: z.uuid(),
   transportType: zTransportTypeEnum,
   traveledYear: z.int().check(z.gte(1))
+});
+
+/**
+ * UserPlanEnum
+ *
+ * Тариф пользователя: за что он платит. Независим от роли.
+ */
+export const zUserPlanEnum = z.enum(['free', 'premium']);
+
+/**
+ * UserRoleEnum
+ *
+ * Роль пользователя: что ему разрешено делать в системе.
+ */
+export const zUserRoleEnum = z.enum(['user', 'admin']);
+
+/**
+ * AccountOptionsResponse
+ *
+ * Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей.
+ */
+export const zAccountOptionsResponse = z.object({
+  roles: z.array(zUserRoleEnum),
+  plans: z.array(zUserPlanEnum)
 });
 
 /**
@@ -687,6 +745,27 @@ export const zFindAccountsByIdsQuery = z.object({
  * Successful Response
  */
 export const zFindAccountsByIdsResponse = zAccountsResponse;
+
+/**
+ * Successful Response
+ */
+export const zGetAccountOptionsResponse = zAccountOptionsResponse;
+
+export const zListAccountsQuery = z.object({
+  page: z._default(z.optional(z.int().check(z.gte(1), z.lte(10000))), 1),
+  limit: z._default(z.optional(z.int().check(z.gte(1), z.lte(100))), 20),
+  email: z.nullish(z.string().check(z.minLength(1), z.maxLength(254))),
+  displayName: z.nullish(z.string().check(z.minLength(1), z.maxLength(50))),
+  role: z.nullish(z.string().check(z.minLength(1), z.maxLength(50))),
+  marketingEmailsConsent: z.nullish(z.boolean()),
+  includeDeleted: z._default(z.optional(z.boolean()), false),
+  sortDirection: z._default(z.optional(zSortDirectionEnum), 'desc')
+});
+
+/**
+ * Successful Response
+ */
+export const zListAccountsResponse = zAccountsListResponse;
 
 /**
  * Successful Response

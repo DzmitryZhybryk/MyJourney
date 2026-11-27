@@ -2,11 +2,11 @@ import datetime as dt
 from typing import Self
 from uuid import UUID
 
-from app.shared.domain.domain_mixins import TimestampedEntityMixin
+from app.shared.domain.domain_mixins import TimestampedEntityMixin, VersionedEntityMixin
 from app.users.exceptions import UserDeletedError
 
 
-class UserEntity(TimestampedEntityMixin):
+class UserEntity(TimestampedEntityMixin, VersionedEntityMixin):
     def __init__(
         self,
         *,
@@ -14,9 +14,11 @@ class UserEntity(TimestampedEntityMixin):
         display_name: str,
         terms_accepted_at: dt.datetime,
         marketing_emails_consent: bool,
+        version: int,
         **timestamp_kwargs: dt.datetime | None,
     ) -> None:
-        super().__init__(**timestamp_kwargs)
+        TimestampedEntityMixin.__init__(self, **timestamp_kwargs)
+        VersionedEntityMixin.__init__(self, version=version)
         self.user_id = user_id
         self.display_name = display_name
         self.terms_accepted_at = terms_accepted_at
@@ -36,6 +38,7 @@ class UserEntity(TimestampedEntityMixin):
             display_name=display_name,
             terms_accepted_at=terms_accepted_at,
             marketing_emails_consent=marketing_emails_consent,
+            version=1,
         )
 
     def update_profile(
@@ -62,6 +65,7 @@ class UserEntity(TimestampedEntityMixin):
             self.marketing_emails_consent = marketing_emails_consent
 
         self._mark_updated()
+        self._bump_version()
 
     def ensure_not_deleted(self) -> None:
         """

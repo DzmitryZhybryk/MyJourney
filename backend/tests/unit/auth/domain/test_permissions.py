@@ -7,7 +7,7 @@ from app.auth.domain.permissions import PLAN_PERMISSIONS, ROLE_PERMISSIONS, expa
 from app.shared.infra.jwt import PermissionEnum
 
 _ADMIN_PERMISSIONS: Final[frozenset[PermissionEnum]] = frozenset(
-    {PermissionEnum.MEDIA_CONFIG_EDIT, PermissionEnum.AUTH_ACCOUNTS_READ},
+    {PermissionEnum.MEDIA_CONFIG_EDIT, PermissionEnum.AUTH_ACCOUNTS_READ, PermissionEnum.BACKOFFICE_ACCOUNTS_READ},
 )
 
 

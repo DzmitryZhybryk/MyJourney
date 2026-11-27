@@ -5,10 +5,10 @@ from uuid import UUID, uuid4
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
 from app.auth.exceptions import EmailAlreadyVerifiedError
-from app.shared.domain.domain_mixins import TimestampedEntityMixin
+from app.shared.domain.domain_mixins import TimestampedEntityMixin, VersionedEntityMixin
 
 
-class UserCredentialsEntity(TimestampedEntityMixin):
+class UserCredentialsEntity(TimestampedEntityMixin, VersionedEntityMixin):
     def __init__(
         self,
         *,
@@ -18,10 +18,12 @@ class UserCredentialsEntity(TimestampedEntityMixin):
         password: Password,
         role: UserRoleEnum,
         plan: UserPlanEnum,
+        version: int,
         email_verified_at: dt.datetime | None = None,
         **timestamp_kwargs: dt.datetime | None,
     ) -> None:
-        super().__init__(**timestamp_kwargs)
+        TimestampedEntityMixin.__init__(self, **timestamp_kwargs)
+        VersionedEntityMixin.__init__(self, version=version)
         self.user_id = user_id
         self.email = email
         self.username = username
@@ -47,6 +49,7 @@ class UserCredentialsEntity(TimestampedEntityMixin):
             password=password,
             role=role,
             plan=plan,
+            version=1,
         )
 
     @property
@@ -88,3 +91,4 @@ class UserCredentialsEntity(TimestampedEntityMixin):
         """
         self.email_verified_at = dt.datetime.now(tz=dt.UTC)
         self._mark_updated()
+        self._bump_version()

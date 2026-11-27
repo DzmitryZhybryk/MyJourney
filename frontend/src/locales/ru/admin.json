@@ -1,7 +1,59 @@
 {
   "title": "Админка",
   "sections": {
-    "mediaConfig": "Правила загрузки"
+    "mediaConfig": "Правила загрузки",
+    "accounts": "Аккаунты"
+  },
+  "accounts": {
+    "loadError": "Не удалось загрузить аккаунты. Обновите страницу.",
+    "range": "{{from}}–{{to}} из {{total}}",
+    "pagination": "Страницы списка аккаунтов",
+    "filters": {
+      "region": "Фильтры аккаунтов",
+      "email": "Email",
+      "emailPlaceholder": "Часть адреса",
+      "name": "Имя",
+      "namePlaceholder": "Часть имени",
+      "role": "Роль",
+      "anyRole": "Все роли",
+      "consent": "Рассылки",
+      "consentAny": "Все",
+      "consentYes": "Да",
+      "consentNo": "Нет",
+      "includeDeleted": "Показывать удалённые",
+      "reset": "Сбросить фильтры"
+    },
+    "columns": {
+      "account": "Email и username",
+      "name": "Имя",
+      "role": "Роль",
+      "plan": "Тариф",
+      "emailVerified": "Почта подтверждена",
+      "consent": "Рассылки",
+      "terms": "Условия приняты",
+      "registered": "Регистрация"
+    },
+    "sort": {
+      "desc": "Сначала новые",
+      "asc": "Сначала старые"
+    },
+    "deleted": "удалён {{date}}",
+    "consent": {
+      "yes": "Да",
+      "no": "Нет"
+    },
+    "roles": {
+      "user": "Пользователь",
+      "admin": "Администратор"
+    },
+    "plans": {
+      "free": "Бесплатный",
+      "premium": "Премиум"
+    },
+    "empty": "Ни один аккаунт не подходит под фильтры.",
+    "emptyAll": "Аккаунтов пока нет.",
+    "pageEmpty": "На этой странице аккаунтов нет.",
+    "toFirstPage": "К первой странице"
   },
   "loadError": "Не удалось загрузить правила. Обновите страницу.",
   "version": {

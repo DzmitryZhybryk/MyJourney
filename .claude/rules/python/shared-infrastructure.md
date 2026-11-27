@@ -8,7 +8,7 @@ paths:
 
 `shared/` is sliced by **vertical**: each technical integration is a self-contained package with its
 lifecycle, clients, protocols and helpers. Before writing DB access, an HTTP client, email,
-background tasks, JWT, hashing, pagination, manual ordering, logging, tracing or an exception base,
+background tasks, events between modules, JWT, hashing, pagination, manual ordering, logging, tracing or an exception base,
 look in `shared/` and reuse what is there. Layer rules — `layers.md`; component vs `@cache`
 factory — `component-lifecycle.md`; what a package's `__init__` exports and how to import from
 it — `imports.md`.
@@ -21,9 +21,9 @@ it — `imports.md`.
 - Hashing: passwords — `SaltedHasherPort`; a value looked up by index (refresh tokens) —
   `DeterministicHasherPort`. A secret that must be read back (one-time codes sent again) is
   encrypted with `SecretCipherPort`, not hashed.
-- Keyset pagination: an endpoint's `*Request` / `*Response` extend `CursorPaginationFields` /
-  `CursorPageFields[ItemT]`; the use case takes `PageQuery` and returns `CursorPage[ItemT]`;
-  repositories use `decode_cursor` / `split_page`.
+- Pagination: keyset (`pagination/cursor/`) for feeds, offset (`pagination/offset/`) for numbered tables with a
+  total. `<Kind>PaginationFields` / `<Kind>PageFields[ItemT]` → `<Kind>PageQuery` → `<Kind>Page[ItemT]`;
+  repositories: `decode_cursor` / `split_page` or `_fetch_offset_page`.
 - Manual row order (`fractional_index/`): the domain supplies only a frozen scope dataclass and the
   `_sort_key_scope` hook of `BaseSortKeyRepository`; the model declares its own unique index over
   scope + `sort_key`.
@@ -36,8 +36,8 @@ it — `imports.md`.
 - An entity's `updated_at` is touched through `TimestampedEntityMixin._mark_updated()`, not by
   hand-written `touch_*` / `mark_modified` methods.
 - tach sees `app.shared` as one module, so the contract/implementation split of `imports.md` is
-  guarded by `tests/unit/shared/test_import_hygiene.py`, which imports every `application`/`domain`
-  module and the worker entrypoint in a clean interpreter.
+  guarded by `tests/unit/shared/test_import_hygiene.py` (each `application`/`domain` module and the
+  worker in a clean interpreter).
 
 ## Exceptions
 
@@ -62,3 +62,11 @@ maps it to text:
 - Deferring a task: outside a transaction `await task_bus.defer(task_name=..., ...)`; inside one
   `task_bus.bind_to(uow.session).defer(task_name=..., ...)` before `await uow.commit()` — one
   commit fixes the writes and the job.
+- A row other tables reference by FK is locked `with_for_update(key_share=True)`: plain `FOR UPDATE`
+  blocks the FK check of an insert into the child table and deadlocks with a use case holding the child row.
+- An event between modules is published like a deferred task:
+  `event_publisher.bind_to(uow.session).publish(...)` before `commit()`. Every path that changes a
+  published field publishes it; a missed one leaves the subscriber silently stale. The entity carries
+  `VersionedEntityMixin`: read under a row lock, one `_bump_version()` per domain operation, written
+  through `_execute_versioned_update`. Subscriptions live only in `app/composition/events.py`; a
+  subscriber ignores a snapshot not newer than the one it stored.

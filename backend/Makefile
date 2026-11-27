@@ -1,4 +1,4 @@
-.PHONY: help format format-check lint typecheck dead-code audit arch check check-ci test coverage test-unit test-integration test-api test-auth test-users test-shared test-journeys test-geo test-health test-media openapi-dump
+.PHONY: help format format-check lint typecheck dead-code audit arch check check-ci test coverage test-unit test-integration test-api test-auth test-users test-shared test-journeys test-geo test-health test-media test-backoffice openapi-dump
 
 # Colors for output
 ifeq ($(OS),Windows_NT)
@@ -114,6 +114,9 @@ test-health: ## Run health-domain tests, any level (-m health)
 
 test-media: ## Run media-domain tests, any level (-m media)
 	@uv run pytest -m media || [ $$? -eq 5 ]
+
+test-backoffice: ## Run backoffice-domain tests, any level (-m backoffice)
+	@uv run pytest -m backoffice || [ $$? -eq 5 ]
 
 openapi-dump: ## Rewrite backend/openapi.json from the app (drift gate is the snapshot test in make test)
 	@echo "${GREEN}INFO :  ${AZURE}Update '${PURPLE}openapi.json${AZURE}' snapshot${RESET}"

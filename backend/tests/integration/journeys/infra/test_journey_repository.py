@@ -25,7 +25,7 @@ from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.infra.models import Journey
 from app.journeys.infra.repositories import JourneyRepository
 from app.shared.fractional_index import generate_key_between
-from app.shared.pagination import PageQuery
+from app.shared.pagination.cursor import CursorPageQuery
 from tests.builders import (
     LONDON_CITY_ID,
     MOSCOW_CITY_ID,
@@ -350,7 +350,7 @@ async def test_find_journeys_page_orders_fresh_year_first_then_sort_key(db_sessi
 
     page = await repository.find_journeys_page_by_user_id(
         user_id=user_id,
-        page=PageQuery(cursor=None, limit=10),
+        page=CursorPageQuery(cursor=None, limit=10),
         filters=_NO_FILTERS,
     )
 
@@ -376,7 +376,7 @@ async def test_find_journeys_page_cursor_walks_whole_feed_without_gaps(db_sessio
     while True:
         page = await repository.find_journeys_page_by_user_id(
             user_id=user_id,
-            page=PageQuery(cursor=cursor, limit=2),
+            page=CursorPageQuery(cursor=cursor, limit=2),
             filters=_NO_FILTERS,
         )
         walked.extend(journey.journey_id for journey in page.items)
@@ -404,7 +404,7 @@ async def test_find_journeys_page_filters_by_year_range_and_transport(db_session
 
     page = await repository.find_journeys_page_by_user_id(
         user_id=user_id,
-        page=PageQuery(cursor=None, limit=10),
+        page=CursorPageQuery(cursor=None, limit=10),
         filters=JourneyFilters(
             year_from=2018,
             year_to=2020,
@@ -424,7 +424,7 @@ async def test_find_journeys_page_sort_key_compares_bytewise(db_session: AsyncSe
 
     page = await repository.find_journeys_page_by_user_id(
         user_id=user_id,
-        page=PageQuery(cursor=None, limit=10),
+        page=CursorPageQuery(cursor=None, limit=10),
         filters=_NO_FILTERS,
     )
 
@@ -556,7 +556,7 @@ async def test_deleted_journey_drops_out_of_feed_and_years_but_stays_findable(db
 
     page = await repository.find_journeys_page_by_user_id(
         user_id=user_id,
-        page=PageQuery(cursor=None, limit=10),
+        page=CursorPageQuery(cursor=None, limit=10),
         filters=_NO_FILTERS,
     )
     stored = await repository.find_journey_by_id_and_user_id(journey_id=journey_entity.journey_id, user_id=user_id)

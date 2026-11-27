@@ -36,6 +36,7 @@ from testcontainers.community.postgres import PostgresContainer
 # Импорт моделей регистрирует таблицы в ``BaseDBModel.metadata`` (нужно для create_all).
 from app.auth.infra import models as _auth_models  # noqa: F401
 from app.auth.infra.repositories import UserCredentialsRepository
+from app.backoffice.infra import models as _backoffice_models  # noqa: F401
 from app.geo.infra import models as _geo_models  # noqa: F401
 from app.journeys.infra import models as _journey_models  # noqa: F401
 from app.media.infra import models as _media_models  # noqa: F401
@@ -57,6 +58,7 @@ _ALL_TABLES = (
     "geo_dataset_loads",
     "journeys",
     "media_config",
+    "backoffice.accounts",
 )
 
 
@@ -66,6 +68,13 @@ def _postgres_container() -> Iterator[PostgresContainer]:
     with PostgresContainer(_POSTGRES_IMAGE, driver="psycopg") as container:
         sync_engine = create_engine(container.get_connection_url())
         try:
+            # create_all не создаёт ни расширения, ни схемы: миграция делает и то и другое до своих таблиц.
+            model_schemas = {table.schema for table in BaseDBModel.metadata.tables.values() if table.schema}
+            with sync_engine.begin() as conn:
+                conn.execute(sa.text("CREATE EXTENSION pg_trgm"))
+                for schema in sorted(model_schemas):
+                    conn.execute(sa.text(f"CREATE SCHEMA {schema}"))
+
             BaseDBModel.metadata.create_all(sync_engine)
         finally:
             sync_engine.dispose()

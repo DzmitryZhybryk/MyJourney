@@ -68,7 +68,7 @@ The same idea at the outbound boundary. A port method (repository, client) takes
 | `*Scope` | the set of rows the operation works within; required | `JourneyOrderScope(user_id, traveled_year)` |
 | `*Filters` | an optional narrowing of a list, chosen by the caller | `JourneyFilters(year_from, year_to, transport_types)` |
 | `*Request` | what we send to another domain or service | `CreateUserRequest` |
-| `PageQuery` | paging, from the shared layer | — |
+| `*PageQuery` | paging, from the shared layer; one per kind | `CursorPageQuery`, `OffsetPageQuery` |
 
 `*Params`, `*Criteria`, `*Args` and `*Context` are not in the vocabulary: a bag named for its
 shape says nothing about its role, and a second synonym for `*Filters` is where two conventions

@@ -2,11 +2,10 @@
 Worker entrypoint для procrastinate-задач.
 
 Поднимает только те компоненты, которые нужны исполнителю tasks:
+``SqlAlchemyComponent`` (даёт ``SessionMaker`` задачам, которые пишут в БД),
 ``ResendComponent`` (даёт ``EmailTransportPort``), ``MediaStorageComponent``
 (хранилища бакетов media) и ``ProcrastinateComponent``
-(App + подключённые blueprint'ы доменов). ``SqlAlchemyComponent`` намеренно
-отсутствует — текущая task ``send_verification_email`` БД не трогает:
-расшифровывает код ключом из настроек, рендерит письмо и зовёт provider.
+(App + подключённые blueprint'ы доменов). Издателя событий нет: задачи воркера событий не публикуют.
 
 Таски получают зависимости из реестра компонентов: он целиком лежит в
 ``additional_context`` под ``WORKER_REGISTRY_KEY``.
@@ -16,14 +15,15 @@ Schema procrastinate worker не трогает: её применяет шаг 
 
 Процесс блокируется в ``run_worker_async`` до SIGTERM/SIGINT; procrastinate
 сам graceful-shutdown'ит in-flight jobs, после чего ``run_components``
-освобождает ресурсы компонентов (psycopg-пул, httpx-пул, клиент S3) в обратном порядке.
+освобождает ресурсы компонентов (psycopg-пул, httpx-пул, клиент S3, пул SQLAlchemy) в обратном порядке.
 """
 
 import asyncio
 
-from app.blueprints import TASK_BLUEPRINTS
+from app.composition.tasks import TASK_BLUEPRINTS
 from app.media.infra.component import MediaStorageComponent
 from app.shared.enums import AppEnvEnum
+from app.shared.infra.db.postgres.component import SqlAlchemyComponent
 from app.shared.infra.di.base import BaseComponent
 from app.shared.infra.di.lifecycle import run_components
 from app.shared.infra.di.registry import ComponentRegistry
@@ -46,6 +46,7 @@ async def run_worker() -> None:  # pragma: no cover — entry-point обвязк
 
     registry = ComponentRegistry()
     components: list[BaseComponent] = [
+        SqlAlchemyComponent(settings),
         ResendComponent(settings),
         MediaStorageComponent(settings),
         ProcrastinateComponent(settings=settings, blueprints=TASK_BLUEPRINTS),

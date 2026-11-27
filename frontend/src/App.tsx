@@ -46,6 +46,7 @@ const AdminLayout = lazy(() => import("./admin/AdminLayout").then((m) => ({ defa
 const MediaConfigPage = lazy(() =>
   import("./admin/media-config/MediaConfigPage").then((m) => ({ default: m.MediaConfigPage })),
 );
+const AccountsPage = lazy(() => import("./admin/accounts/AccountsPage").then((m) => ({ default: m.AccountsPage })));
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("./pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 
@@ -154,6 +155,7 @@ export default function App() {
                 >
                   <Route index element={<Navigate to={ADMIN_SECTIONS[0].path} replace />} />
                   <Route path="media-config" element={<MediaConfigPage />} />
+                  <Route path="accounts" element={<AccountsPage />} />
                 </Route>
                 {/*
                  * Journeys section: shared shell (header + panel) with sub-tabs via <Outlet/>.

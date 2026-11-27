@@ -1,6 +1,6 @@
 """
 Migration name: initial schema — users, user_credentials, refresh_tokens, challenges, geo_cities,
-geo_places, geo_dataset_loads, journeys, media_config
+geo_places, geo_dataset_loads, journeys, media_config, backoffice.accounts
 
 Revision ID: e00067cc5c0e
 Revises: None
@@ -31,6 +31,7 @@ def upgrade() -> None:
         sa.Column("display_name", sa.String(length=50), nullable=False),
         sa.Column("terms_accepted_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("marketing_emails_consent", sa.Boolean(), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -45,6 +46,7 @@ def upgrade() -> None:
         sa.Column("role", sa.String(length=20), nullable=False),
         sa.Column("plan", sa.String(length=20), nullable=False),
         sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("version", sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint("user_id"),
     )
     # Уникальность email и username без учёта регистра.
@@ -206,9 +208,57 @@ def upgrade() -> None:
         sa.Column("config", postgresql.JSONB(none_as_null=True), nullable=False),
         sa.PrimaryKeyConstraint("version"),
     )
+    op.execute("CREATE SCHEMA backoffice")
+    op.execute("CREATE EXTENSION pg_trgm")
+    op.create_table(
+        "accounts",
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("email", sa.String(), nullable=True),
+        sa.Column("username", sa.String(), nullable=True),
+        sa.Column("role", sa.String(), nullable=True),
+        sa.Column("plan", sa.String(), nullable=True),
+        sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("registered_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("auth_version", sa.Integer(), nullable=True),
+        sa.Column("display_name", sa.String(), nullable=True),
+        sa.Column("marketing_emails_consent", sa.Boolean(), nullable=True),
+        sa.Column("terms_accepted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("users_version", sa.Integer(), nullable=True),
+        sa.PrimaryKeyConstraint("user_id"),
+        schema="backoffice",
+    )
+    op.create_index(
+        "ix_accounts_registered_at_user_id",
+        "accounts",
+        [sa.text("registered_at DESC NULLS LAST"), sa.text("user_id DESC")],
+        schema="backoffice",
+    )
+    op.create_index(
+        "ix_accounts_email_trgm",
+        "accounts",
+        ["email"],
+        schema="backoffice",
+        postgresql_using="gin",
+        postgresql_ops={"email": "gin_trgm_ops"},
+    )
+    op.create_index(
+        "ix_accounts_display_name_trgm",
+        "accounts",
+        ["display_name"],
+        schema="backoffice",
+        postgresql_using="gin",
+        postgresql_ops={"display_name": "gin_trgm_ops"},
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_accounts_display_name_trgm", table_name="accounts", schema="backoffice")
+    op.drop_index("ix_accounts_email_trgm", table_name="accounts", schema="backoffice")
+    op.drop_index("ix_accounts_registered_at_user_id", table_name="accounts", schema="backoffice")
+    op.drop_table("accounts", schema="backoffice")
+    op.execute("DROP EXTENSION pg_trgm")
+    op.execute("DROP SCHEMA backoffice")
     op.drop_table("media_config")
     # journeys и таблицы geo создаются последними в upgrade — дропаются первыми.
     op.drop_index("ix_journeys_active_user_id_year_sort_key", table_name="journeys")

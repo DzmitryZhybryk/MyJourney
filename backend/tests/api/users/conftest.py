@@ -18,7 +18,7 @@ from fastapi import APIRouter
 from app.users.application.services.user import UserService
 from app.users.presentation.dependencies import user_service_dependency
 from app.users.presentation.routes import users_router
-from tests.fakes import FakeUserUnitOfWork
+from tests.fakes import FakeEventPublisher, FakeUserUnitOfWork
 
 _USERS_ROUTER_PREFIX = "/v1/users"
 
@@ -36,5 +36,6 @@ def router_prefix() -> str:
 @pytest.fixture
 def dependency_overrides(
     fake_user_uow: FakeUserUnitOfWork,
+    fake_event_publisher: FakeEventPublisher,
 ) -> dict[Callable[..., Any], Callable[..., Any]]:
-    return {user_service_dependency: lambda: UserService(fake_user_uow)}
+    return {user_service_dependency: lambda: UserService(uow=fake_user_uow, event_publisher=fake_event_publisher)}

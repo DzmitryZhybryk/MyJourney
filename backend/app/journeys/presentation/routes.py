@@ -42,7 +42,7 @@ from app.journeys.presentation.schemas import (
     UpdateJourneyRequest,
 )
 from app.shared.infra.jwt.dependency import current_user_id_dependency
-from app.shared.pagination import PageQuery
+from app.shared.pagination.cursor import CursorPageQuery
 
 journey_router = APIRouter()
 
@@ -153,7 +153,7 @@ async def list_journeys(
     journey_service: Annotated[JourneyService, Depends(journey_service_dependency)],
 ) -> JourneysFeedResponse:
     command = ListJourneysCommand(
-        page=PageQuery(cursor=query.cursor, limit=query.limit),
+        page=CursorPageQuery(cursor=query.cursor, limit=query.limit),
         filters=JourneyFilters(
             year_from=query.year_from,
             year_to=query.year_to,

@@ -85,7 +85,10 @@
 
 ## An external call's adapter classifies a failure and passes on the dependency's retry delay; the caller decides the retry
 - `TemporaryError` (category `TEMPORARY`: 503, WARNING) is the base of every transient failure of a dependency; a
-  persistent one is an `InternalError`. Background tasks retry by `retry_exceptions={TemporaryError}`.
+  persistent one is an `InternalError`. A background task that calls an external dependency retries by
+  `retry_exceptions={TemporaryError}`. An idempotent task that only writes our own database retries on any failure
+  (plain `RetryStrategy`, no `retry_exceptions`): database failures are not classified, and a repeated idempotent
+  write is harmless.
 - Temporary: any 5xx, 408, 429, timeout, network failure, a broken response body, and the S3 retry codes
   `RequestTimeout`, `SlowDown`, `InternalError`, `ServiceUnavailable`; every other 4xx is persistent. A provider that
   signals "retry" with another 4xx overrides `BaseHTTPClient._TEMPORARY_CLIENT_ERROR_STATUSES`.
@@ -111,7 +114,11 @@
 - Rejected: the task sleeping for `retry_after` — holds a worker and makes the task its own retry loop.
 - Rejected: the larger of the named delay and the own backoff — `max_attempts` already bounds a `Retry-After: 0`.
 - Rejected: waiting exactly the ceiling for a longer delay — a retry before the named time meets the same 429.
-- Source: external failure classification (#33), 2026-10-31; retry delay (#40), 2026-11-03
+- Rejected: `retry_exceptions={TemporaryError}` on every task (until 2026-11-27) — no database failure is a
+  `TemporaryError`, so a task over our own database would never retry a dropped connection or a deadlock.
+- Revisit when: database failures are classified into `TemporaryError` — every task then retries by
+  `retry_exceptions`.
+- Source: external failure classification (#33), 2026-10-31; retry delay (#40), 2026-11-03; PR #241, 2026-11-27
 
 ## A server-fault response carries only the `code` and the class message
 - For a category with `ErrorCategoryEnum.is_server_fault` (`TEMPORARY`, `INTERNAL`) the envelope drops `details` and

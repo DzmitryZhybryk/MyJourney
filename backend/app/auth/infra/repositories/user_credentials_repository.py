@@ -38,9 +38,10 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
 
     async def update_user_credentials_by_user_id(self, user_credentials_entity: UserCredentialsEntity) -> None:
         """
-        Персистит изменённое состояние учётных данных через atomic UPDATE по PK.
+        Персистит изменённое состояние учётных данных через atomic UPDATE по PK и предыдущей версии.
 
-        Все non-PK-поля переписываются текущим состоянием credentials.
+        Все non-PK-поля переписываются текущим состоянием credentials. Строка пишется, только если в базе
+        всё ещё версия, с которой сущность была прочитана.
 
         Args:
             user_credentials_entity: Доменная сущность с уже обновлённым состоянием
@@ -49,10 +50,20 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         del values["user_id"]  # PK не входит в SET
         query = (
             sa.update(UserCredentials)
-            .where(UserCredentials.user_id == user_credentials_entity.user_id)
+            .where(
+                UserCredentials.user_id == user_credentials_entity.user_id,
+                UserCredentials.version == user_credentials_entity.version - 1,
+            )
             .values(**values)
         )
-        await self._session.execute(query)
+        await self._execute_versioned_update(query)
+
+    async def find_user_credentials_by_user_id_for_update(self, user_id: UUID) -> UserCredentialsEntity | None:
+        # FOR NO KEY UPDATE, не FOR UPDATE: вставка строки, ссылающейся сюда по FK, берёт FOR KEY SHARE, и
+        # FOR UPDATE её блокирует — ввод кода и его повторная отправка ждали бы друг друга (deadlock).
+        query = sa.select(UserCredentials).where(UserCredentials.user_id == user_id).with_for_update(key_share=True)
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     async def find_user_credentials_by_user_id(self, user_id: UUID) -> UserCredentialsEntity | None:
         """
@@ -155,6 +166,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             "role": user_credentials_entity.role.value,
             "plan": user_credentials_entity.plan.value,
             "email_verified_at": user_credentials_entity.email_verified_at,
+            "version": user_credentials_entity.version,
             "created_at": user_credentials_entity.created_at,
             "updated_at": user_credentials_entity.updated_at,
             "deleted_at": user_credentials_entity.deleted_at,
@@ -185,6 +197,7 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             role=UserRoleEnum(user_credentials_model.role),
             plan=UserPlanEnum(user_credentials_model.plan),
             email_verified_at=user_credentials_model.email_verified_at,
+            version=user_credentials_model.version,
             created_at=user_credentials_model.created_at,
             updated_at=user_credentials_model.updated_at,
             deleted_at=user_credentials_model.deleted_at,

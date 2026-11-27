@@ -39,6 +39,7 @@ depends_on = ["app.auth.domain", "app.shared", "app.users.application", "app.aut
 path = "app.auth.presentation"
 depends_on = [
     "app.auth.application",
+    "app.auth.domain",
     "app.auth.exceptions",
     "app.shared",
     "app.auth.infra",
@@ -76,7 +77,7 @@ depends_on = ["app.shared", "app.users.exceptions"]
 
 [[modules]]
 path = "app.users.application"
-depends_on = ["app.users.domain", "app.users.exceptions"]
+depends_on = ["app.users.domain", "app.users.exceptions", "app.shared"]
 
 [[modules]]
 path = "app.users.infra"
@@ -137,6 +138,18 @@ depends_on = ["app.media.infra", "app.media.application", "app.shared"]
 [[modules]]
 path = "app.media.presentation"
 depends_on = ["app.media.application", "app.media.infra", "app.media.domain", "app.shared"]
+
+[[modules]]
+path = "app.backoffice.application"
+depends_on = ["app.shared"]
+
+[[modules]]
+path = "app.backoffice.infra"
+depends_on = ["app.backoffice.application", "app.shared"]
+
+[[modules]]
+path = "app.backoffice.presentation"
+depends_on = ["app.backoffice.application", "app.backoffice.infra", "app.shared"]
 
 [[modules]]
 path = "app.shared"

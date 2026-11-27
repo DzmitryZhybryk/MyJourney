@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.shared.events import EventPublisherPort, ProfileChangedEvent
 from app.users.application.ports.unit_of_work import UserUnitOfWorkPort
 from app.users.application.schemas.commands import CreateUserCommand, UpdateCurrentUserCommand
 from app.users.application.schemas.results import CurrentUserResult
@@ -10,8 +11,9 @@ from app.users.exceptions import UserNotFoundError
 class UserService:
     """Сервис управления пользователями."""
 
-    def __init__(self, uow: UserUnitOfWorkPort) -> None:
+    def __init__(self, *, uow: UserUnitOfWorkPort, event_publisher: EventPublisherPort) -> None:
         self._uow = uow
+        self._event_publisher = event_publisher
 
     async def create_user(self, command: CreateUserCommand) -> None:
         """
@@ -19,7 +21,7 @@ class UserService:
 
         НЕ коммитит: ``create_user`` — cross-domain участник use-case'а, чьей
         входной точкой владеет вызывающий (``AuthService.register``). Запись
-        кладётся в общую сессию и фиксируется единственным ``commit()`` вызывающего —
+        и событие о профиле кладутся в общую сессию и фиксируется единственным ``commit()`` вызывающего —
         атомарно вместе с ``user_credentials`` и refresh-токеном. Любой сбой до
         этого commit'а откатывает всё, осиротевшей учётки не остаётся
         (Option A транзакционной модели, см. ``BaseUnitOfWork``).
@@ -37,6 +39,15 @@ class UserService:
             terms_accepted_at=command.terms_accepted_at,
         )
         await self._uow.user_repository.insert_user(user_entity)
+        await self._event_publisher.bind_to(self._uow.session).publish(
+            ProfileChangedEvent(
+                user_id=user_entity.user_id,
+                display_name=user_entity.display_name,
+                marketing_emails_consent=user_entity.marketing_emails_consent,
+                terms_accepted_at=user_entity.terms_accepted_at,
+                version=user_entity.version,
+            ),
+        )
 
     async def get_current_user(self, user_id: UUID) -> CurrentUserResult:
         """
@@ -100,6 +111,15 @@ class UserService:
                 marketing_emails_consent=command.marketing_emails_consent,
             )
             await self._uow.user_repository.update_user_by_id(user_entity)
+            await self._event_publisher.bind_to(self._uow.session).publish(
+                ProfileChangedEvent(
+                    user_id=user_entity.user_id,
+                    display_name=user_entity.display_name,
+                    marketing_emails_consent=user_entity.marketing_emails_consent,
+                    terms_accepted_at=user_entity.terms_accepted_at,
+                    version=user_entity.version,
+                ),
+            )
             await self._uow.commit()
 
         return CurrentUserResult(

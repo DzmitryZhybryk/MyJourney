@@ -14,6 +14,7 @@ import { setupServer } from "msw/node";
 
 import type {
   AccountItem,
+  AccountsListResponse,
   CitySearchItem,
   CurrentAccountResponse,
   CurrentUserResponse,
@@ -42,6 +43,42 @@ export const TEST_ADMIN_ACCOUNT: AccountItem = {
   id: "22222222-2222-4222-8222-222222222222",
   email: "admin@example.com",
   isDeleted: false,
+};
+
+/**
+ * One page of the admin account list: a full row, and a deleted row whose profile has not reached the
+ * read model yet (profile fields null).
+ */
+export const TEST_ACCOUNTS_PAGE: AccountsListResponse = {
+  items: [
+    {
+      userId: "33333333-3333-4333-8333-333333333333",
+      email: "neo@example.com",
+      username: "neo",
+      role: "admin",
+      plan: "premium",
+      emailVerifiedAt: "2026-11-02T10:00:00Z",
+      registeredAt: "2026-11-01T10:00:00Z",
+      deletedAt: null,
+      displayName: "Neo",
+      marketingEmailsConsent: true,
+      termsAcceptedAt: "2026-11-01T10:00:00Z",
+    },
+    {
+      userId: "44444444-4444-4444-8444-444444444444",
+      email: "smith@example.com",
+      username: "smith",
+      role: "user",
+      plan: "free",
+      emailVerifiedAt: null,
+      registeredAt: "2026-10-20T10:00:00Z",
+      deletedAt: "2026-11-21T10:00:00Z",
+      displayName: null,
+      marketingEmailsConsent: null,
+      termsAcceptedAt: null,
+    },
+  ],
+  total: 2,
 };
 
 /** Public upload rules matching `TEST_MEDIA_CONFIG`, with the side axis from backend code. */
@@ -285,6 +322,11 @@ export const handlers = [
     const ids = new URL(request.url).searchParams.getAll("ids");
     return HttpResponse.json({ accounts: ids.includes(TEST_ADMIN_ACCOUNT.id) ? [TEST_ADMIN_ACCOUNT] : [] });
   }),
+  http.get("/v1/admin/auth/account-options/", () =>
+    HttpResponse.json({ roles: ["user", "admin"], plans: ["free", "premium"] }),
+  ),
+  // The account list ignores the query: a test that checks what the page asks for captures the request.
+  http.get("/v1/admin/backoffice/accounts/", () => HttpResponse.json(TEST_ACCOUNTS_PAGE)),
 ];
 
 export const server = setupServer(...handlers);

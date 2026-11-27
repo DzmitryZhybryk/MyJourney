@@ -39,7 +39,7 @@ from app.journeys.exceptions import (
     UnknownCityError,
 )
 from app.shared.fractional_index import MovePlacementEnum
-from app.shared.pagination import PageQuery
+from app.shared.pagination.cursor import CursorPageQuery
 from tests.builders import LONDON_CITY_ID, MOSCOW_CITY_ID, make_geo_point, make_journey
 from tests.fakes import FakeCitiesClient, FakeJourneyRepository, FakeJourneyUnitOfWork, MovementConnectionQuery
 
@@ -628,7 +628,7 @@ async def test_list_journeys_maps_page_items_and_cursor(
     result = await journey_service.list_journeys(
         user_id=user_id,
         command=ListJourneysCommand(
-            page=PageQuery(cursor=None, limit=2),
+            page=CursorPageQuery(cursor=None, limit=2),
             filters=JourneyFilters(year_from=None, year_to=None, transport_types=None),
         ),
     )

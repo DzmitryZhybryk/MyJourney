@@ -55,6 +55,11 @@ const PAGES: readonly Page[] = [
     budget: "app",
     modules: ["src/admin/AdminLayout.tsx", "src/admin/media-config/MediaConfigPage.tsx"],
   },
+  {
+    name: "/admin/accounts",
+    budget: "app",
+    modules: ["src/admin/AdminLayout.tsx", "src/admin/accounts/AccountsPage.tsx"],
+  },
   // The shared map (country borders) loads lazily from the layout on every tab that shows it, so it
   // is counted there explicitly; /journeys/add never loads it.
   {

@@ -57,3 +57,27 @@ class TimestampedEntityMixin:
         now = dt.datetime.now(tz=dt.UTC)
         self._deleted_at = now
         self._updated_at = now
+
+
+class VersionedEntityMixin:
+    """Mixin версии строки: каждое изменение сущности поднимает версию на единицу."""
+
+    def __init__(self, *, version: int) -> None:
+        """Инициализация смеси."""
+        self._version = version
+
+    @property
+    def version(self) -> int:
+        return self._version
+
+    def _bump_version(self) -> None:
+        """
+        Увеличивает версию сущности на единицу.
+
+        Вызывается изнутри мутирующих методов наследников рядом с ``_mark_updated``. Хранилище
+        записывает сущность, только если строка всё ещё на предыдущей версии.
+
+        Scenarios:
+            - любая доменная операция, меняющая сущность с версией
+        """
+        self._version += 1

@@ -3,7 +3,7 @@ import binascii
 import json
 from collections.abc import Callable, Sequence
 
-from app.shared.pagination.exceptions import InvalidCursorError
+from app.shared.pagination.cursor.exceptions import InvalidCursorError
 
 type CursorParser = Callable[[str], object]
 

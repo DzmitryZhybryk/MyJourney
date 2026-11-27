@@ -9,8 +9,11 @@ SQLAlchemy-репозиторий/UoW. ``ty`` сверяет обе реализ
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import cast
 from unittest.mock import AsyncMock
 from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.users.application.ports.unit_of_work import UserUnitOfWorkPort
 from app.users.application.ports.user_repository import UserRepositoryPort
@@ -46,12 +49,18 @@ class FakeUserUnitOfWork(UserUnitOfWorkPort):
 
     Репозиторий передаётся снаружи (фикстура держит тот же инстанс, чтобы тест мог
     проверять его состояние), ``commit`` — ``AsyncMock`` (``commit_mock``) для проверки
-    факта фиксации.
+    факта фиксации, ``session`` — sentinel: фейк-издатель её не использует, но тест
+    сверяет, что событие опубликовано именно в этой сессии.
     """
 
     def __init__(self, user_repository: UserRepositoryPort) -> None:
         self.user_repository = user_repository
         self.commit_mock = AsyncMock()
+        self._session = cast(AsyncSession, object())
+
+    @property
+    def session(self) -> AsyncSession:
+        return self._session
 
     @asynccontextmanager
     async def transaction(self) -> AsyncGenerator[None]:

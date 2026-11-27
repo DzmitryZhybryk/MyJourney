@@ -47,10 +47,13 @@ from app.shared.infra.crypto.fernet import FernetSecretCipher  # noqa: E402
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher  # noqa: E402
 from tests.builders import LONDON_CITY_ID, make_city_location_response  # noqa: E402
 from tests.fakes import (  # noqa: E402
+    FakeAccountRepository,
     FakeAuthUnitOfWork,
+    FakeBackofficeUnitOfWork,
     FakeChallengeRepository,
     FakeCitiesClient,
     FakeCityRepository,
+    FakeEventPublisher,
     FakeGeoUnitOfWork,
     FakeJourneyRepository,
     FakeJourneyUnitOfWork,
@@ -74,7 +77,7 @@ _EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
 # При добавлении нового уровня/домена обнови и эти кортежи, и список ``markers`` в
 # pyproject.toml (``--strict-markers`` запрещает незарегистрированные маркеры).
 _LEVEL_MARKERS = ("unit", "integration", "api")
-_DOMAIN_MARKERS = ("auth", "users", "shared", "journeys", "geo", "health", "media")
+_DOMAIN_MARKERS = ("auth", "users", "shared", "journeys", "geo", "health", "media", "backoffice")
 
 # Потолок времени на один тест по уровню. Integration считает только сам тест: подъём
 # контейнера в session-фикстуре приходится на setup первого теста и в лимит не входит.
@@ -189,6 +192,21 @@ def secret_cipher() -> FernetSecretCipher:
 @pytest.fixture
 def fake_task_bus() -> FakeTaskBus:
     return FakeTaskBus()
+
+
+@pytest.fixture
+def fake_event_publisher() -> FakeEventPublisher:
+    return FakeEventPublisher()
+
+
+@pytest.fixture
+def fake_account_repository() -> FakeAccountRepository:
+    return FakeAccountRepository()
+
+
+@pytest.fixture
+def fake_backoffice_uow(fake_account_repository: FakeAccountRepository) -> FakeBackofficeUnitOfWork:
+    return FakeBackofficeUnitOfWork(fake_account_repository)
 
 
 @pytest.fixture

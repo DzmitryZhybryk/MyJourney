@@ -12,7 +12,7 @@ from uuid import UUID
 
 import pytest
 
-from app.shared.pagination import InvalidCursorError, decode_cursor, encode_cursor, split_page
+from app.shared.pagination.cursor import InvalidCursorError, decode_cursor, encode_cursor, split_page
 
 _PARSERS = (dt.date.fromisoformat, dt.datetime.fromisoformat, UUID)
 

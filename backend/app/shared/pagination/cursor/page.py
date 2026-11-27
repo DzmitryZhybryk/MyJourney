@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
-class PageQuery:
+class CursorPageQuery:
     """
     Какую страницу списка отдать: курсор (``None`` — первая страница) и её размер.
 

@@ -26,6 +26,7 @@ def test_user_entity_create_sets_fields_and_defaults() -> None:
     assert user_entity.display_name == "alice"
     assert user_entity.marketing_emails_consent is True
     assert user_entity.terms_accepted_at == terms_accepted_at
+    assert user_entity.version == 1
     assert user_entity.deleted_at is None
 
 
@@ -105,3 +106,12 @@ def test_user_entity_update_profile_without_fields_touches_only_updated_at() -> 
     assert user_entity.display_name == "alice"
     assert user_entity.marketing_emails_consent is True
     assert user_entity.updated_at != _OLD_UPDATED_AT
+
+
+def test_user_entity_update_profile_bumps_version_by_one() -> None:
+    """`update_profile` поднимает версию ровно на единицу от прочитанной."""
+    user_entity = make_user_entity(version=3)
+
+    user_entity.update_profile(display_name="Alice D.")
+
+    assert user_entity.version == 4

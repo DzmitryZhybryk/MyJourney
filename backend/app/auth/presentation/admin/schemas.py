@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.shared.schemas.base import CamelModel
 
 
@@ -26,3 +27,12 @@ class AccountsResponse(CamelModel):
     model_config = ConfigDict(frozen=True)
 
     accounts: frozenset[AccountItem]
+
+
+class AccountOptionsResponse(CamelModel):
+    """Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей."""
+
+    model_config = ConfigDict(frozen=True)
+
+    roles: tuple[UserRoleEnum, ...]
+    plans: tuple[UserPlanEnum, ...]

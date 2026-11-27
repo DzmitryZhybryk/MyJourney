@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createJourney, deleteJourney, estimateJourneyDistance, findAccountsByIds, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMediaConfig, getMovementsMap, getUploadRules, healthz, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, updateMediaConfig, verifyEmail } from '../sdk.gen';
-import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, FindAccountsByIdsData, FindAccountsByIdsError, FindAccountsByIdsResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMediaConfigData, GetMediaConfigError, GetMediaConfigResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, GetUploadRulesData, GetUploadRulesError, GetUploadRulesResponse, HealthzData, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, UpdateMediaConfigData, UpdateMediaConfigError, UpdateMediaConfigResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
+import { createJourney, deleteJourney, estimateJourneyDistance, findAccountsByIds, getAccountOptions, getCurrentAccount, getCurrentUser, getJourneysGlobe, getJourneysMap, getJourneyYears, getMediaConfig, getMovementsMap, getUploadRules, healthz, listAccounts, listJourneys, login, logout, moveJourney, type Options, refresh, register, resolveCities, searchCities, sendEmailVerification, updateCurrentUser, updateJourney, updateMediaConfig, verifyEmail } from '../sdk.gen';
+import type { CreateJourneyData, CreateJourneyError, DeleteJourneyData, DeleteJourneyError, DeleteJourneyResponse, EstimateJourneyDistanceData, EstimateJourneyDistanceError, EstimateJourneyDistanceResponse, FindAccountsByIdsData, FindAccountsByIdsError, FindAccountsByIdsResponse, GetAccountOptionsData, GetAccountOptionsError, GetAccountOptionsResponse, GetCurrentAccountData, GetCurrentAccountError, GetCurrentAccountResponse, GetCurrentUserData, GetCurrentUserError, GetCurrentUserResponse, GetJourneysGlobeData, GetJourneysGlobeError, GetJourneysGlobeResponse, GetJourneysMapData, GetJourneysMapError, GetJourneysMapResponse, GetJourneyYearsData, GetJourneyYearsError, GetJourneyYearsResponse, GetMediaConfigData, GetMediaConfigError, GetMediaConfigResponse, GetMovementsMapData, GetMovementsMapError, GetMovementsMapResponse, GetUploadRulesData, GetUploadRulesError, GetUploadRulesResponse, HealthzData, ListAccountsData, ListAccountsError, ListAccountsResponse, ListJourneysData, ListJourneysError, ListJourneysResponse, LoginData, LoginError, LoginResponse, LogoutData, LogoutError, LogoutResponse, MoveJourneyData, MoveJourneyError, MoveJourneyResponse2, RefreshData, RefreshError, RefreshResponse, RegisterData, RegisterError, RegisterResponse, ResolveCitiesData, ResolveCitiesError, ResolveCitiesResponse2, SearchCitiesData, SearchCitiesError, SearchCitiesResponse, SendEmailVerificationData, SendEmailVerificationError, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateJourneyData, UpdateJourneyError, UpdateJourneyResponse, UpdateMediaConfigData, UpdateMediaConfigError, UpdateMediaConfigResponse, VerifyEmailData, VerifyEmailError, VerifyEmailResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
   Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -459,6 +459,71 @@ export const findAccountsByIdsOptions = (options: Options<FindAccountsByIdsData>
   }),
   queryKey: findAccountsByIdsQueryKey(options)
 });
+
+export const getAccountOptionsQueryKey = (options?: Options<GetAccountOptionsData>) => createQueryKey('getAccountOptions', options);
+
+/**
+ * Get Account Options
+ *
+ * Все роли и тарифы учётной записи в порядке объявления. Право `auth.accounts.read`.
+ */
+export const getAccountOptionsOptions = (options?: Options<GetAccountOptionsData>) => queryOptions<GetAccountOptionsResponse, GetAccountOptionsError, GetAccountOptionsResponse, ReturnType<typeof getAccountOptionsQueryKey>>({
+  queryFn: async ({ queryKey, signal }) => await getAccountOptions({
+    ...options,
+    ...queryKey[0],
+    signal,
+    throwOnError: true
+  }),
+  queryKey: getAccountOptionsQueryKey(options)
+});
+
+export const listAccountsQueryKey = (options?: Options<ListAccountsData>) => createQueryKey('listAccounts', options);
+
+/**
+ * List Accounts
+ *
+ * Страница списка аккаунтов под фильтром и число всех аккаунтов под ним. Право `backoffice.accounts.read`.
+ */
+export const listAccountsOptions = (options?: Options<ListAccountsData>) => queryOptions<ListAccountsResponse, ListAccountsError, ListAccountsResponse, ReturnType<typeof listAccountsQueryKey>>({
+  queryFn: async ({ queryKey, signal }) => await listAccounts({
+    ...options,
+    ...queryKey[0],
+    signal,
+    throwOnError: true
+  }),
+  queryKey: listAccountsQueryKey(options)
+});
+
+export const listAccountsInfiniteQueryKey = (options?: Options<ListAccountsData>): QueryKey<Options<ListAccountsData>> => createQueryKey('listAccounts', options, true);
+
+/**
+ * List Accounts
+ *
+ * Страница списка аккаунтов под фильтром и число всех аккаунтов под ним. Право `backoffice.accounts.read`.
+ */
+export const listAccountsInfiniteOptions = (options?: Options<ListAccountsData>) => {
+  const opts = infiniteQueryOptions<ListAccountsResponse, ListAccountsError, InfiniteData<ListAccountsResponse>, QueryKey<Options<ListAccountsData>>, number | Pick<QueryKey<Options<ListAccountsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+  // @ts-ignore
+  {
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+      // @ts-ignore
+      const page: Pick<QueryKey<Options<ListAccountsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+        query: {
+          page: pageParam
+        }
+      };
+      const params = createInfiniteParams(queryKey, page);
+      return await listAccounts({
+        ...options,
+        ...params,
+        signal,
+        throwOnError: true
+      });
+    },
+    queryKey: listAccountsInfiniteQueryKey(options)
+  });
+  return opts as Omit<typeof opts, 'initialData'>;
+};
 
 export const getMediaConfigQueryKey = (options?: Options<GetMediaConfigData>) => createQueryKey('getMediaConfig', options);
 
