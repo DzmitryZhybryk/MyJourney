@@ -10,3 +10,4 @@ class PermissionEnum(StrEnum):
 
     MEDIA_CONFIG_EDIT = "media.config.edit"
     AUTH_ACCOUNTS_READ = "auth.accounts.read"
+    BACKOFFICE_ACCOUNTS_READ = "backoffice.accounts.read"

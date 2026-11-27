@@ -4,8 +4,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, SecretStr
 
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
+
 __all__ = [
     "Account",
+    "AccountOptionsResult",
     "AccountsResult",
     "CurrentAccountResult",
     "IssuedRefreshToken",
@@ -32,6 +35,14 @@ class AccountsResult:
     """Найденные учётные записи; id без записи в нём нет."""
 
     accounts: frozenset[Account]
+
+
+@dataclass(frozen=True, slots=True)
+class AccountOptionsResult:
+    """Все роли и тарифы учётной записи, в порядке объявления."""
+
+    roles: tuple[UserRoleEnum, ...]
+    plans: tuple[UserPlanEnum, ...]
 
 
 class IssuedRefreshToken(BaseModel):

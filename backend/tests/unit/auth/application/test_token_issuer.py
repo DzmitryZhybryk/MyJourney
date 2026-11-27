@@ -81,7 +81,13 @@ def test_build_token_pair_access_token_decodes_back_to_user(
         (
             UserRoleEnum.ADMIN,
             UserPlanEnum.PREMIUM,
-            frozenset({PermissionEnum.MEDIA_CONFIG_EDIT, PermissionEnum.AUTH_ACCOUNTS_READ}),
+            frozenset(
+                {
+                    PermissionEnum.MEDIA_CONFIG_EDIT,
+                    PermissionEnum.AUTH_ACCOUNTS_READ,
+                    PermissionEnum.BACKOFFICE_ACCOUNTS_READ,
+                },
+            ),
         ),
     ],
 )

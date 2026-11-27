@@ -31,6 +31,7 @@ import "@mantine/core/styles/Indicator.css";
 import "@mantine/core/styles/Menu.css";
 import "@mantine/core/styles/Modal.css";
 import "@mantine/core/styles/NumberInput.css";
+import "@mantine/core/styles/Pagination.css";
 import "@mantine/core/styles/PasswordInput.css";
 import "@mantine/core/styles/PinInput.css";
 import "@mantine/core/styles/Slider.css";

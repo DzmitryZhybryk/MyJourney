@@ -12,4 +12,8 @@ def test_permission_enum_member_named_as_domain_resource_action(permission: Perm
 
 def test_permission_enum_values_pinned_as_token_contract() -> None:
     """Строка права уходит в выданные токены: её переименование — смена контракта, а не рефакторинг."""
-    assert {permission.value for permission in PermissionEnum} == {"media.config.edit", "auth.accounts.read"}
+    assert {permission.value for permission in PermissionEnum} == {
+        "media.config.edit",
+        "auth.accounts.read",
+        "backoffice.accounts.read",
+    }

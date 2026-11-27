@@ -13,6 +13,10 @@
   padding: var(--content-offset-top) var(--header-inset) 48px;
 }
 
+.admin-layout--wide {
+  grid-template-columns: 13rem minmax(0, 1180px);
+}
+
 .admin-nav {
   position: sticky;
   top: calc(var(--header-height) + 16px);
@@ -64,6 +68,10 @@
   .admin-layout {
     grid-template-columns: minmax(0, 640px);
     gap: 16px;
+  }
+
+  .admin-layout--wide {
+    grid-template-columns: minmax(0, 1180px);
   }
 
   .admin-nav {

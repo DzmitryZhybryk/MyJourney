@@ -17,7 +17,7 @@ from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.domain.value_objects import GeoPoint
 from app.journeys.infra.models import Journey
 from app.shared.fractional_index.repository import BaseSortKeyRepository
-from app.shared.pagination import CursorPage, PageQuery, decode_cursor, split_page
+from app.shared.pagination.cursor import CursorPage, CursorPageQuery, decode_cursor, split_page
 from app.shared.types import DictStrAny
 
 
@@ -210,7 +210,7 @@ class JourneyRepository(BaseSortKeyRepository[Journey, JourneyOrderScope], Journ
         self,
         *,
         user_id: UUID,
-        page: PageQuery,
+        page: CursorPageQuery,
         filters: JourneyFilters,
     ) -> CursorPage[JourneyEntity]:
         """

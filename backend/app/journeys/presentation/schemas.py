@@ -7,7 +7,7 @@ from pydantic import ConfigDict, Field, field_validator, model_validator
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.exceptions import InvalidYearRangeError, JourneyDateInFutureError, SameOriginAndDestinationError
 from app.shared.fractional_index import MovePlacementEnum
-from app.shared.pagination.schemas import CursorPageFields, CursorPaginationFields
+from app.shared.pagination.cursor.schemas import CursorPageFields, CursorPaginationFields
 from app.shared.schemas.base import CamelModel
 
 

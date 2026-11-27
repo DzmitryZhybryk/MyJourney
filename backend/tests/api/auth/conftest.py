@@ -10,12 +10,12 @@ task-bus) и ``mint_access_token`` живут в родительском ``test
 I/O-границы (UoW, users-client, email-настройки) — в корневом ``tests/conftest.py``.
 
 Подменяем лишь **листовые** dependency — UoW, users-client, salted-hasher, task-bus,
-email-настройки. Реальными остаются ``auth_service``/``email_verification_service``/
+издатель событий, email-настройки. Реальными остаются ``auth_service``/``email_verification_service``/
 ``token_issuer``/``current_user_id`` (они эти листья и компонуют) — так тест прогоняет
 настоящую проводку сервисов, выпуск/декод JWT, куки и exception-handler'ы, фейкая только
-ввод-вывод. ``task_bus_dependency`` обязателен в overrides: боевой читает
-``request.app.registry.get(ProcrastinateTaskBus)``, а ``api_app`` поднят без компонентов —
-registry пуст и боевой бы упал.
+ввод-вывод. ``task_bus_dependency`` и ``event_publisher_dependency`` обязательны в overrides:
+боевые читают ``request.app.registry``, а ``api_app`` поднят без компонентов — registry пуст и
+боевые бы упали.
 """
 
 from collections.abc import Callable
@@ -34,8 +34,10 @@ from app.auth.presentation.dependencies import (
     users_client_dependency,
 )
 from app.auth.presentation.routes import auth_router
+from app.shared.events.dependency import event_publisher_dependency
 from tests.fakes import (
     FakeAuthUnitOfWork,
+    FakeEventPublisher,
     FakeSaltedHasher,
     FakeTaskBus,
     FakeUsersClient,
@@ -61,6 +63,7 @@ def dependency_overrides(
     fake_users_client: FakeUsersClient,
     fake_salted_hasher: FakeSaltedHasher,
     fake_task_bus: FakeTaskBus,
+    fake_event_publisher: FakeEventPublisher,
     email_verification_config: EmailVerificationConfig,
 ) -> dict[Callable[..., Any], Callable[..., Any]]:
     return {
@@ -68,5 +71,6 @@ def dependency_overrides(
         users_client_dependency: lambda: fake_users_client,
         salted_hasher_dependency: lambda: fake_salted_hasher,
         task_bus_dependency: lambda: fake_task_bus,
+        event_publisher_dependency: lambda: fake_event_publisher,
         email_verification_config_dependency: lambda: email_verification_config,
     }

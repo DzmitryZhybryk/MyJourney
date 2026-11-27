@@ -12,6 +12,7 @@ from app.auth.exceptions import (
     ChallengeNotFoundError,
     VerificationCodeInvalidError,
 )
+from app.shared.events import AccountChangedEvent, EventPublisherPort
 from app.shared.infra.crypto import SecretCipherPort
 from app.shared.infra.procrastinate import TaskBusPort
 
@@ -23,11 +24,13 @@ class EmailVerificationService:
         uow: AuthUnitOfWorkPort,
         secret_cipher: SecretCipherPort,
         task_bus: TaskBusPort,
+        event_publisher: EventPublisherPort,
         config: EmailVerificationConfig,
     ) -> None:
         self._uow = uow
         self._secret_cipher = secret_cipher
         self._task_bus = task_bus
+        self._event_publisher = event_publisher
         self._config = config
 
     async def request_email_verification(self, user_id: UUID) -> None:
@@ -104,7 +107,7 @@ class EmailVerificationService:
         """
         Проверяет одноразовый код и помечает email пользователя подтверждённым.
 
-        Активный challenge берётся под ``SELECT ... FOR UPDATE`` — параллельные
+        Учётные данные, а за ними активный challenge берутся под ``SELECT ... FOR UPDATE`` — параллельные
         попытки ввода кода сериализуются и не теряют инкремент счётчика. На
         неверном коде счётчик неудачных попыток увеличивается; при превышении
         лимита challenge дальше не принимается до выпуска нового.
@@ -125,8 +128,8 @@ class EmailVerificationService:
             ChallengeAttemptsExceededError: Превышен лимит попыток
         """
         async with self._uow.transaction():
-            user_credentials_entity = await self._uow.user_credentials_repository.find_user_credentials_by_user_id(
-                user_id
+            user_credentials_entity = (
+                await self._uow.user_credentials_repository.find_user_credentials_by_user_id_for_update(user_id)
             )
             if user_credentials_entity is None:
                 raise AccountNotFoundError()
@@ -154,4 +157,17 @@ class EmailVerificationService:
             user_credentials_entity.mark_email_verified()
             await self._uow.challenge_repository.update_challenge_by_id(challenge_entity)
             await self._uow.user_credentials_repository.update_user_credentials_by_user_id(user_credentials_entity)
+            await self._event_publisher.bind_to(self._uow.session).publish(
+                AccountChangedEvent(
+                    user_id=user_credentials_entity.user_id,
+                    email=user_credentials_entity.email,
+                    username=user_credentials_entity.username,
+                    role=user_credentials_entity.role.value,
+                    plan=user_credentials_entity.plan.value,
+                    email_verified_at=user_credentials_entity.email_verified_at,
+                    registered_at=user_credentials_entity.created_at,
+                    deleted_at=user_credentials_entity.deleted_at,
+                    version=user_credentials_entity.version,
+                ),
+            )
             await self._uow.commit()

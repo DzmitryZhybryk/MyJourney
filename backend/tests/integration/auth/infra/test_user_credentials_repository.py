@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.infra.repositories import UserCredentialsRepository
+from app.shared.infra.db.postgres.exceptions import StaleRowVersionError
 from tests.builders import make_user_credentials
 
 _VERIFIED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
@@ -194,6 +195,7 @@ async def test_update_persists_email_verified_at(
         email="uc-update@example.com",
         username="uc_update",
         email_verified_at=_VERIFIED_AT,
+        version=2,
     )
     async with session_factory() as writer:
         await UserCredentialsRepository(writer).update_user_credentials_by_user_id(verified)
@@ -204,6 +206,38 @@ async def test_update_persists_email_verified_at(
 
     assert found is not None
     assert found.email_verified_at == _VERIFIED_AT
+
+
+@pytest.mark.parametrize("stale_version", [1, 3], ids=["same-as-stored", "skips-a-version"])
+async def test_update_with_version_not_next_to_stored_raises_stale_and_keeps_row(
+    session_factory: async_sessionmaker[AsyncSession],
+    stale_version: int,
+) -> None:
+    """Версия сущности не на единицу выше записанной → ``StaleRowVersionError``, строка прежняя."""
+    user_id = uuid4()
+    async with session_factory() as writer:
+        await UserCredentialsRepository(writer).insert_user_credentials(
+            make_user_credentials(user_id=user_id, email="uc-stale@example.com", username="uc_stale"),
+        )
+        await writer.commit()
+
+    stale = make_user_credentials(
+        user_id=user_id,
+        email="uc-stale@example.com",
+        username="uc_stale",
+        email_verified_at=_VERIFIED_AT,
+        version=stale_version,
+    )
+    async with session_factory() as writer:
+        with pytest.raises(StaleRowVersionError):
+            await UserCredentialsRepository(writer).update_user_credentials_by_user_id(stale)
+
+    async with session_factory() as reader:
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
+
+    assert found is not None
+    assert found.email_verified_at is None
+    assert found.version == 1
 
 
 async def test_find_by_user_ids_returns_matching_rows_incl_deleted_and_skips_unknown(

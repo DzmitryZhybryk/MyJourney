@@ -19,6 +19,7 @@ def test_create_defaults_to_user_role_free_plan_and_unverified() -> None:
 
     assert creds.role is UserRoleEnum.USER
     assert creds.plan is UserPlanEnum.FREE
+    assert creds.version == 1
     assert not creds.is_email_verified
     assert creds.email == "user@example.com"
     assert creds.username == "user"
@@ -67,3 +68,12 @@ def test_mark_email_verified_sets_timestamp_and_marks_updated() -> None:
     assert creds.is_email_verified
     assert creds.email_verified_at is not None
     assert creds.updated_at is not None
+
+
+def test_mark_email_verified_bumps_version_by_one() -> None:
+    """`mark_email_verified` поднимает версию ровно на единицу от прочитанной."""
+    creds = make_user_credentials(email_verified_at=None, version=4)
+
+    creds.mark_email_verified()
+
+    assert creds.version == 5

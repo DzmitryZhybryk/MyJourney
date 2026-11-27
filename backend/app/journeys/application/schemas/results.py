@@ -4,7 +4,7 @@ from uuid import UUID
 from app.journeys.application.ports.journey_repository import MovementConnection
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.domain.value_objects import GeoPoint
-from app.shared.pagination import CursorPage
+from app.shared.pagination.cursor import CursorPage
 
 __all__ = [
     "JourneyDistanceResult",

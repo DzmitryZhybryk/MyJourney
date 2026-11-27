@@ -21,6 +21,7 @@ from app.shared.infra.jwt.service import JWTService
 from tests.fakes import (
     FakeAuthUnitOfWork,
     FakeEmailVerificationService,
+    FakeEventPublisher,
     FakeSaltedHasher,
     FakeTaskBus,
     FakeUsersClient,
@@ -50,6 +51,7 @@ def auth_service(
     fake_salted_hasher: FakeSaltedHasher,
     token_issuer: TokenIssuer,
     fake_email_verification_service: FakeEmailVerificationService,
+    fake_event_publisher: FakeEventPublisher,
 ) -> AuthService:
     return AuthService(
         uow=fake_uow,
@@ -57,6 +59,7 @@ def auth_service(
         salted_hasher=fake_salted_hasher,
         token_issuer=token_issuer,
         email_verification_service=fake_email_verification_service,
+        event_publisher=fake_event_publisher,
     )
 
 
@@ -70,11 +73,13 @@ def email_verification_service(
     fake_uow: FakeAuthUnitOfWork,
     secret_cipher: FernetSecretCipher,
     fake_task_bus: FakeTaskBus,
+    fake_event_publisher: FakeEventPublisher,
     email_verification_config: EmailVerificationConfig,
 ) -> EmailVerificationService:
     return EmailVerificationService(
         uow=fake_uow,
         secret_cipher=secret_cipher,
         task_bus=fake_task_bus,
+        event_publisher=fake_event_publisher,
         config=email_verification_config,
     )

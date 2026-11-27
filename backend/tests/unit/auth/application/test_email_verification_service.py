@@ -18,11 +18,13 @@ from app.auth.exceptions import (
     EmailAlreadyVerifiedError,
     VerificationCodeInvalidError,
 )
+from app.shared.events import AccountChangedEvent
 from app.shared.infra.crypto.fernet import FernetSecretCipher
 from tests.builders import make_challenge, make_user_credentials
 from tests.fakes import (
     FakeAuthUnitOfWork,
     FakeChallengeRepository,
+    FakeEventPublisher,
     FakeTaskBus,
     FakeUserCredentialsRepository,
 )
@@ -270,6 +272,73 @@ async def test_verify_marks_email_verified_on_correct_code(
     assert user_credentials_entity.is_email_verified
     assert challenge_entity.used_at is not None
     fake_uow.commit_mock.assert_awaited_once()
+
+
+async def test_verify_publishes_account_changed_with_verified_state_and_next_version(
+    email_verification_service: EmailVerificationService,
+    fake_uow: FakeAuthUnitOfWork,
+    fake_user_credentials_repository: FakeUserCredentialsRepository,
+    fake_challenge_repository: FakeChallengeRepository,
+    fake_event_publisher: FakeEventPublisher,
+    secret_cipher: FernetSecretCipher,
+) -> None:
+    """verify: в сессии UoW публикуется снимок учётной записи с датой подтверждения и версией на единицу выше."""
+    user_credentials_entity = make_user_credentials(email_verified_at=None, version=2)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
+    await fake_challenge_repository.insert_challenge(
+        make_challenge(
+            user_id=user_credentials_entity.user_id,
+            used_at=None,
+            code_ciphertext=secret_cipher.encrypt("123456"),
+        ),
+    )
+
+    await email_verification_service.verify_email(
+        user_id=user_credentials_entity.user_id,
+        command=VerifyEmailCommand(code=SecretStr("123456")),
+    )
+
+    assert fake_event_publisher.bound_session is fake_uow.session
+    assert fake_event_publisher.bound.published == [
+        AccountChangedEvent(
+            user_id=user_credentials_entity.user_id,
+            email=user_credentials_entity.email,
+            username=user_credentials_entity.username,
+            role=user_credentials_entity.role.value,
+            plan=user_credentials_entity.plan.value,
+            email_verified_at=user_credentials_entity.email_verified_at,
+            registered_at=user_credentials_entity.created_at,
+            deleted_at=None,
+            version=3,
+        ),
+    ]
+
+
+async def test_verify_wrong_code_publishes_nothing(
+    email_verification_service: EmailVerificationService,
+    fake_user_credentials_repository: FakeUserCredentialsRepository,
+    fake_challenge_repository: FakeChallengeRepository,
+    fake_event_publisher: FakeEventPublisher,
+    secret_cipher: FernetSecretCipher,
+) -> None:
+    """verify: неверный код не меняет учётную запись, поэтому событие не публикуется."""
+    user_credentials_entity = make_user_credentials(email_verified_at=None)
+    await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
+    await fake_challenge_repository.insert_challenge(
+        make_challenge(
+            user_id=user_credentials_entity.user_id,
+            used_at=None,
+            code_ciphertext=secret_cipher.encrypt("123456"),
+        ),
+    )
+
+    with pytest.raises(VerificationCodeInvalidError):
+        await email_verification_service.verify_email(
+            user_id=user_credentials_entity.user_id,
+            command=VerifyEmailCommand(code=SecretStr("000000")),
+        )
+
+    assert fake_event_publisher.bound.published == []
 
 
 async def test_verify_increments_attempts_and_raises_on_wrong_code(

@@ -2137,6 +2137,275 @@
         }
       }
     },
+    "/v1/admin/auth/account-options/": {
+      "get": {
+        "tags": [
+          "admin: auth"
+        ],
+        "summary": "Get Account Options",
+        "description": "Все роли и тарифы учётной записи в порядке объявления. Право `auth.accounts.read`.",
+        "operationId": "get_account_options",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOptionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Невалидный или истёкший access-токен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "auth.invalid_access_token",
+                  "message": "Невалидный или истёкший access-токен",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "В токене нет права на просмотр учётных записей",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "permission_required",
+                  "message": "Недостаточно прав",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/backoffice/accounts/": {
+      "get": {
+        "tags": [
+          "admin: backoffice"
+        ],
+        "summary": "List Accounts",
+        "description": "Страница списка аккаунтов под фильтром и число всех аккаунтов под ним. Право `backoffice.accounts.read`.",
+        "operationId": "list_accounts",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 254
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email"
+            }
+          },
+          {
+            "name": "displayName",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Displayname"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "marketingEmailsConsent",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marketingemailsconsent"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Includedeleted"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortDirectionEnum",
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Невалидный или истёкший access-токен",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "auth.invalid_access_token",
+                  "message": "Невалидный или истёкший access-токен",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "В токене нет права на просмотр списка аккаунтов",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "permission_required",
+                  "message": "Недостаточно прав",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "internal",
+                  "message": "Внутренняя ошибка сервера",
+                  "timestamp": "2024-01-01T12:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/media/config/": {
       "get": {
         "tags": [
@@ -2333,6 +2602,192 @@
           "isDeleted"
         ],
         "title": "AccountItem"
+      },
+      "AccountListEntry": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "emailVerifiedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emailverifiedat"
+          },
+          "registeredAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registeredat"
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedat"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "marketingEmailsConsent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketingemailsconsent"
+          },
+          "termsAcceptedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termsacceptedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "username",
+          "role",
+          "plan",
+          "emailVerifiedAt",
+          "registeredAt",
+          "deletedAt",
+          "displayName",
+          "marketingEmailsConsent",
+          "termsAcceptedAt"
+        ],
+        "title": "AccountListEntry",
+        "description": "Аккаунт в списке; пустое поле — данные учётной записи или профиля ещё не дошли до списка."
+      },
+      "AccountOptionsResponse": {
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/UserRoleEnum"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/UserPlanEnum"
+            },
+            "type": "array",
+            "title": "Plans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "roles",
+          "plans"
+        ],
+        "title": "AccountOptionsResponse",
+        "description": "Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей."
+      },
+      "AccountsListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AccountListEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "AccountsListResponse",
+        "description": "Страница списка аккаунтов и число всех аккаунтов под фильтром."
       },
       "AccountsResponse": {
         "properties": {
@@ -3254,6 +3709,14 @@
         "title": "SideAxisEnum",
         "description": "Какую сторону картинки сравнивают с минимальным размером вида.\n\n`SHORT` — для картинки, которую обрезают в квадрат: квадрат не больше короткой стороны, поэтому\n3000×400 при минимуме 512 не пройдёт. `LONG` — для картинки, которую показывают целиком: чёткость\nзадаёт длинная сторона, поэтому узкая панорама 4000×600 при минимуме 1280 пройдёт."
       },
+      "SortDirectionEnum": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ],
+        "title": "SortDirectionEnum"
+      },
       "TokenResponse": {
         "properties": {
           "accessToken": {
@@ -3371,6 +3834,24 @@
         ],
         "title": "UploadRulesResponse",
         "description": "Текущие правила загрузки: по полю на каждый вид файла."
+      },
+      "UserPlanEnum": {
+        "type": "string",
+        "enum": [
+          "free",
+          "premium"
+        ],
+        "title": "UserPlanEnum",
+        "description": "Тариф пользователя: за что он платит. Независим от роли."
+      },
+      "UserRoleEnum": {
+        "type": "string",
+        "enum": [
+          "user",
+          "admin"
+        ],
+        "title": "UserRoleEnum",
+        "description": "Роль пользователя: что ему разрешено делать в системе."
       },
       "VerifyEmailRequest": {
         "properties": {

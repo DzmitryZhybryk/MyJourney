@@ -30,7 +30,7 @@ from app.journeys.application.ports.journey_repository import (
 from app.journeys.application.ports.unit_of_work import JourneyUnitOfWorkPort
 from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
-from app.shared.pagination import CursorPage, PageQuery, decode_cursor, split_page
+from app.shared.pagination.cursor import CursorPage, CursorPageQuery, decode_cursor, split_page
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,7 +115,7 @@ class FakeJourneyRepository(JourneyRepositoryPort):
         self,
         *,
         user_id: UUID,
-        page: PageQuery,
+        page: CursorPageQuery,
         filters: JourneyFilters,
     ) -> CursorPage[JourneyEntity]:
         """Страница ленты поверх ``self.journeys``: те же фильтр, порядок и курсор, что в SQL."""

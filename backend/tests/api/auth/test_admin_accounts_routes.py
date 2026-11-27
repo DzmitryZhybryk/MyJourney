@@ -19,6 +19,7 @@ from tests.builders import make_user_credentials
 from tests.fakes import FakeUserCredentialsRepository
 
 _PATH: Final[str] = "/v1/admin/auth/accounts/"
+_OPTIONS_PATH: Final[str] = "/v1/admin/auth/account-options/"
 
 
 async def test_find_accounts_by_ids_admin_token_returns_email_and_deleted_flag(
@@ -89,3 +90,35 @@ async def test_find_accounts_by_ids_invalid_ids_returns_validation_error(
     response = await client.get(_PATH, params={"ids": ids}, headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 422
+
+
+async def test_get_account_options_admin_token_returns_roles_and_plans(
+    client: AsyncClient,
+    issue_access_token: Callable[[UserCredentialsEntity], str],
+) -> None:
+    """Админ получает все роли и тарифы значениями enum'ов в порядке объявления."""
+    token = issue_access_token(make_user_credentials(role=UserRoleEnum.ADMIN))
+
+    response = await client.get(_OPTIONS_PATH, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert response.json() == {"roles": ["user", "admin"], "plans": ["free", "premium"]}
+
+
+async def test_get_account_options_user_token_returns_permission_required(
+    client: AsyncClient,
+    issue_access_token: Callable[[UserCredentialsEntity], str],
+) -> None:
+    """403 ``permission_required`` у обычного пользователя."""
+    token = issue_access_token(make_user_credentials())
+
+    response = await client.get(_OPTIONS_PATH, headers={"Authorization": f"Bearer {token}"})
+
+    assert (response.status_code, response.json()["code"]) == (403, "permission_required")
+
+
+async def test_get_account_options_without_token_returns_unauthenticated(client: AsyncClient) -> None:
+    """401 без Bearer."""
+    response = await client.get(_OPTIONS_PATH)
+
+    assert response.status_code == 401

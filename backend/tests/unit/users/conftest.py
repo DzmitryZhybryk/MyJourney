@@ -8,9 +8,9 @@
 import pytest
 
 from app.users.application.services.user import UserService
-from tests.fakes import FakeUserUnitOfWork
+from tests.fakes import FakeEventPublisher, FakeUserUnitOfWork
 
 
 @pytest.fixture
-def user_service(fake_user_uow: FakeUserUnitOfWork) -> UserService:
-    return UserService(fake_user_uow)
+def user_service(fake_user_uow: FakeUserUnitOfWork, fake_event_publisher: FakeEventPublisher) -> UserService:
+    return UserService(uow=fake_user_uow, event_publisher=fake_event_publisher)

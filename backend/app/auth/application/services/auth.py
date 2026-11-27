@@ -13,6 +13,7 @@ from app.auth.exceptions import (
     InvalidRefreshTokenError,
     UsernameAlreadyExistError,
 )
+from app.shared.events import AccountChangedEvent, EventPublisherPort
 from app.shared.infra.crypto import SaltedHasherPort
 
 
@@ -25,12 +26,14 @@ class AuthService:
         salted_hasher: SaltedHasherPort,
         token_issuer: TokenIssuer,
         email_verification_service: EmailVerificationService,
+        event_publisher: EventPublisherPort,
     ) -> None:
         self._uow = uow
         self._users_client = users_client
         self._salted_hasher = salted_hasher
         self._token_issuer = token_issuer
         self._email_verification_service = email_verification_service
+        self._event_publisher = event_publisher
 
     async def register(
         self,
@@ -41,8 +44,8 @@ class AuthService:
         """
         Регистрирует пользователя.
 
-        Учётные данные, профиль пользователя и refresh-токен сохраняются одной транзакцией; после
-        неё запрашивается код подтверждения email.
+        Учётные данные, профиль пользователя, refresh-токен и событие об учётной записи сохраняются одной
+        транзакцией; после неё запрашивается код подтверждения email.
 
         Scenarios:
             - регистрация на странице «Создать аккаунт»
@@ -86,6 +89,19 @@ class AuthService:
                 client_metadata=client_metadata,
             )
             await self._uow.refresh_token_repository.insert_refresh_token(refresh_token_entity)
+            await self._event_publisher.bind_to(self._uow.session).publish(
+                AccountChangedEvent(
+                    user_id=user_credentials_entity.user_id,
+                    email=user_credentials_entity.email,
+                    username=user_credentials_entity.username,
+                    role=user_credentials_entity.role.value,
+                    plan=user_credentials_entity.plan.value,
+                    email_verified_at=user_credentials_entity.email_verified_at,
+                    registered_at=user_credentials_entity.created_at,
+                    deleted_at=user_credentials_entity.deleted_at,
+                    version=user_credentials_entity.version,
+                ),
+            )
             await self._uow.commit()
 
         # Вне транзакции register'а: own transaction()/commit (atomic-defer письма) — поэтому ПОСЛЕ блока.

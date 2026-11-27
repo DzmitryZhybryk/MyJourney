@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { makeAuthValue, renderWithProviders, screen } from "../test/render";
+import { makeAuthValue, renderWithProviders, screen, within } from "../test/render";
 import { AdminLayout } from "./AdminLayout";
 
 describe("AdminLayout", () => {
@@ -23,5 +23,24 @@ describe("AdminLayout", () => {
     expect(link).toHaveAttribute("href", "/admin/media-config");
     expect(link).toHaveAttribute("aria-current", "page");
     expect(await screen.findByText("media-config-section")).toBeInTheDocument();
+  });
+
+  it("правила загрузки — первый раздел меню, аккаунты — за ними", () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="accounts" element={<div>accounts-section</div>} />
+        </Route>
+      </Routes>,
+      {
+        route: "/admin/accounts",
+        authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      },
+    );
+
+    const links = within(screen.getByRole("navigation", { name: "Admin" })).getAllByRole("link");
+
+    expect(links.map((link) => link.textContent)).toEqual(["Upload rules", "Accounts"]);
+    expect(links[1]).toHaveAttribute("aria-current", "page");
   });
 });

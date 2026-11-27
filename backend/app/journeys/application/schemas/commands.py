@@ -4,7 +4,7 @@ from uuid import UUID
 from app.journeys.application.ports.journey_repository import JourneyFilters
 from app.journeys.domain.enums import TransportTypeEnum
 from app.shared.fractional_index import MovePlacementEnum
-from app.shared.pagination import PageQuery
+from app.shared.pagination.cursor import CursorPageQuery
 
 __all__ = [
     "CreateJourneyCommand",
@@ -56,7 +56,7 @@ class EstimateJourneyDistanceCommand:
 class ListJourneysCommand:
     """Какую страницу ленты поездок отдать и с каким фильтром."""
 
-    page: PageQuery
+    page: CursorPageQuery
     filters: JourneyFilters
 
 

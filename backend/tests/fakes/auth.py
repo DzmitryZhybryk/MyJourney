@@ -40,6 +40,9 @@ class FakeUserCredentialsRepository(UserCredentialsRepositoryPort):
     async def update_user_credentials_by_user_id(self, user_credentials_entity: UserCredentialsEntity) -> None:
         self.by_user_id[user_credentials_entity.user_id] = user_credentials_entity
 
+    async def find_user_credentials_by_user_id_for_update(self, user_id: UUID) -> UserCredentialsEntity | None:
+        return self.by_user_id.get(user_id)
+
     async def find_user_credentials_by_user_id(self, user_id: UUID) -> UserCredentialsEntity | None:
         return self.by_user_id.get(user_id)
 

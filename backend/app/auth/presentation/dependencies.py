@@ -13,6 +13,8 @@ from app.auth.exceptions import InvalidRefreshTokenError
 from app.auth.infra.clients.internal_users_client import InternalUsersClient
 from app.auth.infra.uow import AuthUnitOfWork
 from app.auth.presentation.cookies import read_refresh_token_cookie
+from app.shared.events import EventPublisherPort
+from app.shared.events.dependency import event_publisher_dependency
 from app.shared.infra.crypto import (
     DeterministicHasherPort,
     SaltedHasherPort,
@@ -140,12 +142,14 @@ def email_verification_service_dependency(
     uow: Annotated[AuthUnitOfWork, Depends(auth_uow_dependency)],
     secret_cipher: Annotated[SecretCipherPort, Depends(secret_cipher_dependency)],
     task_bus: Annotated[TaskBusPort, Depends(task_bus_dependency)],
+    event_publisher: Annotated[EventPublisherPort, Depends(event_publisher_dependency)],
     config: Annotated[EmailVerificationConfig, Depends(email_verification_config_dependency)],
 ) -> EmailVerificationService:
     return EmailVerificationService(
         uow=uow,
         secret_cipher=secret_cipher,
         task_bus=task_bus,
+        event_publisher=event_publisher,
         config=config,
     )
 
@@ -175,6 +179,7 @@ def auth_service_dependency(
     salted_hasher: Annotated[SaltedHasherPort, Depends(salted_hasher_dependency)],
     token_issuer: Annotated[TokenIssuer, Depends(token_issuer_dependency)],
     email_verification_service: Annotated[EmailVerificationService, Depends(email_verification_service_dependency)],
+    event_publisher: Annotated[EventPublisherPort, Depends(event_publisher_dependency)],
 ) -> AuthService:
     return AuthService(
         uow=uow,
@@ -182,4 +187,5 @@ def auth_service_dependency(
         salted_hasher=salted_hasher,
         token_issuer=token_issuer,
         email_verification_service=email_verification_service,
+        event_publisher=event_publisher,
     )

@@ -4,8 +4,9 @@ from uuid import uuid4
 import pytest
 
 from app.auth.application.schemas.commands import FindAccountsByIdsCommand
-from app.auth.application.schemas.results import Account, CurrentAccountResult
+from app.auth.application.schemas.results import Account, AccountOptionsResult, CurrentAccountResult
 from app.auth.application.services.account import AccountService
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.exceptions import AccountNotFoundError
 from tests.builders import make_user_credentials
 from tests.fakes import FakeAuthUnitOfWork, FakeUserCredentialsRepository
@@ -79,3 +80,13 @@ async def test_find_accounts_by_ids_returns_found_and_deleted_and_skips_unknown(
         }
     )
     fake_uow.commit_mock.assert_not_awaited()
+
+
+def test_get_account_options_returns_every_role_and_plan_in_declaration_order(account_service: AccountService) -> None:
+    """get_account_options отдаёт все роли и тарифы в порядке объявления enum'ов."""
+    result = account_service.get_account_options()
+
+    assert result == AccountOptionsResult(
+        roles=(UserRoleEnum.USER, UserRoleEnum.ADMIN),
+        plans=(UserPlanEnum.FREE, UserPlanEnum.PREMIUM),
+    )

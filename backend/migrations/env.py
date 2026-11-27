@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 # Импорт базового класса моделей и явная загрузка модулей с моделями,
 # чтобы все таблицы регистрировались в BaseDBModel.metadata для autogenerate.
 from app.auth.infra import models as _auth_models  # noqa: F401
+from app.backoffice.infra import models as _backoffice_models  # noqa: F401
 from app.geo.infra import models as _geo_models  # noqa: F401
 from app.journeys.infra import models as _journeys_models  # noqa: F401
 from app.media.infra import models as _media_models  # noqa: F401
@@ -31,11 +32,18 @@ config.set_main_option("sqlalchemy.url", settings.postgres_dsn)
 target_metadata = BaseDBModel.metadata
 
 _PROCRASTINATE_TABLE_PREFIX = "procrastinate_"
+_MODEL_SCHEMAS = frozenset(table.schema for table in target_metadata.tables.values())
 
 
 def include_name(name: str | None, type_: NameFilterType, parent_names: NameFilterParentNames) -> bool:
     """
-    Исключает таблицы procrastinate из сравнения, которое делает ``alembic revision --autogenerate``.
+    Ограничивает сравнение, которое делает ``alembic revision --autogenerate``, нашими схемами и моделями.
+
+    Сравниваются только схемы, в которых лежат модели из ``BaseDBModel.metadata``: с
+    ``include_schemas`` alembic видит все схемы базы и без фильтра предлагал бы удалить чужие
+    таблицы. Схему по умолчанию alembic передаёт как ``None``, и у моделей без ``schema`` она тоже ``None``.
+
+    Из оставшихся исключаются таблицы procrastinate.
 
     Autogenerate сверяет таблицы в базе с ``BaseDBModel.metadata``. Таблиц procrastinate
     (``procrastinate_jobs`` и соседних) в metadata нет: это не наши модели, их создаёт сама
@@ -47,14 +55,20 @@ def include_name(name: str | None, type_: NameFilterType, parent_names: NameFilt
     В alembic её не кладём, потому что у procrastinate нет SQL для удаления схемы, и
     ``alembic downgrade`` такой ревизии было бы нечем выполнить.
 
+    Scenarios:
+        - создание ревизии миграции по изменениям моделей
+
     Args:
         name: Имя объекта
-        type_: Тип объекта (``table``, ``column``, ``index``, …)
+        type_: Тип объекта (``schema``, ``table``, ``column``, ``index``, …)
         parent_names: Имена родительских объектов (сигнатура alembic-хука)
 
     Returns:
-        ``False`` для таблиц procrastinate, иначе ``True``
+        ``False`` для схем без наших моделей и для таблиц procrastinate, иначе ``True``
     """
+    if type_ == "schema":
+        return name in _MODEL_SCHEMAS
+
     return not (type_ == "table" and name is not None and name.startswith(_PROCRASTINATE_TABLE_PREFIX))
 
 
@@ -74,6 +88,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        include_schemas=True,
         include_name=include_name,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -88,6 +103,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
+        include_schemas=True,
         include_name=include_name,
         autogenerate_plugins=["alembic.autogenerate.*", opclass_compare.PLUGIN_NAME],
     )

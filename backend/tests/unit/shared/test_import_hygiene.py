@@ -18,6 +18,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
+import pytest
+
 # tests/unit/shared/<этот файл> → backend/
 _BACKEND_DIR: Final[Path] = Path(__file__).resolve().parents[3]
 _FRAMEWORKS: Final[tuple[str, ...]] = ("fastapi", "starlette", "sqlalchemy")
@@ -68,6 +70,8 @@ def test_application_and_domain_import_without_web_and_orm_frameworks(
     assert loaded == [], f"загружены фреймворки при импорте {len(module_names)} модулей"
 
 
+# Чистый интерпретатор грузит воркер целиком, SQLAlchemy и aiobotocore включительно: ~0,9 с против лимита unit в 1 с.
+@pytest.mark.timeout(2)
 def test_worker_imports_without_web_frameworks(tmp_path: Path) -> None:
     """Импорт точки входа воркера в чистом интерпретаторе не грузит FastAPI и Starlette."""
     assert _frameworks_loaded_by(["app.worker"], _WEB_FRAMEWORKS, tmp_path) == []

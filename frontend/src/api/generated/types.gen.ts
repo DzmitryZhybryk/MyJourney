@@ -23,6 +23,90 @@ export type AccountItem = {
 };
 
 /**
+ * AccountListEntry
+ *
+ * Аккаунт в списке; пустое поле — данные учётной записи или профиля ещё не дошли до списка.
+ */
+export type AccountListEntry = {
+  /**
+   * Userid
+   */
+  userId: string;
+  /**
+   * Email
+   */
+  email: string | null;
+  /**
+   * Username
+   */
+  username: string | null;
+  /**
+   * Role
+   */
+  role: string | null;
+  /**
+   * Plan
+   */
+  plan: string | null;
+  /**
+   * Emailverifiedat
+   */
+  emailVerifiedAt: string | null;
+  /**
+   * Registeredat
+   */
+  registeredAt: string | null;
+  /**
+   * Deletedat
+   */
+  deletedAt: string | null;
+  /**
+   * Displayname
+   */
+  displayName: string | null;
+  /**
+   * Marketingemailsconsent
+   */
+  marketingEmailsConsent: boolean | null;
+  /**
+   * Termsacceptedat
+   */
+  termsAcceptedAt: string | null;
+};
+
+/**
+ * AccountOptionsResponse
+ *
+ * Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей.
+ */
+export type AccountOptionsResponse = {
+  /**
+   * Roles
+   */
+  roles: Array<UserRoleEnum>;
+  /**
+   * Plans
+   */
+  plans: Array<UserPlanEnum>;
+};
+
+/**
+ * AccountsListResponse
+ *
+ * Страница списка аккаунтов и число всех аккаунтов под фильтром.
+ */
+export type AccountsListResponse = {
+  /**
+   * Items
+   */
+  items: Array<AccountListEntry>;
+  /**
+   * Total
+   */
+  total: number;
+};
+
+/**
  * AccountsResponse
  *
  * Найденные учётные записи; id без записи в ответе нет.
@@ -639,6 +723,11 @@ export type SavedVideoKindRules = {
 export type SideAxisEnum = 'short' | 'long';
 
 /**
+ * SortDirectionEnum
+ */
+export type SortDirectionEnum = 'asc' | 'desc';
+
+/**
  * TokenResponse
  */
 export type TokenResponse = {
@@ -722,6 +811,20 @@ export type UploadRulesResponse = {
   journeyPhoto: ImageUploadRules;
   journeyVideo: VideoUploadRules;
 };
+
+/**
+ * UserPlanEnum
+ *
+ * Тариф пользователя: за что он платит. Независим от роли.
+ */
+export type UserPlanEnum = 'free' | 'premium';
+
+/**
+ * UserRoleEnum
+ *
+ * Роль пользователя: что ему разрешено делать в системе.
+ */
+export type UserRoleEnum = 'user' | 'admin';
 
 /**
  * VerifyEmailRequest
@@ -1692,6 +1795,106 @@ export type FindAccountsByIdsResponses = {
 };
 
 export type FindAccountsByIdsResponse = FindAccountsByIdsResponses[keyof FindAccountsByIdsResponses];
+
+export type GetAccountOptionsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/v1/admin/auth/account-options/';
+};
+
+export type GetAccountOptionsErrors = {
+  /**
+   * Невалидный или истёкший access-токен
+   */
+  401: ErrorResponse;
+  /**
+   * В токене нет права на просмотр учётных записей
+   */
+  403: ErrorResponse;
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type GetAccountOptionsError = GetAccountOptionsErrors[keyof GetAccountOptionsErrors];
+
+export type GetAccountOptionsResponses = {
+  /**
+   * Successful Response
+   */
+  200: AccountOptionsResponse;
+};
+
+export type GetAccountOptionsResponse = GetAccountOptionsResponses[keyof GetAccountOptionsResponses];
+
+export type ListAccountsData = {
+  body?: never;
+  path?: never;
+  query?: {
+    /**
+     * Page
+     */
+    page?: number;
+    /**
+     * Limit
+     */
+    limit?: number;
+    /**
+     * Email
+     */
+    email?: string | null;
+    /**
+     * Displayname
+     */
+    displayName?: string | null;
+    /**
+     * Role
+     */
+    role?: string | null;
+    /**
+     * Marketingemailsconsent
+     */
+    marketingEmailsConsent?: boolean | null;
+    /**
+     * Includedeleted
+     */
+    includeDeleted?: boolean;
+    sortDirection?: SortDirectionEnum;
+  };
+  url: '/v1/admin/backoffice/accounts/';
+};
+
+export type ListAccountsErrors = {
+  /**
+   * Невалидный или истёкший access-токен
+   */
+  401: ErrorResponse;
+  /**
+   * В токене нет права на просмотр списка аккаунтов
+   */
+  403: ErrorResponse;
+  /**
+   * Ошибка валидации запроса
+   */
+  422: ErrorResponse;
+  /**
+   * Внутренняя ошибка сервера
+   */
+  500: ErrorResponse;
+};
+
+export type ListAccountsError = ListAccountsErrors[keyof ListAccountsErrors];
+
+export type ListAccountsResponses = {
+  /**
+   * Successful Response
+   */
+  200: AccountsListResponse;
+};
+
+export type ListAccountsResponse = ListAccountsResponses[keyof ListAccountsResponses];
 
 export type GetMediaConfigData = {
   body?: never;

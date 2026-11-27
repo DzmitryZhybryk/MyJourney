@@ -23,7 +23,9 @@ class UserCredentialsRepositoryPort(Protocol):
 
     async def update_user_credentials_by_user_id(self, user_credentials_entity: UserCredentialsEntity) -> None:
         """
-        Записывает изменённое состояние учётных данных.
+        Записывает изменённое состояние учётных данных, если строка в хранилище всё ещё на предыдущей версии.
+
+        Учётные данные должны быть прочитаны под блокировкой и изменены одной доменной операцией.
 
         Scenarios:
             - верный код в диалоге «Подтвердите email»
@@ -33,13 +35,28 @@ class UserCredentialsRepositoryPort(Protocol):
         """
         ...
 
+    async def find_user_credentials_by_user_id_for_update(self, user_id: UUID) -> UserCredentialsEntity | None:
+        """
+        Находит учётные данные по id пользователя и блокирует строку до конца транзакции.
+
+        Scenarios:
+            - ввод кода в диалоге «Подтвердите email»
+
+        Args:
+            user_id: Id пользователя
+
+        Returns:
+            Учётные данные; ``None``, если их нет
+        """
+        ...
+
     async def find_user_credentials_by_user_id(self, user_id: UUID) -> UserCredentialsEntity | None:
         """
         Находит учётные данные по id пользователя.
 
         Scenarios:
             - обновление сессии
-            - отправка и ввод кода в диалоге «Подтвердите email»
+            - отправка кода в диалоге «Подтвердите email»
             - данные входа текущего пользователя
 
         Args:

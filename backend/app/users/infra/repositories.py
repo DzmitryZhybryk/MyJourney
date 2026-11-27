@@ -19,18 +19,20 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
 
     async def update_user_by_id(self, user_entity: UserEntity) -> None:
         """
-        Персистит изменённое состояние пользователя через atomic UPDATE по PK.
+        Персистит изменённое состояние пользователя через atomic UPDATE по PK и предыдущей версии.
 
-        Все non-PK-поля переписываются текущим состоянием пользователя. Под ранее взятым
-        ``FOR UPDATE``-локом параллельные апдейты сериализованы.
+        Все non-PK-поля переписываются текущим состоянием пользователя. Строка пишется, только если в базе
+        всё ещё версия, с которой сущность была прочитана.
 
         Args:
             user_entity: Доменная сущность с уже обновлённым состоянием
         """
         values = self._to_columns(user_entity)
         del values["id"]
-        query = update(User).where(User.id == user_entity.user_id).values(**values)
-        await self._session.execute(query)
+        query = (
+            update(User).where(User.id == user_entity.user_id, User.version == user_entity.version - 1).values(**values)
+        )
+        await self._execute_versioned_update(query)
 
     async def find_user_by_id_for_update(self, user_id: UUID) -> UserEntity | None:
         """
@@ -71,6 +73,7 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
             display_name=user_model.display_name,
             terms_accepted_at=user_model.terms_accepted_at,
             marketing_emails_consent=user_model.marketing_emails_consent,
+            version=user_model.version,
             created_at=user_model.created_at,
             updated_at=user_model.updated_at,
             deleted_at=user_model.deleted_at,
@@ -99,6 +102,7 @@ class UserRepository(BaseDBRepository[User], UserRepositoryPort):
             "display_name": user_entity.display_name,
             "terms_accepted_at": user_entity.terms_accepted_at,
             "marketing_emails_consent": user_entity.marketing_emails_consent,
+            "version": user_entity.version,
             "created_at": user_entity.created_at,
             "updated_at": user_entity.updated_at,
             "deleted_at": user_entity.deleted_at,

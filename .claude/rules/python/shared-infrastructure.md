@@ -21,9 +21,9 @@ it — `imports.md`.
 - Hashing: passwords — `SaltedHasherPort`; a value looked up by index (refresh tokens) —
   `DeterministicHasherPort`. A secret that must be read back (one-time codes sent again) is
   encrypted with `SecretCipherPort`, not hashed.
-- Keyset pagination: an endpoint's `*Request` / `*Response` extend `CursorPaginationFields` /
-  `CursorPageFields[ItemT]`; the use case takes `PageQuery` and returns `CursorPage[ItemT]`;
-  repositories use `decode_cursor` / `split_page`.
+- Pagination: keyset (`pagination/cursor/`) for feeds, offset (`pagination/offset/`) for numbered tables with a
+  total. `<Kind>PaginationFields` / `<Kind>PageFields[ItemT]` → `<Kind>PageQuery` → `<Kind>Page[ItemT]`;
+  repositories: `decode_cursor` / `split_page` or `_fetch_offset_page`.
 - Manual row order (`fractional_index/`): the domain supplies only a frozen scope dataclass and the
   `_sort_key_scope` hook of `BaseSortKeyRepository`; the model declares its own unique index over
   scope + `sort_key`.
@@ -36,8 +36,8 @@ it — `imports.md`.
 - An entity's `updated_at` is touched through `TimestampedEntityMixin._mark_updated()`, not by
   hand-written `touch_*` / `mark_modified` methods.
 - tach sees `app.shared` as one module, so the contract/implementation split of `imports.md` is
-  guarded by `tests/unit/shared/test_import_hygiene.py`, which imports every `application`/`domain`
-  module and the worker entrypoint in a clean interpreter.
+  guarded by `tests/unit/shared/test_import_hygiene.py` (each `application`/`domain` module and the
+  worker in a clean interpreter).
 
 ## Exceptions
 

@@ -7,7 +7,9 @@ from fastapi.routing import APIRoute
 
 from app.auth.presentation.admin.routes import auth_admin_router
 from app.auth.presentation.routes import auth_router
-from app.blueprints import TASK_BLUEPRINTS
+from app.backoffice.presentation.admin.routes import backoffice_admin_router
+from app.composition.events import EVENT_SUBSCRIPTIONS
+from app.composition.tasks import TASK_BLUEPRINTS
 from app.geo.presentation.routes import geo_router
 from app.health.presentation.routes import health_router
 from app.journeys.presentation.routes import journey_router
@@ -15,6 +17,7 @@ from app.media.infra.component import MediaStorageComponent
 from app.media.presentation.admin.routes import media_admin_router
 from app.media.presentation.routes import media_router
 from app.shared.enums import AppEnvEnum
+from app.shared.events.component import EventPublisherComponent
 from app.shared.exceptions.handlers import register_exception_handlers
 from app.shared.infra.db.postgres.component import SqlAlchemyComponent
 from app.shared.infra.di.base import BaseComponent
@@ -125,6 +128,7 @@ def create_app() -> BFastAPI:
             MediaStorageComponent(settings),
             ProcrastinateComponent(settings=settings, blueprints=TASK_BLUEPRINTS),
             TaskBusComponent(),
+            EventPublisherComponent(EVENT_SUBSCRIPTIONS),
         ],
         **docs_kwargs,
     )
@@ -144,6 +148,7 @@ def create_app() -> BFastAPI:
     app.include_router(users_router, prefix="/v1/users", tags=["users"])
 
     app.include_router(auth_admin_router, prefix="/v1/admin/auth", tags=["admin: auth"])
+    app.include_router(backoffice_admin_router, prefix="/v1/admin/backoffice", tags=["admin: backoffice"])
     app.include_router(media_admin_router, prefix="/v1/admin/media", tags=["admin: media"])
 
     return app

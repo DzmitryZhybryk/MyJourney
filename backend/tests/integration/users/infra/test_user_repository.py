@@ -14,6 +14,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.shared.infra.db.postgres.exceptions import StaleRowVersionError
 from app.users.infra.models import User
 from app.users.infra.repositories import UserRepository
 from tests.builders import make_user_entity
@@ -147,6 +148,29 @@ async def test_update_user_by_id_persists_profile_changes(
     assert found.updated_at != _UPDATED_AT
     assert found.created_at == user_entity.created_at
     assert found.terms_accepted_at == _TERMS_ACCEPTED_AT
+
+
+async def test_update_user_by_id_with_entity_changed_twice_raises_stale_and_keeps_row(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Сущность изменена дважды после чтения → ``StaleRowVersionError``, в базе прежнее имя и версия."""
+    user_entity = make_user_entity(display_name="alice")
+    async with session_factory() as writer:
+        await UserRepository(writer).insert_user(user_entity)
+        await writer.commit()
+
+    user_entity.update_profile(display_name="Alice D.")
+    user_entity.update_profile(display_name="Alice Doe")
+    async with session_factory() as editor:
+        with pytest.raises(StaleRowVersionError):
+            await UserRepository(editor).update_user_by_id(user_entity)
+
+    async with session_factory() as reader:
+        found = await UserRepository(reader).find_user_by_id(user_entity.user_id)
+
+    assert found is not None
+    assert found.display_name == "alice"
+    assert found.version == 1
 
 
 async def test_update_user_by_id_leaves_other_users_untouched(

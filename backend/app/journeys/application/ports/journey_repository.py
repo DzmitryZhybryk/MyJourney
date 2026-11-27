@@ -7,7 +7,7 @@ from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.domain.value_objects import GeoPoint
 from app.shared.fractional_index import SortKeyRepositoryPort
-from app.shared.pagination import CursorPage, PageQuery
+from app.shared.pagination.cursor import CursorPage, CursorPageQuery
 
 __all__ = [
     "JourneyFilters",
@@ -176,7 +176,7 @@ class JourneyRepositoryPort(SortKeyRepositoryPort[JourneyOrderScope], Protocol):
         self,
         *,
         user_id: UUID,
-        page: PageQuery,
+        page: CursorPageQuery,
         filters: JourneyFilters,
     ) -> CursorPage[JourneyEntity]:
         """

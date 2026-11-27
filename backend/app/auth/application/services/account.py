@@ -2,7 +2,8 @@ from uuid import UUID
 
 from app.auth.application.ports.unit_of_work import AuthUnitOfWorkPort
 from app.auth.application.schemas.commands import FindAccountsByIdsCommand
-from app.auth.application.schemas.results import Account, AccountsResult, CurrentAccountResult
+from app.auth.application.schemas.results import Account, AccountOptionsResult, AccountsResult, CurrentAccountResult
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.exceptions import AccountNotFoundError
 
 
@@ -71,3 +72,17 @@ class AccountService:
                 for user_credentials_entity in user_credentials_entities
             ),
         )
+
+    def get_account_options(self) -> AccountOptionsResult:
+        """
+        Возвращает все роли и тарифы, которые может иметь учётная запись.
+
+        Хранилище не нужно: значения — члены enum'ов, поэтому транзакции нет.
+
+        Scenarios:
+            - выбор роли в фильтре списка аккаунтов в админке и подписи ролей и тарифов в нём
+
+        Returns:
+            Роли и тарифы в порядке объявления.
+        """
+        return AccountOptionsResult(roles=tuple(UserRoleEnum), plans=tuple(UserPlanEnum))

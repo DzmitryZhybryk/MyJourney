@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.shared.pagination.schemas import CursorPaginationFields
+from app.shared.pagination.cursor.schemas import CursorPaginationFields
 
 
 def test_cursor_pagination_fields_without_params_asks_first_page_of_default_size() -> None:
