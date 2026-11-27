@@ -98,7 +98,7 @@ Frontend — из `frontend/`: `make lint | typecheck | test | coverage | check 
 | `python/admin-routes.md` | админские роуты |
 | `python/tach.md` | правка `tach.toml`: связи только по образцу |
 | `python/validation.md` | где проверяется ввод |
-| `python/shared-infrastructure.md` | вертикали `shared/`, исключения, паттерны composition root, `TaskBusPort` |
+| `python/shared-infrastructure.md` | вертикали `shared/`, исключения, паттерны composition root, `TaskBusPort`, события |
 | `python/imports.md` | откуда импортировать из shared-пакета; `TYPE_CHECKING` в портах |
 | `python/component-lifecycle.md` | component+registry против `@cache`-фабрики |
 | `python/testing.md` | философия, fakes, детерминизм, reuse-before-create |

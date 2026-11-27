@@ -1,21 +1,24 @@
 """
 Интеграционные тесты ``UserCredentialsRepository`` против реального Postgres.
 
-Покрывают round-trip entity↔БД, поиск по email/username без учёта регистра и реальные
-unique-индексы по ``lower(email)`` / ``lower(username)``, которые на фейках не проверить.
+Покрывают round-trip entity↔БД, поиск по email/username без учёта регистра, реальные
+unique-индексы по ``lower(email)`` / ``lower(username)`` и уровень row-лока, которые на фейках не проверить.
 """
 
 import datetime as dt
+from collections.abc import Awaitable, Callable
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.exc import IntegrityError
+import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
-from app.auth.infra.repositories import UserCredentialsRepository
+from app.auth.domain.enums import ChallengeTypeEnum, UserPlanEnum, UserRoleEnum
+from app.auth.infra.models import UserCredentials
+from app.auth.infra.repositories import ChallengeRepository, UserCredentialsRepository
 from app.shared.infra.db.postgres.exceptions import StaleRowVersionError
-from tests.builders import make_user_credentials
+from tests.builders import make_challenge, make_user_credentials
 
 _VERIFIED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
@@ -263,3 +266,50 @@ async def test_find_by_user_ids_returns_matching_rows_incl_deleted_and_skips_unk
         (active_entity.user_id, False),
         (deleted_entity.user_id, True),
     }
+
+
+async def test_find_by_user_id_for_update_locks_row_against_second_locker(
+    session_factory: async_sessionmaker[AsyncSession],
+    seed_user_credentials: Callable[..., Awaitable[None]],
+) -> None:
+    """``find_user_credentials_by_user_id_for_update`` берёт row-лок: второй такой же под ``NOWAIT`` падает."""
+    user_id = uuid4()
+    await seed_user_credentials(user_id=user_id, email="uc-lock@example.com", username="uc_lock")
+
+    async with session_factory() as holder, session_factory() as contender:
+        locked = await UserCredentialsRepository(holder).find_user_credentials_by_user_id_for_update(user_id)
+        assert locked is not None
+
+        nowait_query = (
+            sa.select(UserCredentials)
+            .where(UserCredentials.user_id == user_id)
+            .with_for_update(key_share=True, nowait=True)
+        )
+        with pytest.raises(OperationalError):
+            await contender.execute(nowait_query)
+
+
+async def test_find_by_user_id_for_update_lets_referencing_row_insert(
+    session_factory: async_sessionmaker[AsyncSession],
+    seed_user_credentials: Callable[..., Awaitable[None]],
+) -> None:
+    """Row-лок учётки не блокирует вставку строки, ссылающейся на неё по FK (проверка FK берёт ``FOR KEY SHARE``)."""
+    user_id = uuid4()
+    await seed_user_credentials(user_id=user_id, email="uc-fk@example.com", username="uc_fk")
+
+    async with session_factory() as holder, session_factory() as contender:
+        locked = await UserCredentialsRepository(holder).find_user_credentials_by_user_id_for_update(user_id)
+        assert locked is not None
+
+        await contender.execute(sa.text("SET LOCAL lock_timeout = '2s'"))
+        await ChallengeRepository(contender).insert_challenge(make_challenge(user_id=user_id))
+        await contender.flush()
+        await contender.commit()
+
+    async with session_factory() as reader:
+        found = await ChallengeRepository(reader).find_active_challenge_for_update(
+            user_id=user_id,
+            challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
+        )
+
+    assert found is not None

@@ -59,7 +59,9 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         await self._execute_versioned_update(query)
 
     async def find_user_credentials_by_user_id_for_update(self, user_id: UUID) -> UserCredentialsEntity | None:
-        query = sa.select(UserCredentials).where(UserCredentials.user_id == user_id).with_for_update()
+        # FOR NO KEY UPDATE, не FOR UPDATE: вставка строки, ссылающейся сюда по FK, берёт FOR KEY SHARE, и
+        # FOR UPDATE её блокирует — ввод кода и его повторная отправка ждали бы друг друга (deadlock).
+        query = sa.select(UserCredentials).where(UserCredentials.user_id == user_id).with_for_update(key_share=True)
         user_credentials_model = await self._fetch_one(query)
         return self._to_entity(user_credentials_model) if user_credentials_model else None
 

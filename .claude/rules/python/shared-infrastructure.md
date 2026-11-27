@@ -8,7 +8,7 @@ paths:
 
 `shared/` is sliced by **vertical**: each technical integration is a self-contained package with its
 lifecycle, clients, protocols and helpers. Before writing DB access, an HTTP client, email,
-background tasks, JWT, hashing, pagination, manual ordering, logging, tracing or an exception base,
+background tasks, events between modules, JWT, hashing, pagination, manual ordering, logging, tracing or an exception base,
 look in `shared/` and reuse what is there. Layer rules — `layers.md`; component vs `@cache`
 factory — `component-lifecycle.md`; what a package's `__init__` exports and how to import from
 it — `imports.md`.
@@ -62,3 +62,11 @@ maps it to text:
 - Deferring a task: outside a transaction `await task_bus.defer(task_name=..., ...)`; inside one
   `task_bus.bind_to(uow.session).defer(task_name=..., ...)` before `await uow.commit()` — one
   commit fixes the writes and the job.
+- A row other tables reference by FK is locked `with_for_update(key_share=True)`: plain `FOR UPDATE`
+  blocks the FK check of an insert into the child table and deadlocks with a use case holding the child row.
+- An event between modules is published like a deferred task:
+  `event_publisher.bind_to(uow.session).publish(...)` before `commit()`. Every path that changes a
+  published field publishes it; a missed one leaves the subscriber silently stale. The entity carries
+  `VersionedEntityMixin`: read under a row lock, one `_bump_version()` per domain operation, written
+  through `_execute_versioned_update`. Subscriptions live only in `app/composition/events.py`; a
+  subscriber ignores a snapshot not newer than the one it stored.

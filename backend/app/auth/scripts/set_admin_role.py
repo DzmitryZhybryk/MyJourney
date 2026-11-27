@@ -36,7 +36,7 @@ def _set_admin_role(*, connection: psycopg.Connection, email: str) -> int:
             return 1
 
         row = connection.execute(
-            "SELECT user_id, role FROM user_credentials WHERE lower(email) = lower(%(email)s) FOR UPDATE",
+            "SELECT user_id, role FROM user_credentials WHERE lower(email) = lower(%(email)s) FOR NO KEY UPDATE",
             {"email": email},
         ).fetchone()
         if row is None:
