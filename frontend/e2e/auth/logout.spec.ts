@@ -7,7 +7,7 @@ import { getRefreshCookie, WEBKIT_SECURE_COOKIE_REASON } from "../helpers/sessio
  * Real stack: a real `POST /v1/auth/logout/` (204) clears both the server HttpOnly cookie and the
  * local token. The menu item's presence (C1) is checked indirectly by clicking it.
  */
-test.describe("Logout", () => {
+test.describe("Выход", () => {
   test("logout из меню профиля ведёт на /login и чистит сессию", async ({ authedPage, context, browserName }) => {
     test.skip(browserName === "webkit", WEBKIT_SECURE_COOKIE_REASON);
 

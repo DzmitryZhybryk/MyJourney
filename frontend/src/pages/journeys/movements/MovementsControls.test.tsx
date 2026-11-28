@@ -1,6 +1,6 @@
 import { fireEvent } from "@testing-library/react";
 import { useRef } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { stubOffsetLayout } from "../../../test/layout";
 import { renderWithProviders, screen } from "../../../test/render";
@@ -51,17 +51,12 @@ function dragHandle(from: { x: number; y: number }, to: { x: number; y: number }
 
 describe("MovementsControls: перетаскиваемая карточка", () => {
   beforeEach(() => {
-    localStorage.clear();
     stubOffsetLayout({
       "test-stage": STAGE,
       "test-panel": { left: 32, top: 100, width: 260, height: 400, parentClass: "test-stage" },
       "movements-controls": { ...CARD, parentClass: "test-stage" },
       "movements-controls__handle": { left: 218, top: 4, width: 32, height: 16, parentClass: "movements-controls" },
     });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   it("стоит в левом нижнем углу рамки: левый край — как у панели, снизу — тот же отступ", () => {

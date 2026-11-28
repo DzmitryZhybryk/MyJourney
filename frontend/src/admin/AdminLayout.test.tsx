@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { makeAuthValue, renderWithProviders, screen, within } from "../test/render";
+import { makeVerifiedAuthValue, renderWithProviders, screen, within } from "../test/render";
 import { AdminLayout } from "./AdminLayout";
 
 describe("AdminLayout", () => {
@@ -14,7 +14,7 @@ describe("AdminLayout", () => {
       </Routes>,
       {
         route: "/admin/media-config",
-        authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+        authValue: makeVerifiedAuthValue(),
       },
     );
 
@@ -34,7 +34,7 @@ describe("AdminLayout", () => {
       </Routes>,
       {
         route: "/admin/accounts",
-        authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+        authValue: makeVerifiedAuthValue(),
       },
     );
 

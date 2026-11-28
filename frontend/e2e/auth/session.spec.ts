@@ -33,7 +33,7 @@ function trackRefreshRequests(page: Page): string[] {
   return requests;
 }
 
-test.describe("Session lifecycle", () => {
+test.describe("Жизненный цикл сессии", () => {
   test("D1: reload сохраняет сессию — остаёмся на /home", async ({ authedPage }) => {
     await authedPage.reload();
 

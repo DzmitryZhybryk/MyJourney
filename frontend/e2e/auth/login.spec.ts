@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { loginViaUi, registerUser } from "../helpers/users";
 
@@ -9,7 +9,7 @@ import { loginViaUi, registerUser } from "../helpers/users";
  * depend on DB state or tie the login test to the registration UI. The email stays unverified,
  * which by contract does not block login to `/home`.
  */
-test.describe("Login", () => {
+test.describe("Вход", () => {
   test("валидный логин ведёт на дашборд и показывает меню профиля", async ({ page, request }) => {
     const { username, password } = await registerUser(request);
 

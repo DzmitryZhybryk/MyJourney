@@ -4,14 +4,16 @@ import { describe, expect, it } from "vitest";
 import { getCurrentUserQueryKey } from "../../api/sdk";
 import { AuthContext } from "../../auth/useAuth";
 import { server, TEST_CURRENT_ACCOUNT, TEST_CURRENT_USER } from "../../test/handlers";
-import { createTestQueryClient, makeAuthValue, renderWithProviders, screen, waitFor } from "../../test/render";
+import { renderProfile } from "../../test/profile";
+import {
+  createTestQueryClient,
+  makeAuthValue,
+  makeVerifiedAuthValue,
+  renderWithProviders,
+  screen,
+  waitFor,
+} from "../../test/render";
 import { ProfilePage } from "./ProfilePage";
-
-const VERIFIED = makeAuthValue({ isAuthenticated: true, emailVerified: true });
-
-function renderProfile(options: Parameters<typeof renderWithProviders>[1] = { authValue: VERIFIED }) {
-  return renderWithProviders(<ProfilePage />, { route: "/profile", ...options });
-}
 
 describe("ProfilePage — данные и имя", () => {
   it("показывает имя, логин и email; загрузка фото неактивна и помечена «Soon»", async () => {
@@ -34,7 +36,7 @@ describe("ProfilePage — данные и имя", () => {
       }),
     );
     const queryClient = createTestQueryClient();
-    const { user } = renderProfile({ authValue: VERIFIED, queryClient });
+    const { user } = renderProfile({ queryClient });
 
     await user.click(await screen.findByRole("button", { name: TEST_CURRENT_USER.displayName }));
     const input = screen.getByRole("textbox", { name: "Name" });
@@ -126,7 +128,7 @@ describe("ProfilePage — данные и имя", () => {
       }),
     );
     const queryClient = createTestQueryClient();
-    const { user } = renderProfile({ authValue: VERIFIED, queryClient });
+    const { user } = renderProfile({ queryClient });
 
     await user.click(await screen.findByRole("button", { name: TEST_CURRENT_USER.displayName }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "x{Enter}");
@@ -202,7 +204,7 @@ describe("ProfilePage — данные и имя", () => {
   it("удалённый аккаунт при сохранении перезапрашивает профиль и разлогинивает", async () => {
     const goneBody = { code: "users.user_deleted", message: "" };
     server.use(http.patch("/v1/users/me/", () => HttpResponse.json(goneBody, { status: 410 })));
-    const authValue = makeAuthValue({ isAuthenticated: true, emailVerified: true });
+    const authValue = makeVerifiedAuthValue();
     const { user } = renderProfile({ authValue });
 
     await user.click(await screen.findByRole("button", { name: TEST_CURRENT_USER.displayName }));

@@ -30,7 +30,7 @@ async function hitsGlobeAtCenter(page: Page, locator: Locator): Promise<boolean>
  * on WebGL/canvas: the host's CSS layer (framing + scrim) must work where WebGL is unavailable
  * too (a headless browser without a GPU); a canvas failure is isolated by a boundary inside the host itself.
  */
-test.describe("Persistent globe", () => {
+test.describe("Постоянный глобус", () => {
   test("грань хоста следует за маршрутом: login до входа, home после", async ({ page, request }) => {
     const { username, password } = await registerUser(request);
     const globe = page.locator(".persistent-globe");

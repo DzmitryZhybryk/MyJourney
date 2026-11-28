@@ -20,7 +20,7 @@ const BANNER_NAME = "Email verification reminder";
 const PROFILE_BUTTON_NAME = "Open profile menu";
 const DISMISS_BUTTON_NAME = "Dismiss reminder for this session";
 
-test.describe("Email verification banner", () => {
+test.describe("Баннер подтверждения email", () => {
   test("F1: после реальной регистрации (email не верифицирован) баннер виден", async ({ authedPage }) => {
     // The real backend issues a token with email_verified=false, so AuthContext raises the banner.
     await expect(authedPage.getByRole("region", { name: BANNER_NAME })).toBeVisible();

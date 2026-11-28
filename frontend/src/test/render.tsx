@@ -188,6 +188,11 @@ export function makeAuthValue(overrides: Partial<AuthContextValue> = {}): AuthCo
   };
 }
 
+/** `makeAuthValue` for a signed-in user with a verified email — the state most screens are tested in. */
+export function makeVerifiedAuthValue(overrides: Partial<AuthContextValue> = {}): AuthContextValue {
+  return makeAuthValue({ isAuthenticated: true, emailVerified: true, ...overrides });
+}
+
 /**
  * Returns a Mantine menu item by exact text. Grab all items with one `findAllByRole` and match by
  * `textContent`: more reliable and clearer than `findByRole("menuitem", { name })` for one item.

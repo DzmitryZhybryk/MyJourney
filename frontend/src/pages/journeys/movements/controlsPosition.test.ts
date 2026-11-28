@@ -1,16 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { breakStorage } from "../../../test/storage";
 import { readControlsPosition, saveControlsPosition } from "./controlsPosition";
 
 describe("controlsPosition", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("сохранённое положение переживает перечитывание", () => {
     saveControlsPosition({ left: 340, top: 520 });
 
@@ -33,12 +26,8 @@ describe("controlsPosition", () => {
   });
 
   it("недоступный localStorage не ломает карточку: читается как «не сохранено», запись молча пропускается", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("SecurityError");
-    });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("QuotaExceededError");
-    });
+    breakStorage("getItem");
+    breakStorage("setItem");
 
     expect(readControlsPosition()).toBeNull();
     expect(() => saveControlsPosition({ left: 1, top: 2 })).not.toThrow();

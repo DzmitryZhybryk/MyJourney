@@ -10,24 +10,33 @@ import { JourneysMapSceneProvider } from "../pages/journeys/map/JourneysMapScene
 import { FEED_JOURNEYS, server } from "./handlers";
 import { renderWithProviders, screen, within } from "./render";
 
-/**
- * Serves the feed in one page filtered by `yearFrom` / `yearTo` like the backend, from what
- * `journeys()` returns at request time (a test changes it after a save or a delete). Returns the
- * recorded request queries.
- */
-export function serveFeedByYears(journeys: () => readonly JourneyFeedEntry[] = () => FEED_JOURNEYS): URLSearchParams[] {
+/** Replaces the feed with `respond` and records each request's query, so the test sees which filters went out. */
+export function recordFeedRequests(
+  respond: (params: URLSearchParams) => Response | Promise<Response> = () =>
+    HttpResponse.json({ items: FEED_JOURNEYS, nextCursor: null }),
+): URLSearchParams[] {
   const requests: URLSearchParams[] = [];
   server.use(
     http.get("/v1/journeys/", ({ request }) => {
       const params = new URL(request.url).searchParams;
       requests.push(params);
-      const yearFrom = Number(params.get("yearFrom") ?? Number.NEGATIVE_INFINITY);
-      const yearTo = Number(params.get("yearTo") ?? Number.POSITIVE_INFINITY);
-      const items = journeys().filter((journey) => journey.traveledYear >= yearFrom && journey.traveledYear <= yearTo);
-      return HttpResponse.json({ items, nextCursor: null });
+      return respond(params);
     }),
   );
   return requests;
+}
+
+/**
+ * Serves the feed in one page filtered by `yearFrom` / `yearTo` like the backend, from what
+ * `journeys()` returns at request time (a test changes it after a save or a delete).
+ */
+export function serveFeedByYears(journeys: () => readonly JourneyFeedEntry[] = () => FEED_JOURNEYS): URLSearchParams[] {
+  return recordFeedRequests((params) => {
+    const yearFrom = Number(params.get("yearFrom") ?? Number.NEGATIVE_INFINITY);
+    const yearTo = Number(params.get("yearTo") ?? Number.POSITIVE_INFINITY);
+    const items = journeys().filter((journey) => journey.traveledYear >= yearFrom && journey.traveledYear <= yearTo);
+    return HttpResponse.json({ items, nextCursor: null });
+  });
 }
 
 export interface JourneysTab {

@@ -5,7 +5,7 @@ import { type AdminUpdateMediaConfigRequest, findAccountsByIdsQueryKey } from ".
 import { server, TEST_ADMIN_ACCOUNT, TEST_MEDIA_CONFIG } from "../../test/handlers";
 import {
   createTestQueryClient,
-  makeAuthValue,
+  makeVerifiedAuthValue,
   renderWithProviders,
   screen,
   waitFor,
@@ -17,7 +17,7 @@ const MEGABYTE = 1024 * 1024;
 
 function renderPage(queryClient = createTestQueryClient()) {
   return renderWithProviders(<MediaConfigPage />, {
-    authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+    authValue: makeVerifiedAuthValue(),
     queryClient,
   });
 }

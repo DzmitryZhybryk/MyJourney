@@ -2,18 +2,11 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { server, TEST_CURRENT_USER } from "../../test/handlers";
-import { makeAuthValue, renderWithProviders, screen } from "../../test/render";
-import { ProfilePage } from "./ProfilePage";
+import { renderProfile } from "../../test/profile";
+import { screen } from "../../test/render";
 
 // Mantine wraps the label and the description in one <label>, so the name starts with the label.
 const CONSENT_LABEL = /^Product updates and news by email/u;
-
-function renderProfile() {
-  return renderWithProviders(<ProfilePage />, {
-    route: "/profile",
-    authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
-  });
-}
 
 describe("ProfilePage — согласие на рассылку", () => {
   it("переключатель показывает сохранённое согласие", async () => {

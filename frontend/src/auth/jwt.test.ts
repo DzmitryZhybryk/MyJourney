@@ -1,19 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { base64Url, makeToken } from "../test/handlers";
 import { decodeAccessTokenClaims } from "./jwt";
-
-/** Encodes a string as base64url (like a JWT payload segment: `+/` -> `-_`, no padding). */
-function base64Url(value: string): string {
-  return btoa(value)
-    .replace(/\+/gu, "-")
-    .replace(/\//gu, "_")
-    .replace(/=+$/u, "");
-}
-
-/** Builds a "token" `header.<payload>.signature` with an arbitrary payload (the signature is not checked). */
-function makeToken(payload: Record<string, unknown>): string {
-  return `header.${base64Url(JSON.stringify(payload))}.signature`;
-}
 
 describe("decodeAccessTokenClaims", () => {
   it("декодирует валидный access-токен в claims, без роли — обычный пользователь", () => {

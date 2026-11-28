@@ -19,6 +19,9 @@ mock only the I/O boundary. Commands run from `frontend/`.
 - The only mocked boundary is the network: `fetch` through `vi.stubGlobal` in unit tests, **MSW**
   in component tests. Never mock `appFetch` or other internal modules. Everything below the network
   (token store, jwt decode, error mapping, zod) runs real.
+- One exception: a component jsdom cannot run (WebGL — `GlobeCanvas`) is replaced in its parents'
+  tests by a stub exposing the props it gets as `data-*` attributes; its own test mocks the
+  third-party renderer (`react-globe.gl`) instead.
 - Query like a user: `getByRole` / `getByLabelText` / `findByText`, not `data-testid` or CSS classes.
 - `vi.fn()` spies only for side-effect collaborators whose *call* is the behaviour under test
   (`form.setFieldError`, an emitted event listener). Prefer observing resulting state.
@@ -30,9 +33,10 @@ mock only the I/O boundary. Commands run from `frontend/`.
 - **Opaque values** (tokens, ids): assert the invariant (`Authorization` equals
   `Bearer ${theTokenWeStored}`), never a predicted value.
 - **Module-level state is the main hazard.** `client.ts` (`pendingRefresh`), `tokenStore` and `events`
-  hold state on the module. Reset in `beforeEach`: `clearAccessToken()`, `sessionStorage.clear()`,
-  `vi.unstubAllGlobals()`, and `vi.resetModules()` when a fresh instance is needed. No test depends
-  on another's leftovers.
+  hold state on the module. `src/test/setup.ts` resets after every test the access token, both
+  storages, stubbed globals, spies and MSW handlers; a test file resets only what it adds beyond
+  them — fake timers (`vi.useRealTimers()`), a polyfill it installed, the i18n language, a fresh
+  module (`vi.resetModules()`). No test depends on another's leftovers.
 - **Controlling async** (single-flight refresh): a deferred promise, a `fetch` stub resolved by hand,
   so two callers are provably in flight together; then assert `fetch` was called once.
 
@@ -61,7 +65,6 @@ rg -n "vi\.stubGlobal|http\.(get|post)" src
   when the DOM updates after an await.
 - Explicit options everywhere, including `getByRole("button", { name: "Sign in" })`.
 - No `any` in tests; oxlint applies to test files like production code.
-- Reset in `beforeEach`, clean up in `afterEach` (`vi.unstubAllGlobals()`, `vi.restoreAllMocks()`).
 - A heavy component's tests split by scenario, `<Module>.<topic>.test.tsx`: Vitest runs files in
   parallel but tests inside one file in sequence, so one slow file sets the wall time. Shared helpers
   for such files live in `src/test/`.

@@ -6,7 +6,7 @@ import { expect, test } from "../fixtures";
  * Real stack: `PATCH /v1/users/me/` writes the change; a reload reads it back from the database, so
  * the checks prove persistence, not only the client cache.
  */
-test.describe("Profile", () => {
+test.describe("Профиль", () => {
   test("переименование видно на странице, в меню шапки и в приветствии после перезагрузки", async ({
     authedPage,
   }) => {

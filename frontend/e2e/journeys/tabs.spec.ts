@@ -16,7 +16,7 @@ import { getStoredAccessToken } from "../helpers/session";
 const MAP = ".journeys-map";
 const MAP_TAG = "e2eSameMap";
 
-test.describe("Journeys tabs", () => {
+test.describe("Вкладки поездок", () => {
   test("вкладки переключаются по одной и той же карте, «Добавить» её прячет, возврат показывает", async ({
     authedPage,
     request,

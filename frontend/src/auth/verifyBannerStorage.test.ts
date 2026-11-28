@@ -1,18 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { breakStorage } from "../test/storage";
 import { dismissVerifyBanner, isVerifyBannerDismissed, resetVerifyBannerDismissed } from "./verifyBannerStorage";
 
 const DISMISS_STORAGE_KEY = "verify-banner-dismissed";
 
 describe("verifyBannerStorage", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("по умолчанию плашка не скрыта", () => {
     expect(isVerifyBannerDismissed()).toBe(false);
   });
@@ -32,17 +25,13 @@ describe("verifyBannerStorage", () => {
   });
 
   it("возвращает false, когда чтение из sessionStorage бросает", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("storage disabled");
-    });
+    breakStorage("getItem");
 
     expect(isVerifyBannerDismissed()).toBe(false);
   });
 
   it("не бросает, когда запись в sessionStorage недоступна", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("storage disabled");
-    });
+    breakStorage("setItem");
 
     expect(() => dismissVerifyBanner()).not.toThrow();
   });

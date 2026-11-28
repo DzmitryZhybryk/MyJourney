@@ -1,19 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { breakStorage } from "../test/storage";
 import { clearAccessToken, getAccessToken, setAccessToken, subscribeAccessToken } from "./tokenStore";
 
 const STORAGE_KEY = "access_token";
 
 describe("tokenStore", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-    clearAccessToken();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("setAccessToken сохраняет токен в память и sessionStorage", () => {
     setAccessToken("tok");
 
@@ -61,9 +53,7 @@ describe("tokenStore", () => {
   });
 
   it("держит токен в памяти, даже если запись в sessionStorage упала", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("storage disabled");
-    });
+    breakStorage("setItem");
 
     expect(() => setAccessToken("tok")).not.toThrow();
     expect(getAccessToken()).toBe("tok");
@@ -79,9 +69,7 @@ describe("tokenStore", () => {
   });
 
   it("при инициализации возвращает null, если sessionStorage бросает", async () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("storage disabled");
-    });
+    breakStorage("getItem");
     vi.resetModules();
 
     const freshModule = await import("./tokenStore");
