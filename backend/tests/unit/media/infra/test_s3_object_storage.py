@@ -1,5 +1,6 @@
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -18,7 +19,7 @@ from app.media.exceptions import (
 from app.media.infra.s3_object_storage import S3ObjectStorage
 from tests.fakes import FakeS3ResponseStream
 
-_STORAGE_CALLS: list[tuple[str, Callable[[S3ObjectStorage], Awaitable[object]]]] = [
+_STORAGE_CALLS: Final[list[tuple[str, Callable[[S3ObjectStorage], Awaitable[object]]]]] = [
     ("head_object", lambda storage: storage.head_object("u1/f1/original.jpg")),
     ("get_object", lambda storage: storage.get_object(key="u1/f1/original.jpg", max_bytes=100)),
     (

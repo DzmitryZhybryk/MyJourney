@@ -1,3 +1,5 @@
+from typing import Final
+
 import pytest
 
 from app.auth.application.config import EmailVerificationConfig
@@ -17,7 +19,7 @@ from tests.fakes import (
     FakeUsersClient,
 )
 
-_REFRESH_TOKEN_TTL_DAYS = 30
+_REFRESH_TOKEN_TTL_DAYS: Final[int] = 30
 
 
 @pytest.fixture

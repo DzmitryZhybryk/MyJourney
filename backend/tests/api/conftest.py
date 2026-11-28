@@ -1,6 +1,6 @@
 import datetime as dt
 from collections.abc import AsyncIterator, Callable
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 import pytest
@@ -17,7 +17,7 @@ from app.shared.schemas.base import BFastAPI
 from app.shared.types import DictStrAny
 from tests.builders import make_refresh_token
 
-_BASE_URL = "http://testserver"
+_BASE_URL: Final[str] = "http://testserver"
 
 
 @pytest.fixture

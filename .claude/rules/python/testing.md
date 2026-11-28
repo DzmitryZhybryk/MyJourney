@@ -63,7 +63,7 @@ Read only the matching definitions, then reuse by name.
   the imports. When a second file needs it, it moves: data to `tests/builders.py`, anything that takes
   a fixture to a fixture in the narrowest shared conftest.
 - Values several files share — ids, reference points, a format's header — are public constants in
-  `tests/builders.py`; a file's own constants are `_UPPER_SNAKE`.
+  `tests/builders.py`; a file's own constants are `_UPPER_SNAKE`. Both are annotated `Final[T]`.
 
 ## Conventions
 

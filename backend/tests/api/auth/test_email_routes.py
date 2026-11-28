@@ -1,6 +1,7 @@
 import datetime as dt
 import math
 from collections.abc import Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -15,8 +16,8 @@ from tests.fakes import (
     FakeUserCredentialsRepository,
 )
 
-_SEND_VERIFICATION_URL = "/v1/auth/email/send-verification/"
-_VERIFY_URL = "/v1/auth/email/verify/"
+_SEND_VERIFICATION_URL: Final[str] = "/v1/auth/email/send-verification/"
+_VERIFY_URL: Final[str] = "/v1/auth/email/verify/"
 
 
 # --- send-verification -------------------------------------------------------

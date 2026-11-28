@@ -10,7 +10,7 @@
 обёртке поверх BaseComponent — здесь её намеренно нет, чтобы не смешивать роли.
 """
 
-from datetime import UTC, datetime, timedelta
+import datetime as dt
 from email.utils import parsedate_to_datetime
 from http import HTTPMethod, HTTPStatus
 from typing import Any, ClassVar
@@ -111,7 +111,7 @@ class BaseHTTPClient:
             body=body,
         )
 
-    def _retry_after(self, response: httpx.Response) -> timedelta | None:
+    def _retry_after(self, response: httpx.Response) -> dt.timedelta | None:
         """
         Достаёт из ответа с временной ошибкой срок, через который провайдер просит повторить.
 
@@ -124,7 +124,7 @@ class BaseHTTPClient:
         Returns:
             Срок до повтора или `None`, если провайдер его не сообщил
         """
-        return self._parse_retry_after(value=response.headers.get("Retry-After"), now=datetime.now(tz=UTC))
+        return self._parse_retry_after(value=response.headers.get("Retry-After"), now=dt.datetime.now(tz=dt.UTC))
 
     @classmethod
     def _is_temporary_status(cls, status_code: int) -> bool:
@@ -151,7 +151,7 @@ class BaseHTTPClient:
         return None
 
     @staticmethod
-    def _parse_retry_after(*, value: str | None, now: datetime) -> timedelta | None:
+    def _parse_retry_after(*, value: str | None, now: dt.datetime) -> dt.timedelta | None:
         """
         Разбирает значение в формате `Retry-After`: число секунд или HTTP-дата.
 
@@ -175,7 +175,7 @@ class BaseHTTPClient:
         value = value.strip()
         if value.isascii() and value.isdigit():
             try:
-                return timedelta(seconds=int(value))
+                return dt.timedelta(seconds=int(value))
             except OverflowError, ValueError:
                 return None
 
@@ -185,6 +185,6 @@ class BaseHTTPClient:
             return None
 
         if retry_at.tzinfo is None:
-            retry_at = retry_at.replace(tzinfo=UTC)
+            retry_at = retry_at.replace(tzinfo=dt.UTC)
 
-        return max(retry_at - now, timedelta(0))
+        return max(retry_at - now, dt.timedelta(0))

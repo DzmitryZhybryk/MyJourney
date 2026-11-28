@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import UUID, uuid4
 
 import pytest
@@ -33,7 +34,7 @@ from app.shared.pagination.cursor import CursorPageQuery
 from tests.builders import LONDON_CITY_ID, LONDON_POINT, MOSCOW_CITY_ID, MOSCOW_POINT, make_geo_point, make_journey
 from tests.fakes import FakeCitiesClient, FakeJourneyRepository, FakeJourneyUnitOfWork, MovementConnectionQuery
 
-_DELETED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
 
 async def test_create_journey_snapshots_cities_and_commits(

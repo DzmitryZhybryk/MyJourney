@@ -5,7 +5,7 @@
 (500). Статус ответа провайдера в наш ответ не попадает — 404 от внешнего API не становится нашим 404.
 """
 
-from datetime import timedelta
+import datetime as dt
 
 from app.shared.exceptions import AppError, InternalError, TemporaryError
 
@@ -50,7 +50,7 @@ class ExternalAPITemporaryError(ExternalAPIError, TemporaryError):
         status: int | None,
         message: str,
         body: object | None = None,
-        retry_after: timedelta | None = None,
+        retry_after: dt.timedelta | None = None,
     ) -> None:
         super().__init__(method=method, url=url, status=status, message=message, body=body)
         # Конструктор ExternalAPIError передаёт по MRO в TemporaryError только message, поэтому срок ставится здесь.

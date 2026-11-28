@@ -3,10 +3,12 @@
 нужны его иконка, визуал маршрута и подписи.
 """
 
+from typing import Final
+
 from app.journeys.presentation.routes import journey_router
 from app.shared.schemas.base import BFastAPI
 
-_EXPECTED_TRANSPORT_TYPES = {"land", "air", "water"}
+_EXPECTED_TRANSPORT_TYPES: Final[frozenset[str]] = frozenset({"land", "air", "water"})
 
 
 def test_openapi_publishes_expected_transport_types(api_app: BFastAPI) -> None:

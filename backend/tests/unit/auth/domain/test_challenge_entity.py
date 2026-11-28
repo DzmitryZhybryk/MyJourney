@@ -1,5 +1,6 @@
 import datetime as dt
 import math
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -13,9 +14,9 @@ from app.auth.exceptions import (
 )
 from tests.builders import make_challenge
 
-_MAX_ATTEMPTS = 5
-_RESEND_COOLDOWN_SECONDS = 60
-_TTL_MINUTES = 15
+_MAX_ATTEMPTS: Final[int] = 5
+_RESEND_COOLDOWN_SECONDS: Final[int] = 60
+_TTL_MINUTES: Final[int] = 15
 
 
 def test_generate_code_is_six_digits() -> None:

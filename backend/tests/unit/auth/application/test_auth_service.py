@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -27,7 +28,7 @@ from tests.fakes import (
     FakeUsersClient,
 )
 
-_CLIENT_METADATA = ClientMetadata(ip_address="1.2.3.4", user_agent="UA")
+_CLIENT_METADATA: Final[ClientMetadata] = ClientMetadata(ip_address="1.2.3.4", user_agent="UA")
 
 
 # --- register ---------------------------------------------------------------

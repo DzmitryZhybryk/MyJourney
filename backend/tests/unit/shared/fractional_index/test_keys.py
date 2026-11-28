@@ -1,5 +1,6 @@
 import random
 import re
+from typing import Final
 
 import pytest
 
@@ -7,9 +8,9 @@ from app.shared.fractional_index import generate_key_between
 from app.shared.fractional_index.exceptions import FractionalBoundsOrderError, InvalidFractionalKeyError
 
 # Форма корректного ключа: цифры base-62, последняя — не «0».
-_KEY_FORM = re.compile(r"[0-9A-Za-z]*[1-9A-Za-z]")
-_SEED = 20261003
-_INSERTIONS = 500
+_KEY_FORM: Final[re.Pattern[str]] = re.compile(r"[0-9A-Za-z]*[1-9A-Za-z]")
+_SEED: Final[int] = 20261003
+_INSERTIONS: Final[int] = 500
 
 
 def test_generate_key_between_empty_list_returns_valid_key() -> None:

@@ -1,5 +1,6 @@
 import json
 from collections.abc import Callable
+from typing import Final
 
 import httpx
 import pytest
@@ -8,8 +9,8 @@ from app.shared.infra.email.resend_client import ResendClient
 from app.shared.infra.email.schemas import EmailMessage
 from app.shared.infra.http.exceptions import ExternalAPIPersistentError
 
-_BASE_URL = "https://api.resend.test"
-_FROM = "noreply@app.test"
+_BASE_URL: Final[str] = "https://api.resend.test"
+_FROM: Final[str] = "noreply@app.test"
 
 type _InstallTransport = Callable[[Callable[[httpx.Request], httpx.Response]], None]
 

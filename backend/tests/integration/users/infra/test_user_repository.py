@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -11,9 +12,9 @@ from app.users.infra.models import User
 from app.users.infra.repositories import UserRepository
 from tests.builders import make_user_entity
 
-_TERMS_ACCEPTED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
-_UPDATED_AT = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
-_DELETED_AT = dt.datetime(2026, 1, 3, tzinfo=dt.UTC)
+_TERMS_ACCEPTED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+_UPDATED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 3, tzinfo=dt.UTC)
 
 
 async def test_insert_then_find_user_by_id_roundtrip(

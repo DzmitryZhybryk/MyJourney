@@ -1,6 +1,6 @@
 import datetime as dt
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Final
 from uuid import uuid4
 
 import pytest
@@ -29,20 +29,20 @@ from tests.fakes import (
     MovementConnectionQuery,
 )
 
-_CREATE_PATH = "/v1/journeys/"
-_MAP_PATH = "/v1/journeys/map/"
-_GLOBE_PATH = "/v1/journeys/globe/"
-_MOVEMENTS_PATH = "/v1/journeys/movements/"
-_FEED_PATH = "/v1/journeys/"
-_YEARS_PATH = "/v1/journeys/years/"
-_DISTANCE_PATH = "/v1/journeys/distance/"
-_ROUTE = {"originCityId": str(MOSCOW_CITY_ID), "destinationCityId": str(LONDON_CITY_ID)}
-_VALID_BODY: dict[str, Any] = {
+_CREATE_PATH: Final[str] = "/v1/journeys/"
+_MAP_PATH: Final[str] = "/v1/journeys/map/"
+_GLOBE_PATH: Final[str] = "/v1/journeys/globe/"
+_MOVEMENTS_PATH: Final[str] = "/v1/journeys/movements/"
+_FEED_PATH: Final[str] = "/v1/journeys/"
+_YEARS_PATH: Final[str] = "/v1/journeys/years/"
+_DISTANCE_PATH: Final[str] = "/v1/journeys/distance/"
+_ROUTE: Final[dict[str, str]] = {"originCityId": str(MOSCOW_CITY_ID), "destinationCityId": str(LONDON_CITY_ID)}
+_VALID_BODY: Final[dict[str, Any]] = {
     **_ROUTE,
     "transportType": "air",
     "traveledYear": 2020,
 }
-_CURRENT_YEAR = dt.datetime.now(tz=dt.UTC).year
+_CURRENT_YEAR: Final[int] = dt.datetime.now(tz=dt.UTC).year
 
 
 async def test_create_journey_returns_201_and_persists(

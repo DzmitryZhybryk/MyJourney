@@ -1,5 +1,6 @@
 import datetime as dt
 import math
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -29,7 +30,7 @@ from tests.fakes import (
     FakeUserCredentialsRepository,
 )
 
-_VERIFICATION_CODE_LENGTH = 6
+_VERIFICATION_CODE_LENGTH: Final[int] = 6
 
 
 # --- request_email_verification --------------------------------------------

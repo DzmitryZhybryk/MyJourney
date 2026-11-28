@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Final
 
 import pytest
 import structlog
@@ -13,7 +13,7 @@ from procrastinate.jobs import Job
 from app.shared.types import DictStrAny
 from tests.builders import make_job
 
-_UVICORN_LOGGER_NAMES = ("uvicorn", "uvicorn.error", "uvicorn.access")
+_UVICORN_LOGGER_NAMES: Final[tuple[str, ...]] = ("uvicorn", "uvicorn.error", "uvicorn.access")
 
 
 @dataclass(frozen=True, slots=True)

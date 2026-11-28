@@ -1,13 +1,14 @@
 """``make_http_client()`` зовётся после ``install_mock_transport(handler)``: тот подменяет конструктор клиента httpx."""
 
 from collections.abc import AsyncIterator, Callable
+from typing import Final
 
 import pytest
 
 from app.shared.infra.http.client import BaseHTTPClient
 from app.shared.infra.http.config import HTTPClientConfig
 
-_BASE_URL = "https://api.example.test"
+_BASE_URL: Final[str] = "https://api.example.test"
 
 
 @pytest.fixture

@@ -138,6 +138,12 @@ ignore = [
 
 "migrations/versions/*" = []
 
+[tool.ruff.lint.flake8-import-conventions]
+banned-from = ["datetime"]
+
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
+datetime = "dt"
+
 [tool.ruff.lint.pep8-naming]
 # Allow Pydantic's `@validator` decorator to trigger class method treatment.
 # https://github.com/astral-sh/ruff/issues/2868

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from httpx import AsyncClient
 from pydantic import BaseModel, Field
+from structlog.testing import capture_logs
 from structlog.typing import Processor
 
 from app.shared.exceptions import InternalError, InvalidInputError, NotFoundError, TemporaryError
@@ -92,8 +93,11 @@ async def error_contract_client(
     async def _field_error() -> JSONResponse:
         raise InvalidInputError(details={"field": "password"})
 
-    async with make_async_client(middleware_app) as client:
-        yield client
+    # Without the capture the request line goes to the console renderer, which prints the traceback of an
+    # unhandled error with every local and alone takes more than the per-test time cap.
+    with capture_logs():
+        async with make_async_client(middleware_app) as client:
+            yield client
 
 
 @pytest.fixture

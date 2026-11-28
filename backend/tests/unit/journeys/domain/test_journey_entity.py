@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -8,7 +9,7 @@ from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.exceptions import JourneyNotFoundError
 from tests.builders import LONDON_POINT, MOSCOW_POINT, make_geo_point, make_journey
 
-_DELETED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
 
 def test_create_assigns_fields_and_mints_id() -> None:

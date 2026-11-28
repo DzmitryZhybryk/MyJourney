@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import UUID
 
 import pytest
@@ -9,8 +10,8 @@ from app.shared.enums import SortDirectionEnum
 from app.shared.pagination.offset import OffsetPageQuery
 from tests.builders import make_account_auth_part, make_account_filters, make_account_profile_part
 
-_FIRST_PAGE = OffsetPageQuery(page=1, limit=20)
-_DELETED_AT = dt.datetime(2026, 3, 1, tzinfo=dt.UTC)
+_FIRST_PAGE: Final[OffsetPageQuery] = OffsetPageQuery(page=1, limit=20)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2026, 3, 1, tzinfo=dt.UTC)
 
 
 async def test_upsert_auth_part_into_empty_table_leaves_profile_columns_empty(

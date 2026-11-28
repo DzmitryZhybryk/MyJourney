@@ -1,4 +1,5 @@
 from collections import Counter
+from typing import Final
 
 import pytest
 
@@ -7,7 +8,7 @@ from app.shared.types import DictStrAny
 from devtools.geo_datasets.wikidata_places.places import ExportedPlace, ExportOutcomeEnum, collect_places
 
 # WKT в ответе Wikidata: сначала долгота, потом широта.
-_TIAN_SHAN: DictStrAny = {
+_TIAN_SHAN: Final[DictStrAny] = {
     "item": {"value": "http://www.wikidata.org/entity/Q5474"},
     "links": {"value": "99"},
     "coord": {"value": "Point(80.13 42.04)"},
@@ -15,7 +16,7 @@ _TIAN_SHAN: DictStrAny = {
     "ru": {"value": "Тянь-Шань"},
     "iso": {"value": "KZ"},
 }
-_BELUKHA: DictStrAny = {
+_BELUKHA: Final[DictStrAny] = {
     "item": {"value": "http://www.wikidata.org/entity/Q724367"},
     "links": {"value": "52"},
     "coord": {"value": "Point(86.59 49.81)"},

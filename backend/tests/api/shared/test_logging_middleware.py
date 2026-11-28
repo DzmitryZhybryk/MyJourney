@@ -1,5 +1,6 @@
 import re
 from collections.abc import Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -14,7 +15,7 @@ from app.shared.schemas.base import BFastAPI
 
 type MakeAsyncClient = Callable[[BFastAPI], AsyncClient]
 
-_REQUEST_EVENT = "http.request"
+_REQUEST_EVENT: Final[str] = "http.request"
 
 
 async def test_success_logs_info_with_full_route_template_and_trace_id(

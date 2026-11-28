@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+from typing import Final
 from uuid import UUID, uuid4
 
 from procrastinate import App, JobContext
@@ -25,15 +26,21 @@ from app.shared.types import DictStrAny
 from app.users.domain.entities import UserEntity
 
 # Опорные координаты для детерминированных journeys/geo тестов (Москва→Лондон ≈ 2500 км).
-_MOSCOW_LAT, _MOSCOW_LNG = 55.75, 37.62
-_LONDON_LAT, _LONDON_LNG = 51.5, -0.12
-MOSCOW_CITY_ID = UUID("00000000-0000-0000-0000-000000000001")
-LONDON_CITY_ID = UUID("00000000-0000-0000-0000-000000000002")
-ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000ad")
-MOSCOW_POINT = GeoPoint(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=_MOSCOW_LAT, longitude=_MOSCOW_LNG)
-LONDON_POINT = GeoPoint(city_id=LONDON_CITY_ID, country_code="GB", latitude=_LONDON_LAT, longitude=_LONDON_LNG)
-CITY_CSV_HEADER = "external_id,name_en,name_ru,country_code,latitude,longitude,population"
-PLACE_CSV_HEADER = "external_id,kind,name_en,name_ru,country_codes,latitude,longitude,notability"
+_MOSCOW_LAT: Final[float] = 55.75
+_MOSCOW_LNG: Final[float] = 37.62
+_LONDON_LAT: Final[float] = 51.5
+_LONDON_LNG: Final[float] = -0.12
+MOSCOW_CITY_ID: Final[UUID] = UUID("00000000-0000-0000-0000-000000000001")
+LONDON_CITY_ID: Final[UUID] = UUID("00000000-0000-0000-0000-000000000002")
+ADMIN_ID: Final[UUID] = UUID("00000000-0000-0000-0000-0000000000ad")
+MOSCOW_POINT: Final[GeoPoint] = GeoPoint(
+    city_id=MOSCOW_CITY_ID, country_code="RU", latitude=_MOSCOW_LAT, longitude=_MOSCOW_LNG
+)
+LONDON_POINT: Final[GeoPoint] = GeoPoint(
+    city_id=LONDON_CITY_ID, country_code="GB", latitude=_LONDON_LAT, longitude=_LONDON_LNG
+)
+CITY_CSV_HEADER: Final[str] = "external_id,name_en,name_ru,country_code,latitude,longitude,population"
+PLACE_CSV_HEADER: Final[str] = "external_id,kind,name_en,name_ru,country_codes,latitude,longitude,notability"
 
 
 def make_password(hash: str = "argon2-hash") -> Password:

@@ -1,5 +1,6 @@
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -12,9 +13,9 @@ from app.auth.infra.models import Challenge
 from app.auth.infra.repositories import ChallengeRepository
 from tests.builders import make_challenge
 
-_EXPIRES_AT = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
-_LAST_SENT_AT = dt.datetime(2029, 12, 31, 23, 45, tzinfo=dt.UTC)
-_USED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
+_EXPIRES_AT: Final[dt.datetime] = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
+_LAST_SENT_AT: Final[dt.datetime] = dt.datetime(2029, 12, 31, 23, 45, tzinfo=dt.UTC)
+_USED_AT: Final[dt.datetime] = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
 
 async def test_insert_then_find_active_challenge_for_update_roundtrip(

@@ -1,5 +1,7 @@
 """Транзакционную модель проверяет ``integration/shared/infra/db/postgres/test_uow.py``; здесь — проводка UoW."""
 
+from typing import Final
+
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -7,7 +9,7 @@ from app.media.infra.models import MediaConfigVersion
 from app.media.infra.uow import MediaUnitOfWork
 from tests.builders import make_media_config_snapshot
 
-_COUNT_CONFIG_VERSIONS = sa.select(sa.func.count()).select_from(MediaConfigVersion)
+_COUNT_CONFIG_VERSIONS: Final[sa.Select[int]] = sa.select(sa.func.count()).select_from(MediaConfigVersion)
 
 
 async def test_media_config_repository_write_is_persisted_by_uow_commit(

@@ -1,5 +1,6 @@
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,7 @@ from app.auth.infra.repositories import ChallengeRepository, UserCredentialsRepo
 from app.shared.infra.db.postgres.exceptions import StaleRowVersionError
 from tests.builders import make_challenge, make_user_credentials
 
-_VERIFIED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
+_VERIFIED_AT: Final[dt.datetime] = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
 
 async def test_insert_then_find_user_credentials_by_user_id_roundtrip(

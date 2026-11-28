@@ -7,6 +7,7 @@
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -16,10 +17,10 @@ from app.users.application.services.user import UserService
 from tests.fakes import FakeEventPublisher, FakeGeoUnitOfWork, FakeUserUnitOfWork
 
 # tests/unit/<этот файл> → backend/
-_BACKEND_DIR = Path(__file__).resolve().parents[2]
-_JWT_SECRET = "unit-test-secret-at-least-32-bytes-long"
-_JWT_ALGORITHM = "HS256"
-_ACCESS_TOKEN_EXPIRE_MINUTES = 15
+_BACKEND_DIR: Final[Path] = Path(__file__).resolve().parents[2]
+_JWT_SECRET: Final[str] = "unit-test-secret-at-least-32-bytes-long"
+_JWT_ALGORITHM: Final[str] = "HS256"
+_ACCESS_TOKEN_EXPIRE_MINUTES: Final[int] = 15
 
 
 @pytest.fixture

@@ -2,11 +2,14 @@ import csv
 import gzip
 import hashlib
 from pathlib import Path
+from typing import Final
 
 from devtools.geo_datasets.writer import write_dataset_file
 
-_FIELDNAMES = ("external_id", "name_en", "name_ru")
-_ROWS = ({"external_id": "Wikidata:Q724367", "name_en": "Belukha", "name_ru": "Белуха"},)
+_FIELDNAMES: Final[tuple[str, ...]] = ("external_id", "name_en", "name_ru")
+_ROWS: Final[tuple[dict[str, str], ...]] = (
+    {"external_id": "Wikidata:Q724367", "name_en": "Belukha", "name_ru": "Белуха"},
+)
 
 
 def test_write_dataset_file_writes_gzipped_csv_and_returns_its_sha256(tmp_path: Path) -> None:

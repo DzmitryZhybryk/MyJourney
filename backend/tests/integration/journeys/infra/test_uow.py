@@ -1,5 +1,7 @@
 """Транзакционную модель проверяет ``integration/shared/infra/db/postgres/test_uow.py``; здесь — проводка UoW."""
 
+from typing import Final
+
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -7,7 +9,7 @@ from app.journeys.infra.models import Journey
 from app.journeys.infra.uow import JourneyUnitOfWork
 from tests.builders import make_journey
 
-_COUNT_JOURNEYS = sa.select(sa.func.count()).select_from(Journey)
+_COUNT_JOURNEYS: Final[sa.Select[int]] = sa.select(sa.func.count()).select_from(Journey)
 
 
 async def test_journey_repository_write_is_persisted_by_uow_commit(

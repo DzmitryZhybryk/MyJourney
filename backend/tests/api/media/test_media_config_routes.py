@@ -1,6 +1,7 @@
 """Токены выпускает настоящий ``TokenIssuer`` (``issue_access_token``): право приходит из карты ролей, а не руками."""
 
 from collections.abc import Callable
+from typing import Final
 
 from httpx import AsyncClient
 
@@ -10,10 +11,10 @@ from app.shared.types import DictStrAny
 from tests.builders import ADMIN_ID, make_media_config_snapshot, make_user_credentials
 from tests.fakes import FakeMediaConfigRepository
 
-_PUBLIC_PATH = "/v1/media/config/"
-_ADMIN_PATH = "/v1/admin/media/config/"
+_PUBLIC_PATH: Final[str] = "/v1/media/config/"
+_ADMIN_PATH: Final[str] = "/v1/admin/media/config/"
 
-_EDIT_BODY: DictStrAny = {
+_EDIT_BODY: Final[DictStrAny] = {
     "editedVersion": 1,
     "snapshot": {
         "avatar": {"maxSizeBytes": 1_000, "formats": ["image/jpeg"], "minSide": 640},

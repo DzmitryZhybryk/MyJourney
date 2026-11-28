@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Final
 
 import httpx
 import pytest
@@ -7,7 +8,7 @@ from app.geo.infra.datasets.cache import ensure_cached
 from app.geo.infra.datasets.exceptions import DatasetChecksumError
 from tests.builders import make_dataset_spec
 
-_CONTENT = b"dataset-bytes"
+_CONTENT: Final[bytes] = b"dataset-bytes"
 
 
 def test_ensure_cached_downloads_verified_file(tmp_path: Path) -> None:

@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -7,7 +8,7 @@ from app.users.domain.entities import UserEntity
 from app.users.exceptions import UserDeletedError
 from tests.builders import make_user_entity
 
-_OLD_UPDATED_AT = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
+_OLD_UPDATED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
 
 
 def test_create_sets_fields_and_defaults() -> None:

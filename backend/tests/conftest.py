@@ -16,10 +16,11 @@
 """
 
 import os
+from typing import Final
 
 import pytest
 
-_TEST_ENV_DEFAULTS = {
+_TEST_ENV_DEFAULTS: Final[dict[str, str]] = {
     "POSTGRES_USER": "test",
     "POSTGRES_PASSWORD": "test",
     "POSTGRES_DB": "test",
@@ -68,20 +69,29 @@ from tests.fakes import (  # noqa: E402
     FakeUserUnitOfWork,
 )
 
-_EMAIL_VERIFICATION_TTL_MINUTES = 15
-_EMAIL_VERIFICATION_MAX_ATTEMPTS = 5
-_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
+_EMAIL_VERIFICATION_TTL_MINUTES: Final[int] = 15
+_EMAIL_VERIFICATION_MAX_ATTEMPTS: Final[int] = 5
+_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: Final[int] = 60
 
 
 # Оси маркеров, выводимые из пути файла: tests/<level>/<domain>/...
 # При добавлении нового уровня/домена обнови и эти кортежи, и список ``markers`` в
 # pyproject.toml (``--strict-markers`` запрещает незарегистрированные маркеры).
-_LEVEL_MARKERS = ("unit", "integration", "api")
-_DOMAIN_MARKERS = ("auth", "users", "shared", "journeys", "geo", "health", "media", "backoffice")
+_LEVEL_MARKERS: Final[tuple[str, ...]] = ("unit", "integration", "api")
+_DOMAIN_MARKERS: Final[tuple[str, ...]] = (
+    "auth",
+    "users",
+    "shared",
+    "journeys",
+    "geo",
+    "health",
+    "media",
+    "backoffice",
+)
 
 # Потолок времени на один тест по уровню. Integration считает только сам тест: подъём
 # контейнера в session-фикстуре приходится на setup первого теста и в лимит не входит.
-_LEVEL_TIMEOUTS = {
+_LEVEL_TIMEOUTS: Final[dict[str, pytest.MarkDecorator]] = {
     "unit": pytest.mark.timeout(timeout=1),
     "api": pytest.mark.timeout(timeout=1),
     "integration": pytest.mark.timeout(timeout=30, func_only=True),

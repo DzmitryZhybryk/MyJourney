@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Final
 from uuid import UUID, uuid4
 
 import pytest
@@ -7,8 +8,8 @@ from httpx import AsyncClient
 from tests.builders import make_city
 from tests.fakes import FakeCityRepository
 
-_SEARCH_PATH = "/v1/geo/cities/search/"
-_RESOLVE_PATH = "/v1/geo/cities/resolve/"
+_SEARCH_PATH: Final[str] = "/v1/geo/cities/search/"
+_RESOLVE_PATH: Final[str] = "/v1/geo/cities/resolve/"
 
 
 async def test_search_cities_returns_camelcase_candidates(

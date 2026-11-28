@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -17,7 +18,7 @@ from devtools.geo_datasets.wikidata.disputes import (
     write_decisions,
 )
 
-_HUANGSHAN_ROW = {
+_HUANGSHAN_ROW: Final[dict[str, str]] = {
     "external_id": "GeoNames:1792359",
     "name_en": "Huangshan City",
     "name_ru": "Туньси",
@@ -25,7 +26,7 @@ _HUANGSHAN_ROW = {
     "population": "460786",
 }
 
-_HUANGSHAN_DISPUTE = RuNameDispute(
+_HUANGSHAN_DISPUTE: Final[RuNameDispute] = RuNameDispute(
     external_id="GeoNames:1792359",
     name_en="Huangshan City",
     country_code="CN",
@@ -34,7 +35,7 @@ _HUANGSHAN_DISPUTE = RuNameDispute(
     wikidata_ru=frozenset({"Хуаншань"}),
 )
 
-_HUANGSHAN_DECISION = RuNameDecision(
+_HUANGSHAN_DECISION: Final[RuNameDecision] = RuNameDecision(
     external_id="GeoNames:1792359",
     geonames_ru="Туньси",
     wikidata_ru=frozenset({"Хуаншань"}),

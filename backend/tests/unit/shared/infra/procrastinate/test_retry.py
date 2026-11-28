@@ -1,6 +1,7 @@
 """Время повтора проверяется окном: ``retry_at`` лежит между моментами до и после вызова плюс ожидаемая пауза."""
 
 import datetime as dt
+from typing import Final
 
 import pytest
 from procrastinate.jobs import Job
@@ -9,7 +10,9 @@ from structlog.testing import capture_logs
 from app.shared.exceptions import InternalError, TemporaryError
 from app.shared.infra.procrastinate.retry import RetryAfterStrategy
 
-_STRATEGY = RetryAfterStrategy(max_attempts=3, wait=10, exponential_wait=2, retry_exceptions={TemporaryError})
+_STRATEGY: Final[RetryAfterStrategy] = RetryAfterStrategy(
+    max_attempts=3, wait=10, exponential_wait=2, retry_exceptions={TemporaryError}
+)
 
 
 @pytest.mark.parametrize(

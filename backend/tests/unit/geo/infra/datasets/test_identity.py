@@ -1,10 +1,11 @@
+from typing import Final
 from uuid import UUID
 
 from app.geo.infra.datasets.identity import gazetteer_id_for
 
 # Зафиксированный id Москвы. Если тест упал — сменились id всех объектов газеттира, а на них
 # ссылаются поездки: такое изменение ломает данные, а не просто тест.
-_MOSCOW_CITY_ID = UUID("37431ad9-c510-5812-886e-77118502e4fb")
+_MOSCOW_CITY_ID: Final[UUID] = UUID("37431ad9-c510-5812-886e-77118502e4fb")
 
 
 def test_gazetteer_id_for_is_pinned() -> None:

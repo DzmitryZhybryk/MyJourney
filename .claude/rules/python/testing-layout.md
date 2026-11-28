@@ -32,7 +32,7 @@ current domains instead of assuming.
 - A package that groups a layer **by kind** (`services/`, `entities/`, `value_objects/`,
   `repositories/`, `clients/`) is not mirrored — its tests sit in the layer folder. A **thematic**
   subpackage (`infra/datasets/`) is mirrored.
-- Code outside `app/` (`devtools/`) is tested under the domain it serves: `tests/<level>/<domain>/devtools/`.
+- Code outside `app/` (`devtools/`) is tested under its domain: `tests/<level>/<domain>/devtools/`.
 - Every domain UoW has one integration test of its wiring; the transaction model is tested once, in `shared`.
 
 ## Markers

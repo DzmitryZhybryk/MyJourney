@@ -1,5 +1,6 @@
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -11,9 +12,9 @@ from app.auth.infra.models import RefreshToken
 from app.auth.infra.repositories import RefreshTokenRepository
 from tests.builders import make_refresh_token
 
-_EXPIRES_AT = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
-_REVOKED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
-_ALREADY_REVOKED_AT = dt.datetime(2020, 1, 1, tzinfo=dt.UTC)
+_EXPIRES_AT: Final[dt.datetime] = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
+_REVOKED_AT: Final[dt.datetime] = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
+_ALREADY_REVOKED_AT: Final[dt.datetime] = dt.datetime(2020, 1, 1, tzinfo=dt.UTC)
 
 
 async def test_insert_then_find_refresh_token_by_hash_for_update_roundtrip(

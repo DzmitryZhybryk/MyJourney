@@ -2,6 +2,7 @@
 
 import gzip
 from pathlib import Path
+from typing import Final
 
 import httpx
 import pytest
@@ -15,11 +16,11 @@ from app.geo.infra.datasets.manifest import DatasetFormatEnum
 from app.shared.settings import PostgresSettings
 from tests.builders import CITY_CSV_HEADER, PLACE_CSV_HEADER, make_dataset_spec
 
-_MOSCOW = "GeoNames:524901,Moscow,Москва,RU,55.75,37.62,10000000"
-_MOSTAR = "GeoNames:3194828,Mostar,,BA,43.34,17.81,100000"
+_MOSCOW: Final[str] = "GeoNames:524901,Moscow,Москва,RU,55.75,37.62,10000000"
+_MOSTAR: Final[str] = "GeoNames:3194828,Mostar,,BA,43.34,17.81,100000"
 
-_TIAN_SHAN = 'Wikidata:Q5474,mountain_range,Tian Shan,Тянь-Шань,"CN,KG,KZ,UZ",42.04,80.13,99'
-_BELUKHA = "Wikidata:Q724367,mountain,Belukha,Белуха,RU,49.81,86.59,52"
+_TIAN_SHAN: Final[str] = 'Wikidata:Q5474,mountain_range,Tian Shan,Тянь-Шань,"CN,KG,KZ,UZ",42.04,80.13,99'
+_BELUKHA: Final[str] = "Wikidata:Q724367,mountain,Belukha,Белуха,RU,49.81,86.59,52"
 
 
 async def _cities(db_engine: AsyncEngine) -> dict[str, tuple[str, str | None]]:

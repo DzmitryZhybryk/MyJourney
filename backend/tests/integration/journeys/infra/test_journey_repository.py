@@ -1,5 +1,6 @@
 import asyncio
 import datetime as dt
+from typing import Final
 from uuid import UUID, uuid4
 
 import pytest
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.journeys.application.ports.journey_repository import JourneyFilters, JourneyOrderScope
 from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
+from app.journeys.domain.value_objects import GeoPoint
 from app.journeys.infra.models import Journey
 from app.journeys.infra.repositories import JourneyRepository
 from app.shared.fractional_index import generate_key_between
@@ -23,14 +25,16 @@ from tests.builders import (
     make_journey,
 )
 
-_PARIS_CITY_ID = UUID("33333333-3333-4333-8333-333333333333")
-_PARIS = make_geo_point(city_id=_PARIS_CITY_ID, country_code="FR", latitude=48.85, longitude=2.35)
-_DELETED_AT = dt.datetime(2024, 1, 1, tzinfo=dt.UTC)
-_NO_FILTERS = JourneyFilters(year_from=None, year_to=None, transport_types=None)
+_PARIS_CITY_ID: Final[UUID] = UUID("33333333-3333-4333-8333-333333333333")
+_PARIS: Final[GeoPoint] = make_geo_point(city_id=_PARIS_CITY_ID, country_code="FR", latitude=48.85, longitude=2.35)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2024, 1, 1, tzinfo=dt.UTC)
+_NO_FILTERS: Final[JourneyFilters] = JourneyFilters(year_from=None, year_to=None, transport_types=None)
 # Есть ли сессия, ждущая advisory-блокировку, — условие, которого ждёт тест параллельных вставок.
-_WAITING_ADVISORY_LOCKS = sa.text("SELECT count(*) > 0 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted")
-_LOCK_WAIT_TIMEOUT_SECONDS = 5
-_LOCK_POLL_SECONDS = 0.02
+_WAITING_ADVISORY_LOCKS: Final[sa.TextClause] = sa.text(
+    "SELECT count(*) > 0 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted"
+)
+_LOCK_WAIT_TIMEOUT_SECONDS: Final[int] = 5
+_LOCK_POLL_SECONDS: Final[float] = 0.02
 
 
 async def _insert(db_session: AsyncSession, *journey_entities: JourneyEntity) -> JourneyRepository:

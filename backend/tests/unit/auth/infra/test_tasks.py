@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 
 import pytest
 from procrastinate import JobContext
@@ -10,7 +11,7 @@ from app.shared.infra.crypto.fernet import FernetSecretCipher
 from app.shared.infra.http.exceptions import ExternalAPIPersistentError, ExternalAPITemporaryError
 from tests.fakes import FakeEmailTransport
 
-_FUTURE_EXPIRES_AT = (dt.datetime.now(tz=dt.UTC) + dt.timedelta(hours=1)).isoformat()
+_FUTURE_EXPIRES_AT: Final[str] = (dt.datetime.now(tz=dt.UTC) + dt.timedelta(hours=1)).isoformat()
 
 
 async def test_send_verification_email_renders_and_sends(
