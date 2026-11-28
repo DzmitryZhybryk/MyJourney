@@ -97,3 +97,10 @@
 - The "no admin yet" guard is not a security boundary: whoever can exec into the container can run psql.
   Cost: if the only admin loses the account, recovery is psql.
 - Source: role model (#52), 2026-11-13
+
+## Outside `auth`, role and plan are plain strings; only `auth` lists their values
+- `GET /v1/admin/auth/account-options/` returns the enums; `backoffice` stores and filters strings.
+- Why: a strict enum outside `auth` fails on a new role until the consumer redeploys; after the split a
+  new role would redeploy every service. A domain that decides by role needs a permission instead.
+- Rejected: the enum in `shared/enums.py` or in the event contract — same reason.
+- Source: PR #241, 2026-11-23

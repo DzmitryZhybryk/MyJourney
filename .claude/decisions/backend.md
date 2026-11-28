@@ -200,3 +200,18 @@
   bring the one-shot container's lines into Loki either.
 - Rejected: the gazetteer load as a bootstrap step — heavy and networked; a download failure would block migrations.
 - Source: task #60, 2026-11-22
+
+## A row version is an integer `version` column, only where a reader needs it
+- Only tables whose events are projected, or whose screens need a 409 on a stale edit, get `version`.
+  A write goes `WHERE version = <read>`; a miss raises `StaleRowVersionError`. It assumes one mutating
+  entity method between the read and the write (`entity.version - 1` is the read version).
+- Why: an integer does not depend on clocks, and a writer that forgot `FOR UPDATE` fails loudly.
+- Rejected: `updated_at` as the version — clock-dependent, and a missed lock passes silently.
+- Source: PR #241, 2026-11-23
+
+## Feeds page by keyset, tables with page numbers page by offset
+- `app/shared/pagination/cursor/` for feeds, `offset/` (with `total`) for tables.
+- Why: an operator table needs page numbers and a total; a feed needs stable "load more".
+- Rejected: keyset for the accounts list (until 2026-11-27) — a cursor over a `NULLS LAST` column needs
+  an `OR` that breaks the index range, and gives no page numbers.
+- Source: PR #241, 2026-11-27
