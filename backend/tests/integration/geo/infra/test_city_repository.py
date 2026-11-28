@@ -9,6 +9,7 @@
 
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.geo.domain.enums import LanguageEnum
@@ -114,15 +115,29 @@ async def test_search_prefix_does_not_match_substring(db_session: AsyncSession) 
     assert cities == ()
 
 
-async def test_search_escapes_like_metacharacters(db_session: AsyncSession) -> None:
-    """search: '%' в запросе экранируется и трактуется литералом, а не как LIKE-wildcard."""
+@pytest.mark.parametrize(
+    ("literal_name", "decoy_name", "search_text"),
+    [
+        ("A%B", "AXB", "A%"),
+        ("A_B", "AXB", "A_"),
+        ("A/B", "AB", "A/B"),
+    ],
+    ids=["percent", "underscore", "escape-char"],
+)
+async def test_search_escapes_like_metacharacters(
+    db_session: AsyncSession,
+    literal_name: str,
+    decoy_name: str,
+    search_text: str,
+) -> None:
+    """search: метасимволы LIKE и символ экранирования в запросе ищутся литералами."""
     literal_id = uuid4()
     db_session.add_all(
         [
             GeoCity(
                 id=literal_id,
                 external_id="GeoNames:1",
-                name_en="A%B",
+                name_en=literal_name,
                 name_ru=None,
                 country_code="RU",
                 latitude=0.0,
@@ -132,7 +147,7 @@ async def test_search_escapes_like_metacharacters(db_session: AsyncSession) -> N
             GeoCity(
                 id=uuid4(),
                 external_id="GeoNames:2",
-                name_en="AXB",
+                name_en=decoy_name,
                 name_ru=None,
                 country_code="RU",
                 latitude=0.0,
@@ -143,7 +158,7 @@ async def test_search_escapes_like_metacharacters(db_session: AsyncSession) -> N
     )
     await db_session.commit()
 
-    cities = await CityRepository(db_session).search_cities_by_name(search_text="A%", limit=10)
+    cities = await CityRepository(db_session).search_cities_by_name(search_text=search_text, limit=10)
 
     assert [city_entity.city_id for city_entity in cities] == [literal_id]
 

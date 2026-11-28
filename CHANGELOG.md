@@ -13,6 +13,11 @@ CHANGELOG остаётся один. Новые записи группирую�
 
 ## 2026-11-28
 
+### Backend 7.8.2
+
+- Поиск городов по началу имени экранирует спецсимволы LIKE встроенным `autoescape` SQLAlchemy вместо своего хелпера — так же, как поиск аккаунтов в админке. Выдача и план запроса (префиксный индекс по `lower(name_*)`) прежние
+- Тест экранирования покрывает `%`, `_` и символ экранирования `/`
+
 ### Backend 7.8.1
 
 - Схемы запросов и ответов админских ручек в `openapi.json` названы с префиксом `Admin`: `AdminAccountsListResponse`, `AdminAccountsResponse`, `AdminAccountOptionsResponse`, `AdminMediaConfigResponse`, `AdminUpdateMediaConfigRequest`. Вложенные схемы и значения на проводе прежние — для HTTP-клиента контракт не меняется

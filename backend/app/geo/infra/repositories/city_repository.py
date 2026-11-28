@@ -10,10 +10,6 @@ from app.geo.domain.value_objects import LocalizedNames
 from app.geo.infra.models import GeoCity
 from app.shared.infra.db.postgres.repository import BaseDBRepository
 
-# Бэкслеш как ESCAPE в LIKE: метасимволы пользовательского ввода (% _ \) экранируем,
-# чтобы они не работали как шаблон (юзер ищет литералы, а не wildcard'ы).
-_LIKE_ESCAPE = "\\"
-
 
 class CityRepository(BaseDBRepository[GeoCity], CityRepositoryPort):
     """Чтение городов из газеттира: поиск по началу имени и выборка по id."""
@@ -38,31 +34,19 @@ class CityRepository(BaseDBRepository[GeoCity], CityRepositoryPort):
         Префиксный матч ``lower(name) LIKE 'q%'`` по ``name_en``/``name_ru``.
 
         Ложится на btree ``text_pattern_ops`` по ``lower(name_*)`` — берётся
-        range-scan'ом для запроса любой длины (даже 1 символ).
+        range-scan'ом для запроса любой длины (даже 1 символ). Метасимволы LIKE
+        во вводе ищутся как литералы (``autoescape``). ``istartswith`` не подходит:
+        он даёт ``ILIKE``, который этот индекс не берёт.
 
         Scenarios:
             - автокомплит города в полях маршрута
         """
-        prefix = f"{self._escape_like(search_text).lower()}%"
+        lowered_text = search_text.lower()
         return select(GeoCity).where(
             or_(
-                func.lower(GeoCity.name_en).like(prefix, escape=_LIKE_ESCAPE),
-                func.lower(GeoCity.name_ru).like(prefix, escape=_LIKE_ESCAPE),
+                func.lower(GeoCity.name_en).startswith(lowered_text, autoescape=True),
+                func.lower(GeoCity.name_ru).startswith(lowered_text, autoescape=True),
             ),
-        )
-
-    @staticmethod
-    def _escape_like(search_text: str) -> str:
-        """
-        Экранирует LIKE-метасимволы (``\\`` ``%`` ``_``) в пользовательском вводе.
-
-        Scenarios:
-            - автокомплит города в полях маршрута
-        """
-        return (
-            search_text.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
-            .replace("%", f"{_LIKE_ESCAPE}%")
-            .replace("_", f"{_LIKE_ESCAPE}_")
         )
 
     @staticmethod
