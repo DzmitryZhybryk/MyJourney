@@ -16,7 +16,7 @@ def test_hash_refresh_secret_is_deterministic(
     token_issuer: TokenIssuer,
     deterministic_hasher: Sha256DeterministicHasher,
 ) -> None:
-    """`hash_refresh_secret` детерминирован и равен digest'у используемого hasher'а."""
+    """Хеш секрета детерминирован и равен digest'у hasher'а."""
     secret = "refresh-secret"
 
     first = token_issuer.hash_refresh_secret(secret)
@@ -30,7 +30,7 @@ def test_issue_refresh_token_stores_digest_and_propagates_metadata(
     token_issuer: TokenIssuer,
     deterministic_hasher: Sha256DeterministicHasher,
 ) -> None:
-    """`issue_refresh_token`: в БД ложится digest plaintext-секрета, метаданные пробрасываются, expiry в будущем."""
+    """В БД ложится digest секрета, метаданные пробрасываются, срок — в будущем."""
     user_id = uuid4()
     metadata = ClientMetadata(ip_address="10.0.0.1", user_agent="UA/1.0")
 
@@ -55,7 +55,7 @@ def test_build_token_pair_access_token_decodes_back_to_user(
     token_issuer: TokenIssuer,
     jwt_service: JWTService,
 ) -> None:
-    """`build_token_pair`: access-token декодируется обратно в user_id, refresh-секрет и expiry пробрасываются."""
+    """Access-токен декодируется обратно в user_id; refresh-секрет и срок пробрасываются."""
     user_credentials_entity = make_user_credentials()
     refresh_secret, refresh_token_entity = token_issuer.issue_refresh_token(
         user_id=user_credentials_entity.user_id,

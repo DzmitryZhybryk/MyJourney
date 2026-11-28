@@ -14,7 +14,7 @@ import { getStoredAccessToken } from "../helpers/session";
  * The UI language is pinned in the playwright config (en), so control names are English.
  */
 
-test.describe("Journeys movements map", () => {
+test.describe("Карта перемещений", () => {
   test.beforeEach(async ({ authedPage, request }) => {
     const token = (await getStoredAccessToken(authedPage)) ?? "";
     expect(token, "после логина ожидается access-токен в sessionStorage").not.toBe("");

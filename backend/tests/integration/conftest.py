@@ -18,6 +18,7 @@ async-соединения не «утекают» между event loop'ами.
 """
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from typing import Final
 from uuid import UUID
 
 import pytest
@@ -46,9 +47,9 @@ from app.users.domain.entities import UserEntity  # noqa: F401 — гарант�
 from app.users.infra import models as _users_models  # noqa: F401
 from tests.builders import make_user_credentials
 
-_POSTGRES_IMAGE = "postgres:17-alpine"
+_POSTGRES_IMAGE: Final[str] = "postgres:17-alpine"
 # Порядок не важен: ``TRUNCATE ... CASCADE`` снимает FK-зависимости разом.
-_ALL_TABLES = (
+_ALL_TABLES: Final[tuple[str, ...]] = (
     "users",
     "user_credentials",
     "refresh_tokens",

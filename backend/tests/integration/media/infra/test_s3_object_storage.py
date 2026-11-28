@@ -70,7 +70,7 @@ async def test_get_object_over_limit_raises_too_large(
 
 
 async def test_get_object_missing_object_raises_not_found(private_storage: PrivateStoragePort, key_prefix: str) -> None:
-    """Отсутствующий объект — `ObjectNotFoundError`."""
+    """Отсутствующий объект → ``ObjectNotFoundError``."""
     with pytest.raises(ObjectNotFoundError):
         await private_storage.get_object(key=f"{key_prefix}original.jpg", max_bytes=100)
 
@@ -81,7 +81,7 @@ async def test_public_object_is_read_anonymously_with_cache_control(
     media_storage_settings: MediaStorageSettings,
     key_prefix: str,
 ) -> None:
-    """Записанное в публичный бакет читается без ключей, с типом и `Cache-Control` объекта."""
+    """Записанное в публичный бакет читается без ключей, с типом и ``Cache-Control`` объекта."""
     key = f"{key_prefix}r1/thumb.webp"
     await public_storage.put_object(
         key=key, body=b"webp", content_type="image/webp", cache_control="public, max-age=31536000, immutable"

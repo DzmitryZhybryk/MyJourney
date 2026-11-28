@@ -1,10 +1,6 @@
 """
-Cross-вертикальная фикстура mock-транспорта httpx для unit-тестов HTTP-клиентов.
-
-Общий предок http- и email-тестов: ``BaseHTTPClient`` (и его наследник ``ResendClient``)
-создают собственный ``httpx.AsyncClient`` в ``__init__`` и не дают инжектить транспорт.
-Патчим конструктор, чтобы клиент ходил через ``MockTransport`` с переданным handler'ом —
-без реальной сети. Так тест проверяет маппинг ответов/ошибок в ``ExternalAPI*Error``.
+``BaseHTTPClient`` создаёт свой ``httpx.AsyncClient`` в ``__init__`` и не даёт подставить транспорт, поэтому
+подменяется конструктор ``httpx.AsyncClient``.
 """
 
 from collections.abc import Callable

@@ -33,7 +33,7 @@ async def test_set_admin_role_promotes_account_found_by_email_in_any_case(
     assert await _find_role(session_factory=session_factory, user_id=user_id) is UserRoleEnum.ADMIN
 
 
-async def test_set_admin_role_when_admin_exists_refuses(
+async def test_set_admin_role_existing_admin_refuses(
     seed_user_credentials: Callable[..., Awaitable[None]],
     session_factory: async_sessionmaker[AsyncSession],
     postgres_settings: PostgresSettings,

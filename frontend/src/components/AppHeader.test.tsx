@@ -2,14 +2,14 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { server, TEST_CURRENT_ACCOUNT, TEST_CURRENT_USER } from "../test/handlers";
-import { findMenuItem, makeAuthValue, renderRoutes, renderWithProviders, screen } from "../test/render";
+import { findMenuItem, makeAuthValue, makeVerifiedAuthValue, renderRoutes, renderWithProviders, screen } from "../test/render";
 import { AppHeader } from "./AppHeader";
 
 describe("AppHeader", () => {
   it("«Journeys» — ссылка на раздел, «Mind» (не реализован) — не ссылка с бейджем «Soon»", () => {
     // emailVerified: true, so there is no verification banner cluttering the DOM.
     renderWithProviders(<AppHeader />, {
-      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      authValue: makeVerifiedAuthValue(),
     });
 
     expect(screen.getByRole("link", { name: "Journeys" })).toHaveAttribute("href", "/journeys");
@@ -24,7 +24,7 @@ describe("AppHeader", () => {
   it("на активном разделе таб подсвечен и помечен aria-current", () => {
     renderWithProviders(<AppHeader />, {
       route: "/journeys",
-      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      authValue: makeVerifiedAuthValue(),
     });
 
     const tab = screen.getByRole("link", { name: "Journeys" });
@@ -35,7 +35,7 @@ describe("AppHeader", () => {
   it("в бургер-Drawer активный раздел тоже подсвечен", async () => {
     const { user } = renderWithProviders(<AppHeader />, {
       route: "/journeys",
-      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      authValue: makeVerifiedAuthValue(),
     });
 
     // jsdom applies @media against a fixed 1024px viewport (resizeTo does not change it), where
@@ -51,7 +51,7 @@ describe("AppHeader", () => {
 
   it("меню профиля подписано именем и email текущего пользователя", async () => {
     const { user } = renderWithProviders(<AppHeader />, {
-      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      authValue: makeVerifiedAuthValue(),
     });
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }));
@@ -63,7 +63,7 @@ describe("AppHeader", () => {
   it("пока профиль не загрузился, меню подписано «Account»", async () => {
     server.use(http.get("/v1/users/me/", () => HttpResponse.json({ code: "temporary", message: "" }, { status: 503 })));
     const { user } = renderWithProviders(<AppHeader />, {
-      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      authValue: makeVerifiedAuthValue(),
     });
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }));
@@ -76,7 +76,7 @@ describe("AppHeader", () => {
       element: <AppHeader />,
       path: "/home",
       landings: [{ path: "/profile", label: "profile-landing" }],
-      authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+      authValue: makeVerifiedAuthValue(),
     });
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }));

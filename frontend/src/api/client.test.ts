@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { on } from "../auth/events";
-import { clearAccessToken, getAccessToken, setAccessToken } from "../auth/tokenStore";
+import { getAccessToken, setAccessToken } from "../auth/tokenStore";
 import { jsonResponse, type FetchSignature } from "../test/fetchStub";
 import { appFetch, ensureRefreshed } from "./client";
 import { ApiError } from "./errors";
@@ -35,18 +35,12 @@ function refreshCallCount(mock: ReturnType<typeof vi.fn<FetchSignature>>): numbe
 
 let fetchMock: ReturnType<typeof vi.fn<FetchSignature>>;
 
+beforeEach(() => {
+  fetchMock = vi.fn<FetchSignature>();
+  vi.stubGlobal("fetch", fetchMock);
+});
+
 describe("appFetch", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-    clearAccessToken();
-    fetchMock = vi.fn<FetchSignature>();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("отдаёт успешный ответ как есть — разбор тела на стороне SDK", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { id: 1 }));
 
@@ -204,17 +198,6 @@ describe("appFetch", () => {
 });
 
 describe("ensureRefreshed", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-    clearAccessToken();
-    fetchMock = vi.fn<FetchSignature>();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("два параллельных вызова делают один запрос /refresh/ (single-flight)", async () => {
     const inFlight = deferred<Response>();
     fetchMock.mockReturnValueOnce(inFlight.promise);

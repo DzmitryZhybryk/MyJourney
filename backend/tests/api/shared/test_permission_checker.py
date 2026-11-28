@@ -1,10 +1,3 @@
-"""
-api-тесты ``PermissionChecker`` на маршруте ``/guarded/`` приложения ``guarded_app``.
-
-Токен с правом проходит; без права — 403 ``permission_required``; испорченный claim прав — 401, а не 403;
-``user_id`` попадает в строку лога и у отказа по правам.
-"""
-
 import datetime as dt
 from collections.abc import Callable
 from uuid import uuid4
@@ -20,7 +13,7 @@ from app.shared.settings import settings
 type MakeAsyncClient = Callable[[BFastAPI], AsyncClient]
 
 
-async def test_guarded_route_with_permission_passes(
+async def test_guarded_route_with_permission_returns_200(
     guarded_app: BFastAPI,
     make_async_client: MakeAsyncClient,
     mint_access_token: Callable[..., str],
@@ -37,7 +30,7 @@ async def test_guarded_route_with_permission_passes(
     assert response.json() == {"user_id": str(user_id)}
 
 
-async def test_guarded_route_without_permission_is_403_permission_required(
+async def test_guarded_route_without_permission_returns_403(
     guarded_app: BFastAPI,
     make_async_client: MakeAsyncClient,
     mint_access_token: Callable[..., str],
@@ -52,7 +45,7 @@ async def test_guarded_route_without_permission_is_403_permission_required(
     assert response.json()["code"] == "permission_required"
 
 
-async def test_guarded_route_without_token_is_401(
+async def test_guarded_route_without_token_returns_401(
     guarded_app: BFastAPI,
     make_async_client: MakeAsyncClient,
 ) -> None:
@@ -64,7 +57,7 @@ async def test_guarded_route_without_token_is_401(
     assert response.json()["code"] == "auth.invalid_access_token"
 
 
-async def test_guarded_route_with_malformed_permissions_claim_is_401(
+async def test_guarded_route_malformed_permissions_claim_returns_401(
     guarded_app: BFastAPI,
     make_async_client: MakeAsyncClient,
     guarded_permission: str,

@@ -1,5 +1,6 @@
 import datetime as dt
 import math
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -29,21 +30,21 @@ from tests.fakes import (
     FakeUserCredentialsRepository,
 )
 
-_VERIFICATION_CODE_LENGTH = 6
+_VERIFICATION_CODE_LENGTH: Final[int] = 6
 
 
 # --- request_email_verification --------------------------------------------
 
 
-async def test_request_creates_challenge_and_defers_email_atomically(
+async def test_request_email_verification_creates_challenge_and_defers_email_atomically(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     fake_task_bus: FakeTaskBus,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """request: создаёт challenge, кладёт шифротекст кода (код уходит в письмо), defer'ит в сессии UoW, коммитит."""
+    """Challenge с шифротекстом кода и задача письма с самим кодом ставятся в сессии UoW одним коммитом."""
     user_credentials_entity = make_user_credentials(email="neo@example.com", email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
@@ -67,32 +68,32 @@ async def test_request_creates_challenge_and_defers_email_atomically(
     assert code.isdigit()
     assert len(code) == _VERIFICATION_CODE_LENGTH
 
-    assert fake_task_bus.bound_session is fake_uow.session
-    fake_uow.commit_mock.assert_awaited_once()
+    assert fake_task_bus.bound_session is fake_auth_uow.session
+    fake_auth_uow.commit_mock.assert_awaited_once()
 
 
-async def test_request_raises_when_user_not_found(
+async def test_request_email_verification_unknown_user_raises_account_not_found(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_challenge_repository: FakeChallengeRepository,
     fake_task_bus: FakeTaskBus,
 ) -> None:
-    """request: нет учётной записи → AccountNotFoundError, без challenge, defer'а и коммита."""
+    """Нет учётной записи → ``AccountNotFoundError``; ни challenge, ни письма, ни коммита."""
     with pytest.raises(AccountNotFoundError):
         await email_verification_service.request_email_verification(uuid4())
 
     assert fake_challenge_repository.challenges == []
     assert fake_task_bus.bound.deferred == []
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_request_raises_when_email_already_verified(
+async def test_request_email_verification_verified_email_raises_email_already_verified(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
 ) -> None:
-    """request: email уже подтверждён → EmailAlreadyVerifiedError, без challenge и коммита."""
+    """Email уже подтверждён → ``EmailAlreadyVerifiedError``; ни challenge, ни коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=dt.datetime.now(tz=dt.UTC))
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
@@ -100,16 +101,16 @@ async def test_request_raises_when_email_already_verified(
         await email_verification_service.request_email_verification(user_credentials_entity.user_id)
 
     assert fake_challenge_repository.challenges == []
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_request_raises_when_resend_cooldown_active(
+async def test_request_email_verification_within_cooldown_raises_resend_cooldown(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
 ) -> None:
-    """request: активный challenge свежее cooldown'а → ChallengeResendCooldownError, без нового challenge и коммита."""
+    """Challenge свежее паузы между отправками → ``ChallengeResendCooldownError``; ни нового challenge, ни коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     existing = make_challenge(
@@ -124,18 +125,18 @@ async def test_request_raises_when_resend_cooldown_active(
 
     assert len(fake_challenge_repository.challenges) == 1
     assert existing.used_at is None
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_request_resends_same_code_and_extends_expiry_when_code_live(
+async def test_request_email_verification_live_code_resends_it_and_extends_expiry(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     fake_task_bus: FakeTaskBus,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """request: живой код после cooldown'а уходит тот же, срок продлевается, нового challenge'а нет."""
+    """Живой код после паузы уходит тот же, срок продлевается, нового challenge нет."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     now = dt.datetime.now(tz=dt.UTC)
@@ -156,19 +157,19 @@ async def test_request_resends_same_code_and_extends_expiry_when_code_live(
     deferred = fake_task_bus.bound.deferred[0]
     assert secret_cipher.decrypt(deferred.kwargs["code_ciphertext"]) == "123456"
     assert deferred.kwargs["expires_at"] == previous.expires_at.isoformat()
-    fake_uow.commit_mock.assert_awaited_once()
+    fake_auth_uow.commit_mock.assert_awaited_once()
 
 
 @pytest.mark.parametrize("attempts", [0, 5])
-async def test_request_replaces_expired_challenge_with_new_code(
+async def test_request_email_verification_expired_code_issues_new_code(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     fake_task_bus: FakeTaskBus,
     attempts: int,
 ) -> None:
-    """request: истёкший код (с попытками или без) гасится, выдаётся и уходит в письмо новый."""
+    """Истёкший код (с попытками или без) гасится, в письмо уходит новый."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     now = dt.datetime.now(tz=dt.UTC)
@@ -187,17 +188,17 @@ async def test_request_replaces_expired_challenge_with_new_code(
     active = [c for c in fake_challenge_repository.challenges if c.used_at is None]
     assert len(active) == 1
     assert fake_task_bus.bound.deferred[0].kwargs["code_ciphertext"] == active[0].code_ciphertext
-    fake_uow.commit_mock.assert_awaited_once()
+    fake_auth_uow.commit_mock.assert_awaited_once()
 
 
-async def test_request_raises_attempts_exceeded_when_live_code_exhausted(
+async def test_request_email_verification_exhausted_live_code_raises_attempts_exceeded(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     fake_task_bus: FakeTaskBus,
 ) -> None:
-    """request: живой код исчерпан → 429 с секундами до его истечения; без письма, продления и коммита."""
+    """Живой код исчерпан → ``ChallengeAttemptsExceededError`` с секундами до его истечения; ни письма, ни коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     now = dt.datetime.now(tz=dt.UTC)
@@ -221,15 +222,15 @@ async def test_request_raises_attempts_exceeded_when_live_code_exhausted(
     assert math.ceil((expires_at - checked_at).total_seconds()) <= details["retry_after_seconds"] <= 300
     assert previous.expires_at == expires_at
     assert fake_task_bus.bound.deferred == []
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_request_reports_exhausted_code_before_cooldown(
+async def test_request_email_verification_exhausted_code_within_cooldown_raises_attempts_exceeded(
     email_verification_service: EmailVerificationService,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
 ) -> None:
-    """request: исчерпанный код внутри cooldown'а → «попытки исчерпаны» со временем, а не «подождите»."""
+    """Исчерпанный код внутри паузы → «попытки исчерпаны» со временем, а не «подождите»."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     previous = make_challenge(
@@ -247,14 +248,14 @@ async def test_request_reports_exhausted_code_before_cooldown(
 # --- verify_email -----------------------------------------------------------
 
 
-async def test_verify_marks_email_verified_on_correct_code(
+async def test_verify_email_correct_code_marks_email_verified(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: верный код помечает email подтверждённым, закрывает challenge, коммитит."""
+    """Верный код подтверждает email и закрывает challenge, коммит."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
@@ -271,18 +272,18 @@ async def test_verify_marks_email_verified_on_correct_code(
 
     assert user_credentials_entity.is_email_verified
     assert challenge_entity.used_at is not None
-    fake_uow.commit_mock.assert_awaited_once()
+    fake_auth_uow.commit_mock.assert_awaited_once()
 
 
-async def test_verify_publishes_account_changed_with_verified_state_and_next_version(
+async def test_verify_email_publishes_account_changed_with_verified_state_and_next_version(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     fake_event_publisher: FakeEventPublisher,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: в сессии UoW публикуется снимок учётной записи с датой подтверждения и версией на единицу выше."""
+    """В сессии UoW публикуется снимок учётной записи с датой подтверждения и версией на единицу выше."""
     user_credentials_entity = make_user_credentials(email_verified_at=None, version=2)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     await fake_challenge_repository.insert_challenge(
@@ -298,7 +299,7 @@ async def test_verify_publishes_account_changed_with_verified_state_and_next_ver
         command=VerifyEmailCommand(code=SecretStr("123456")),
     )
 
-    assert fake_event_publisher.bound_session is fake_uow.session
+    assert fake_event_publisher.bound_session is fake_auth_uow.session
     assert fake_event_publisher.bound.published == [
         AccountChangedEvent(
             user_id=user_credentials_entity.user_id,
@@ -314,14 +315,14 @@ async def test_verify_publishes_account_changed_with_verified_state_and_next_ver
     ]
 
 
-async def test_verify_wrong_code_publishes_nothing(
+async def test_verify_email_wrong_code_publishes_nothing(
     email_verification_service: EmailVerificationService,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     fake_event_publisher: FakeEventPublisher,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: неверный код не меняет учётную запись, поэтому событие не публикуется."""
+    """Неверный код не меняет учётную запись, поэтому событие не публикуется."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     await fake_challenge_repository.insert_challenge(
@@ -341,14 +342,14 @@ async def test_verify_wrong_code_publishes_nothing(
     assert fake_event_publisher.bound.published == []
 
 
-async def test_verify_increments_attempts_and_raises_on_wrong_code(
+async def test_verify_email_wrong_code_counts_attempt_and_raises_code_invalid(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: неверный код инкрементит счётчик попыток, коммитит инкремент и бросает VerificationCodeInvalidError."""
+    """Неверный код: попытка списана и закоммичена, ``VerificationCodeInvalidError``."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
@@ -367,28 +368,28 @@ async def test_verify_increments_attempts_and_raises_on_wrong_code(
 
     assert challenge_entity.attempts == 1
     assert not user_credentials_entity.is_email_verified
-    fake_uow.commit_mock.assert_awaited_once()
+    fake_auth_uow.commit_mock.assert_awaited_once()
 
 
-async def test_verify_raises_when_user_not_found(
+async def test_verify_email_unknown_user_raises_account_not_found(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
 ) -> None:
-    """verify: нет учётной записи → AccountNotFoundError, без коммита."""
+    """Нет учётной записи → ``AccountNotFoundError``, без коммита."""
     with pytest.raises(AccountNotFoundError):
         await email_verification_service.verify_email(
             user_id=uuid4(), command=VerifyEmailCommand(code=SecretStr("123456"))
         )
 
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_verify_raises_when_email_already_verified(
+async def test_verify_email_verified_email_raises_email_already_verified(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
 ) -> None:
-    """verify: email уже подтверждён → EmailAlreadyVerifiedError, без коммита."""
+    """Email уже подтверждён → ``EmailAlreadyVerifiedError``, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=dt.datetime.now(tz=dt.UTC))
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
@@ -398,15 +399,15 @@ async def test_verify_raises_when_email_already_verified(
             command=VerifyEmailCommand(code=SecretStr("123456")),
         )
 
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_verify_raises_when_no_active_challenge(
+async def test_verify_email_without_active_challenge_raises_challenge_not_found(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
 ) -> None:
-    """verify: у пользователя нет активного challenge'а → ChallengeNotFoundError, без коммита."""
+    """Активного challenge нет → ``ChallengeNotFoundError``, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
 
@@ -416,17 +417,17 @@ async def test_verify_raises_when_no_active_challenge(
             command=VerifyEmailCommand(code=SecretStr("123456")),
         )
 
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_verify_raises_when_attempts_exhausted(
+async def test_verify_email_exhausted_attempts_raises_attempts_exceeded(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: лимит исчерпан → 429 с секундами до нового кода ещё до сверки кода, без коммита."""
+    """Лимит исчерпан → ``ChallengeAttemptsExceededError`` с секундами до нового кода ещё до сверки, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     expires_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=420)
@@ -450,16 +451,16 @@ async def test_verify_raises_when_attempts_exhausted(
     assert details is not None
     assert details.keys() == {"retry_after_seconds"}
     assert math.ceil((expires_at - checked_at).total_seconds()) <= details["retry_after_seconds"] <= 420
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
-async def test_verify_non_ascii_digits_count_as_wrong_code(
+async def test_verify_email_non_ascii_digits_count_as_wrong_code(
     email_verification_service: EmailVerificationService,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: не-ASCII цифры — обычный неверный код (попытка списана), а не падение сравнения."""
+    """Не-ASCII цифры — обычный неверный код (попытка списана), а не падение сравнения."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
@@ -478,14 +479,14 @@ async def test_verify_non_ascii_digits_count_as_wrong_code(
     assert challenge_entity.attempts == 1
 
 
-async def test_verify_raises_when_challenge_expired(
+async def test_verify_email_expired_challenge_raises_challenge_expired(
     email_verification_service: EmailVerificationService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_challenge_repository: FakeChallengeRepository,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """verify: срок действия challenge'а истёк → ChallengeExpiredError, без коммита."""
+    """Срок challenge истёк → ``ChallengeExpiredError``, без коммита."""
     user_credentials_entity = make_user_credentials(email_verified_at=None)
     await fake_user_credentials_repository.insert_user_credentials(user_credentials_entity)
     challenge_entity = make_challenge(
@@ -502,4 +503,4 @@ async def test_verify_raises_when_challenge_expired(
             command=VerifyEmailCommand(code=SecretStr("123456")),
         )
 
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()

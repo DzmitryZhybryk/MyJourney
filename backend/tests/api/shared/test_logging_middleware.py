@@ -1,13 +1,6 @@
-"""
-api-тесты ``HTTPLoggingMiddleware`` на минимальном приложении (``middleware_app``).
-
-Одна строка лога на запрос (``event="http.request"``): уровень — по ошибке, без неё — по статусу; тип и код
-ошибки; трейсбек только у нашего сбоя; полный шаблон маршрута; номер запроса и пользователь. Ответ проходит без
-изменений. Строки снимаются ``capture_logs`` с процессорами контекста запроса.
-"""
-
 import re
 from collections.abc import Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -22,7 +15,7 @@ from app.shared.schemas.base import BFastAPI
 
 type MakeAsyncClient = Callable[[BFastAPI], AsyncClient]
 
-_REQUEST_EVENT = "http.request"
+_REQUEST_EVENT: Final[str] = "http.request"
 
 
 async def test_success_logs_info_with_full_route_template_and_trace_id(

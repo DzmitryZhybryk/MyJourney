@@ -1,16 +1,11 @@
-"""
-Тест-дата билдеры для доменных entity и value object'ов.
-
-Обычные функции с kwargs-дефолтами и именованными аргументами; явные timestamp'ы
-вместо заморозки времени (см. ``.claude/rules/python/testing.md``). Дефолты дают
-«валидную» сущность; тест переопределяет только то, что проверяет.
-"""
-
 import datetime as dt
 import hashlib
+from typing import Final
 from uuid import UUID, uuid4
 
+from procrastinate import App, JobContext
 from procrastinate.jobs import Job
+from procrastinate.testing import InMemoryConnector
 
 from app.auth.domain.entities import ChallengeEntity, RefreshTokenEntity, UserCredentialsEntity
 from app.auth.domain.enums import ChallengeTypeEnum, UserPlanEnum, UserRoleEnum
@@ -25,14 +20,27 @@ from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.domain.value_objects import GeoPoint
 from app.media.application.ports.media_config_repository import ImageKindRules, MediaConfigSnapshot, VideoKindRules
 from app.media.domain.enums import ImageFormatEnum, VideoFormatEnum
+from app.shared.infra.di.registry import ComponentRegistry
+from app.shared.infra.procrastinate.component import WORKER_REGISTRY_KEY
 from app.shared.types import DictStrAny
 from app.users.domain.entities import UserEntity
 
 # Опорные координаты для детерминированных journeys/geo тестов (Москва→Лондон ≈ 2500 км).
-_MOSCOW_LAT, _MOSCOW_LNG = 55.75, 37.62
-_LONDON_LAT, _LONDON_LNG = 51.5, -0.12
-MOSCOW_CITY_ID = UUID("00000000-0000-0000-0000-000000000001")
-LONDON_CITY_ID = UUID("00000000-0000-0000-0000-000000000002")
+_MOSCOW_LAT: Final[float] = 55.75
+_MOSCOW_LNG: Final[float] = 37.62
+_LONDON_LAT: Final[float] = 51.5
+_LONDON_LNG: Final[float] = -0.12
+MOSCOW_CITY_ID: Final[UUID] = UUID("00000000-0000-0000-0000-000000000001")
+LONDON_CITY_ID: Final[UUID] = UUID("00000000-0000-0000-0000-000000000002")
+ADMIN_ID: Final[UUID] = UUID("00000000-0000-0000-0000-0000000000ad")
+MOSCOW_POINT: Final[GeoPoint] = GeoPoint(
+    city_id=MOSCOW_CITY_ID, country_code="RU", latitude=_MOSCOW_LAT, longitude=_MOSCOW_LNG
+)
+LONDON_POINT: Final[GeoPoint] = GeoPoint(
+    city_id=LONDON_CITY_ID, country_code="GB", latitude=_LONDON_LAT, longitude=_LONDON_LNG
+)
+CITY_CSV_HEADER: Final[str] = "external_id,name_en,name_ru,country_code,latitude,longitude,population"
+PLACE_CSV_HEADER: Final[str] = "external_id,kind,name_en,name_ru,country_codes,latitude,longitude,notability"
 
 
 def make_password(hash: str = "argon2-hash") -> Password:
@@ -153,14 +161,13 @@ def make_geo_point(
     return GeoPoint(city_id=city_id, country_code=country_code, latitude=latitude, longitude=longitude)
 
 
-def make_city_location_response(
-    *,
-    city_id: UUID = MOSCOW_CITY_ID,
-    country_code: str = "RU",
-    latitude: float = _MOSCOW_LAT,
-    longitude: float = _MOSCOW_LNG,
-) -> CityLocationResponse:
-    return CityLocationResponse(city_id=city_id, country_code=country_code, latitude=latitude, longitude=longitude)
+def make_city_location_response(point: GeoPoint = MOSCOW_POINT) -> CityLocationResponse:
+    return CityLocationResponse(
+        city_id=point.city_id,
+        country_code=point.country_code,
+        latitude=point.latitude,
+        longitude=point.longitude,
+    )
 
 
 def make_journey(
@@ -180,9 +187,8 @@ def make_journey(
     return JourneyEntity(
         journey_id=journey_id or uuid4(),
         user_id=user_id or uuid4(),
-        origin=origin or make_geo_point(country_code="RU"),
-        destination=destination
-        or make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=_LONDON_LAT, longitude=_LONDON_LNG),
+        origin=origin or MOSCOW_POINT,
+        destination=destination or LONDON_POINT,
         transport_type=transport_type,
         distance_km=distance_km,
         traveled_year=traveled_year,
@@ -245,6 +251,17 @@ def make_job(
         queueing_lock=None,
         task_name=task_name,
         task_kwargs=task_kwargs or {},
+    )
+
+
+def make_job_context(*, registry: ComponentRegistry, job: Job | None = None) -> JobContext:
+    """Контекст задачи, каким его собирает воркер: реестр компонентов лежит в ``additional_context``."""
+    return JobContext(
+        app=App(connector=InMemoryConnector()),
+        job=job or make_job(),
+        start_timestamp=0.0,
+        abort_reason=lambda: None,
+        additional_context={WORKER_REGISTRY_KEY: registry},
     )
 
 

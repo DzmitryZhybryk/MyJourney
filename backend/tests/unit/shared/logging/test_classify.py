@@ -1,6 +1,5 @@
-"""Unit-тесты уровня строки лога запроса: по исключению, которым закончился запрос, и по статусу ответа."""
-
 import logging
+from typing import Final
 
 import pytest
 from fastapi.exceptions import RequestValidationError
@@ -22,7 +21,7 @@ from app.shared.exceptions.base import (
 )
 from app.shared.logging.classify import get_log_level_for_exception, get_log_level_for_status
 
-_LEVEL_BY_CATEGORY: tuple[tuple[AppError, int], ...] = (
+_LEVEL_BY_CATEGORY: Final[tuple[tuple[AppError, int], ...]] = (
     (InvalidInputError(), logging.WARNING),
     (UnauthenticatedError(), logging.WARNING),
     (PermissionDeniedError(), logging.WARNING),

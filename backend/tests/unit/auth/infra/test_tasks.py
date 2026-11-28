@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+import datetime as dt
+from typing import Final
 
 import pytest
 from procrastinate import JobContext
@@ -10,7 +11,7 @@ from app.shared.infra.crypto.fernet import FernetSecretCipher
 from app.shared.infra.http.exceptions import ExternalAPIPersistentError, ExternalAPITemporaryError
 from tests.fakes import FakeEmailTransport
 
-_FUTURE_EXPIRES_AT = (datetime.now(tz=UTC) + timedelta(hours=1)).isoformat()
+_FUTURE_EXPIRES_AT: Final[str] = (dt.datetime.now(tz=dt.UTC) + dt.timedelta(hours=1)).isoformat()
 
 
 async def test_send_verification_email_renders_and_sends(
@@ -18,7 +19,7 @@ async def test_send_verification_email_renders_and_sends(
     fake_email_transport: FakeEmailTransport,
     secret_cipher: FernetSecretCipher,
 ) -> None:
-    """send_verification_email рендерит письмо и отдаёт транспорту: to=email, код в html и text."""
+    """Письмо отрендерено и отдано транспорту: получатель — email учётки, код — в html и text."""
     await send_verification_email(
         job_context,
         user_id="user-1",
@@ -60,7 +61,7 @@ async def test_send_verification_email_skips_expired_code(
     secret_cipher: FernetSecretCipher,
 ) -> None:
     """Код истёк к моменту отправки → письма нет, в логе пропуск с user_id."""
-    expired_at = (datetime.now(tz=UTC) - timedelta(seconds=1)).isoformat()
+    expired_at = (dt.datetime.now(tz=dt.UTC) - dt.timedelta(seconds=1)).isoformat()
 
     with capture_logs() as logs:
         await send_verification_email(
@@ -125,16 +126,16 @@ def test_send_verification_email_retries_after_provider_delay(job_context: JobCo
     retry_strategy = send_verification_email.retry_strategy
     assert retry_strategy is not None
     error = ExternalAPITemporaryError(
-        method="POST", url="u", status=429, message="m", retry_after=timedelta(seconds=60)
+        method="POST", url="u", status=429, message="m", retry_after=dt.timedelta(seconds=60)
     )
 
-    before = datetime.now(tz=UTC)
+    before = dt.datetime.now(tz=dt.UTC)
     decision = retry_strategy.get_retry_decision(exception=error, job=job_context.job)
-    after = datetime.now(tz=UTC)
+    after = dt.datetime.now(tz=dt.UTC)
 
     assert decision is not None
     assert decision.retry_at is not None
-    assert before + timedelta(seconds=60) <= decision.retry_at <= after + timedelta(seconds=60)
+    assert before + dt.timedelta(seconds=60) <= decision.retry_at <= after + dt.timedelta(seconds=60)
 
 
 async def test_send_verification_email_propagates_persistent_error(

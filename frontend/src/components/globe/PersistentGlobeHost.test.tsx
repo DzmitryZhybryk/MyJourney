@@ -1,7 +1,7 @@
 import { delay, http, HttpResponse } from "msw";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { getJourneysGlobeQueryKey } from "../../api/sdk";
 import { i18n } from "../../i18n";
@@ -352,10 +352,6 @@ describe("PersistentGlobeHost — грань формы поездки", () => {
   };
   // jsdom: the viewport is 1024x768. The column is on the right, as in the desktop form layout.
   const SLOT: GlobeSlot = { left: 700, top: 100, width: 300, height: 600 };
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
 
   function renderJourneyAdd(options: { slot?: GlobeSlot | null; route?: GlobeRoute | null; queryClient?: ReturnType<typeof createTestQueryClient> } = {}) {
     const { slot = SLOT, route = ROUTE, queryClient } = options;

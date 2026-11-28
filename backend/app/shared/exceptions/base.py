@@ -1,6 +1,6 @@
 """Базовые исключения приложения."""
 
-from datetime import timedelta
+import datetime as dt
 from enum import Enum
 from typing import ClassVar
 
@@ -169,7 +169,7 @@ class TemporaryError(AppError):
         message: str | None = None,
         code: str | None = None,
         details: OptionalDict = None,
-        retry_after: timedelta | None = None,
+        retry_after: dt.timedelta | None = None,
     ) -> None:
         super().__init__(message=message, code=code, details=details)
         self.retry_after = retry_after

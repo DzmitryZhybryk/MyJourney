@@ -35,14 +35,11 @@ checker catches drift. Port rules — `layers.md`.
 
 ## Determinism
 
-- **Time:** construct entities with explicit timestamps (`expires_at`, `revoked_at` are constructor
-  arguments). For a method that stamps *now* (`revoke()`), assert the field is set, not its value.
-  Never freeze time globally and never inject a `Clock` into production code for tests.
-- **Randomness** (`secrets.token_urlsafe`): never predict the value; assert the invariant
-  (`entity.token_hash == hasher.digest(plaintext)`).
+- **Time:** timestamps are constructor arguments (`expires_at`, `revoked_at`); for a method that
+  stamps *now* (`revoke()`), assert the field is set, not its value.
+- **Randomness** (`secrets.token_urlsafe`): assert the invariant (`entity.token_hash == hasher.digest(plaintext)`).
 - **Slow primitives** (a password hash tuned to tens of milliseconds): service tests use a fake
   hasher; the real one is covered once, in its own roundtrip test.
-- **No sleeps:** wait for the condition, not a duration.
 
 ## Test data builders
 
@@ -51,9 +48,6 @@ Plain functions with keyword defaults in `tests/builders.py`
 determinism beats realism.
 
 ## Reuse before create
-
-Before adding a test, fixture, fake, builder or helper, enumerate what exists and reuse it. A
-near-duplicate is the same defect as copy-pasted production code.
 
 ```bash
 grep -rn "@pytest.fixture" tests
@@ -65,6 +59,11 @@ Read only the matching definitions, then reuse by name.
 - **No file-local `_make_*` helpers.** Build the object inline in the test, or use the shared
   builder or fixture. A helper is justified only once the same construction repeats across files,
   and then it becomes a builder or fixture, not a file-local function.
+- Any other helper one file needs (a query reading rows back, a pure oracle) is private, right after
+  the imports. When a second file needs it, it moves: data to `tests/builders.py`, anything that takes
+  a fixture to a fixture in the narrowest shared conftest.
+- Values several files share — ids, reference points, a format's header — are public constants in
+  `tests/builders.py`; a file's own constants are `_UPPER_SNAKE`. Both are annotated `Final[T]`.
 
 ## Conventions
 
@@ -72,6 +71,16 @@ Read only the matching definitions, then reuse by name.
 - A helper class one test needs (a provider subclass, a stub type) is declared inside that test, as
   part of its arrange step; one the whole file shares goes right after the imports. Never between tests.
 - `asyncio_mode = "auto"`: write `async def test_...` with no decorator.
-- Name: `test_<unit>_<condition>_<expected>`, plus a **one-line Russian docstring** stating what is asserted.
 - Variants through `@pytest.mark.parametrize`; `pytest.raises(SomeError, match=...)` where the
   message is the signal.
+
+### Name and docstring
+
+- **Name** — `test_<unit>_<condition>_<expected>`: the unit as the code spells it, never shortened or
+  class-prefixed; the condition (input or state) omitted for the plain case; the outcome — at the api
+  level the HTTP status (`returns_401`). `test_verify_email_expired_challenge_raises_challenge_expired`,
+  not `test_verify_raises_when_challenge_expired`.
+- **Docstring** — one Russian line stating the behaviour, without the unit the name carries; code in
+  double backticks: `"""Срок challenge истёк → ``ChallengeExpiredError``, без коммита."""`.
+- **Module docstring** — only for a fact no test states (why this level, what is tested elsewhere, a
+  hidden constraint), never a retelling of the path.

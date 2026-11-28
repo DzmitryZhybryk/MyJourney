@@ -1,5 +1,3 @@
-"""Фикстуры unit-тестов вертикали procrastinate."""
-
 import pytest
 from procrastinate.jobs import Job
 

@@ -1,12 +1,4 @@
-"""
-Фикстуры домена auth (unit): сборка application-сервисов на фейках.
-
-Фейки I/O-границы (репозитории, UoW, users-client, hasher'ы, task-bus, email-настройки)
-переехали в корневой ``tests/conftest.py`` — они переиспользуются и api-уровнем. Здесь
-остаётся только доменно-специфичная проводка сервисов-под-тестом, чтобы тесты не повторяли
-её. ``TokenIssuer``, ``JWTService`` и шифратор кодов — реальные (stateless infra, дешёвые и
-детерминированные).
-"""
+from typing import Final
 
 import pytest
 
@@ -27,7 +19,7 @@ from tests.fakes import (
     FakeUsersClient,
 )
 
-_REFRESH_TOKEN_TTL_DAYS = 30
+_REFRESH_TOKEN_TTL_DAYS: Final[int] = 30
 
 
 @pytest.fixture
@@ -46,7 +38,7 @@ def fake_email_verification_service() -> FakeEmailVerificationService:
 
 @pytest.fixture
 def auth_service(
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_users_client: FakeUsersClient,
     fake_salted_hasher: FakeSaltedHasher,
     token_issuer: TokenIssuer,
@@ -54,7 +46,7 @@ def auth_service(
     fake_event_publisher: FakeEventPublisher,
 ) -> AuthService:
     return AuthService(
-        uow=fake_uow,
+        uow=fake_auth_uow,
         users_client=fake_users_client,
         salted_hasher=fake_salted_hasher,
         token_issuer=token_issuer,
@@ -64,20 +56,20 @@ def auth_service(
 
 
 @pytest.fixture
-def account_service(fake_uow: FakeAuthUnitOfWork) -> AccountService:
-    return AccountService(fake_uow)
+def account_service(fake_auth_uow: FakeAuthUnitOfWork) -> AccountService:
+    return AccountService(fake_auth_uow)
 
 
 @pytest.fixture
 def email_verification_service(
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     secret_cipher: FernetSecretCipher,
     fake_task_bus: FakeTaskBus,
     fake_event_publisher: FakeEventPublisher,
     email_verification_config: EmailVerificationConfig,
 ) -> EmailVerificationService:
     return EmailVerificationService(
-        uow=fake_uow,
+        uow=fake_auth_uow,
         secret_cipher=secret_cipher,
         task_bus=fake_task_bus,
         event_publisher=fake_event_publisher,

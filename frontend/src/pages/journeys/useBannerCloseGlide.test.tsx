@@ -55,8 +55,6 @@ beforeEach(() => {
 afterEach(() => {
   // @ts-expect-error -- removing the test's own polyfill; jsdom never had the method
   delete Element.prototype.animate;
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
 });
 
 /** The stage top moves by `shift` (up when positive) and the layout reports a resize. */

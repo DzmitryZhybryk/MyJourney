@@ -1,10 +1,4 @@
-"""
-Юнит-тест адаптера ``InternalCitiesClient`` (journeys → geo).
-
-Реальный ``CityService`` на фейковом репозитории geo; фейкаем только I/O-границу geo. Api-тесты
-journeys подменяют клиента целиком, поэтому стык «journeys спрашивает — geo отвечает» проверяется
-только здесь.
-"""
+"""Api-тесты journeys подменяют клиента городов целиком, поэтому стык journeys и geo проверяется только здесь."""
 
 from uuid import uuid4
 
@@ -12,20 +6,19 @@ from app.geo.application.services.city import CityService
 from app.journeys.application.ports.cities_client import CityLocationResponse
 from app.journeys.infra.clients.internal_cities_client import InternalCitiesClient
 from tests.builders import make_city
-from tests.fakes import FakeCityRepository, FakeGeoUnitOfWork
+from tests.fakes import FakeCityRepository
 
 
-async def test_find_city_locations_maps_known_cities_from_geo() -> None:
-    """find_city_locations: страна и координаты городов из справочника geo, неизвестного id в ответе нет."""
+async def test_find_city_locations_maps_known_cities_from_geo(
+    city_service: CityService,
+    fake_city_repository: FakeCityRepository,
+) -> None:
+    """Страна и координаты городов берутся из справочника geo; неизвестного id в ответе нет."""
     moscow = make_city()
     london = make_city(en="London", ru="Лондон", country_code="GB", latitude=51.5, longitude=-0.12)
-    city_repository = FakeCityRepository()
-    city_repository.cities.extend([moscow, london])
-    client = InternalCitiesClient(
-        CityService(uow=FakeGeoUnitOfWork(city_repository)),
-    )
+    fake_city_repository.cities.extend([moscow, london])
 
-    locations = await client.find_city_locations((moscow.city_id, london.city_id, uuid4()))
+    locations = await InternalCitiesClient(city_service).find_city_locations((moscow.city_id, london.city_id, uuid4()))
 
     assert locations == frozenset(
         {

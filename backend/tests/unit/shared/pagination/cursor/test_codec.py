@@ -1,20 +1,13 @@
-"""
-Unit-тесты курсора keyset-пагинации: упаковка ключа сортировки, разбор курсора от клиента и
-отрезание страницы от выборки на ``limit + 1`` строк.
-
-Курсор приходит от клиента, поэтому главное — что любой испорченный или чужой курсор
-превращается в ``InvalidCursorError``, а не долетает до SQL и не роняет запрос в 500.
-"""
-
 import base64
 import datetime as dt
+from typing import Final
 from uuid import UUID
 
 import pytest
 
-from app.shared.pagination.cursor import InvalidCursorError, decode_cursor, encode_cursor, split_page
+from app.shared.pagination.cursor import CursorParser, InvalidCursorError, decode_cursor, encode_cursor, split_page
 
-_PARSERS = (dt.date.fromisoformat, dt.datetime.fromisoformat, UUID)
+_PARSERS: Final[tuple[CursorParser, ...]] = (dt.date.fromisoformat, dt.datetime.fromisoformat, UUID)
 
 
 def test_decode_cursor_restores_encoded_values_with_their_types() -> None:

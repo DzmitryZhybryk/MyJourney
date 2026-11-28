@@ -1,6 +1,6 @@
 import { fireEvent } from "@testing-library/react";
 import { useRef } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { stubScreenLayout, type ScreenRect } from "../test/layout";
 import { preferReducedMotion } from "../test/motion";
@@ -248,10 +248,6 @@ function OccludedMap({ fitBounds, occluderClass, shouldFadeUnderOccluder, isFitA
 describe("WorldMap: масштаб и слой поверх карты", () => {
   beforeEach(() => {
     stubScreenLayout(SCREEN_RECTS);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   it("щипок тачпада над картой приближает только её, вокруг курсора", () => {
@@ -517,10 +513,6 @@ describe("WorldMap: смена сцены", () => {
 
   beforeEach(() => {
     stubScreenLayout(SCREEN_RECTS);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   /** The view a map fitted to `SCENE_BOUNDS` opens on: the end of every scene change below. */

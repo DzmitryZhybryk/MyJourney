@@ -9,6 +9,7 @@ Integration-харнес хранилища media: S3-эмулятор RustFS в
 """
 
 from collections.abc import AsyncIterator, Iterator
+from typing import Final
 from uuid import uuid4
 
 import httpx
@@ -26,11 +27,13 @@ from app.shared.infra.di.registry import ComponentRegistry
 from app.shared.settings import MediaStorageSettings
 from devtools.storage_bootstrap import bootstrap_buckets
 
-_RUSTFS_IMAGE = "rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2"
-_RUSTFS_PORT = 9000
-_ACCESS_KEY_ID = "integration-access-key"
-_SECRET_ACCESS_KEY = "integration-secret-key"
-_FRONTEND_ORIGIN = "http://frontend.test"
+_RUSTFS_IMAGE: Final[str] = (
+    "rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2"
+)
+_RUSTFS_PORT: Final[int] = 9000
+_ACCESS_KEY_ID: Final[str] = "integration-access-key"
+_SECRET_ACCESS_KEY: Final[str] = "integration-secret-key"
+_FRONTEND_ORIGIN: Final[str] = "http://frontend.test"
 
 
 @pytest.fixture(scope="session")

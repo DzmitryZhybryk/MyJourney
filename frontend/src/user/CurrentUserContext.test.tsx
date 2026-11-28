@@ -151,8 +151,9 @@ describe("CurrentUserProvider", () => {
     expect(await screen.findByText("anonymous")).toBeInTheDocument();
 
     releaseProfile();
-    // Let the stale response arrive: the state must stay anonymous.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Disabling the query does not cancel the request in flight: the stale response has landed once
+    // the client stops fetching, and the state must still be anonymous.
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     expect(screen.getByText("anonymous")).toBeInTheDocument();
     expect(screen.queryByText(/ready:/u)).not.toBeInTheDocument();
     expect(screen.queryByText("error")).not.toBeInTheDocument();

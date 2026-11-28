@@ -1,12 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { emit, on } from "./events";
 
-describe("auth events", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
+describe("events", () => {
   it("вызывает подписчика при emit того же события", () => {
     const listener = vi.fn();
     const off = on("auth-required", listener);

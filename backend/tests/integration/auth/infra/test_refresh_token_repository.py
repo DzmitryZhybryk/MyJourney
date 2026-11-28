@@ -1,13 +1,6 @@
-"""
-Интеграционные тесты ``RefreshTokenRepository`` против реального Postgres.
-
-Покрывают то, что нельзя проверить на фейках: round-trip entity↔БД, bulk-UPDATE
-``revoke_all_active_refresh_tokens`` и реальный row-лок ``SELECT ... FOR UPDATE`` (основа
-reuse-detection refresh-флоу).
-"""
-
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -19,16 +12,16 @@ from app.auth.infra.models import RefreshToken
 from app.auth.infra.repositories import RefreshTokenRepository
 from tests.builders import make_refresh_token
 
-_EXPIRES_AT = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
-_REVOKED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
-_ALREADY_REVOKED_AT = dt.datetime(2020, 1, 1, tzinfo=dt.UTC)
+_EXPIRES_AT: Final[dt.datetime] = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
+_REVOKED_AT: Final[dt.datetime] = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
+_ALREADY_REVOKED_AT: Final[dt.datetime] = dt.datetime(2020, 1, 1, tzinfo=dt.UTC)
 
 
-async def test_insert_then_find_refresh_token_by_hash_roundtrip(
+async def test_insert_then_find_refresh_token_by_hash_for_update_roundtrip(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """insert + commit → ``find_refresh_token_by_hash_for_update`` из новой сессии возвращает ту же сущность."""
+    """Insert и commit → поиск по hash из новой сессии отдаёт ту же сущность."""
     user_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="rt-roundtrip@example.com", username="rt_roundtrip")
     refresh_token_entity = make_refresh_token(user_id=user_id, token_hash="roundtrip-hash", expires_at=_EXPIRES_AT)
@@ -49,7 +42,7 @@ async def test_insert_then_find_refresh_token_by_hash_roundtrip(
     assert found.revoked_at is None
 
 
-async def test_find_refresh_token_by_hash_missing_returns_none(db_session: AsyncSession) -> None:
+async def test_find_refresh_token_by_hash_for_update_unknown_hash_returns_none(db_session: AsyncSession) -> None:
     """Поиск по несуществующему hash'у возвращает ``None``, а не падает."""
     found = await RefreshTokenRepository(db_session).find_refresh_token_by_hash_for_update(
         "missing-hash",
@@ -58,11 +51,11 @@ async def test_find_refresh_token_by_hash_missing_returns_none(db_session: Async
     assert found is None
 
 
-async def test_update_refresh_token_persists_revoked_at(
+async def test_update_refresh_token_by_id_persists_revoked_at(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``update_refresh_token_by_id`` персистит изменённый ``revoked_at`` (виден из новой сессии)."""
+    """Изменённый ``revoked_at`` виден из новой сессии."""
     user_id = uuid4()
     token_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="rt-update@example.com", username="rt_update")
@@ -93,11 +86,11 @@ async def test_update_refresh_token_persists_revoked_at(
     assert found.revoked_at == _REVOKED_AT
 
 
-async def test_revoke_all_active_refresh_tokens_revokes_only_active(
+async def test_revoke_all_active_refresh_tokens_by_user_id_revokes_only_active(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``revoke_all_active_refresh_tokens_by_user_id`` отзывает только активные; уже отозванный не перезаписывается."""
+    """Отзываются только активные токены; уже отозванный не перезаписывается."""
     user_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="rt-revoke@example.com", username="rt_revoke")
     active_one = make_refresh_token(user_id=user_id, token_hash="active-1", expires_at=_EXPIRES_AT)
@@ -137,7 +130,7 @@ async def test_find_refresh_token_by_hash_for_update_locks_row(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``find_refresh_token_by_hash_for_update`` берёт реальный row-лок: вторая сессия не возьмёт его под ``NOWAIT``."""
+    """Row-лок реальный: вторая сессия не возьмёт строку под ``NOWAIT``."""
     user_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="rt-lock@example.com", username="rt_lock")
     refresh_token_entity = make_refresh_token(user_id=user_id, token_hash="lock-hash", expires_at=_EXPIRES_AT)

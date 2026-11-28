@@ -1,11 +1,4 @@
-"""
-Unit-тест lifecycle ``ResendComponent``.
-
-Компонент собирает ``ResendClient`` из настроек и регистрирует его в registry под
-ключом-Protocol'ом ``EmailTransportPort`` (доменный код зависит от Protocol, не от
-провайдера); shutdown закрывает httpx-пул. Сети нет — httpx-клиент коннектится
-только на запрос, а ``aclose`` лишь освобождает пул.
-"""
+"""Сеть не нужна: httpx-клиент соединяется только на запрос, а ``aclose`` лишь освобождает пул."""
 
 from pydantic import SecretStr
 

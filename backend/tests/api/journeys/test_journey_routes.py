@@ -1,17 +1,6 @@
-"""
-api-тесты роутов journeys (``POST``/``GET /v1/journeys/``, ``PUT``/``DELETE /{id}/``, ``/{id}/move/``,
-``/years/``, ``/distance/``, ``/map/``, ``/globe/``, ``/movements/``) на ASGI-приложении.
-
-Реальная проводка ``journey_service`` поверх фейк-UoW, реальный декод Bearer-токена
-(``mint_access_token`` подписывает settings-секретом; ``sub`` токена становится ``user_id``
-поездки). Пиннят 201-payload-on-create, 401 без токена, 400 неизвестного города, 422 запроса,
-сериализацию ответов карт (camelCase, без лишних полей) и то, что фильтры карты перемещений
-из query доходят до репозитория.
-"""
-
 import datetime as dt
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Final
 from uuid import uuid4
 
 import pytest
@@ -24,7 +13,9 @@ from app.journeys.presentation.dependencies import cities_client_dependency
 from app.shared.schemas.base import BFastAPI
 from tests.builders import (
     LONDON_CITY_ID,
+    LONDON_POINT,
     MOSCOW_CITY_ID,
+    MOSCOW_POINT,
     make_city,
     make_geo_point,
     make_journey,
@@ -38,20 +29,20 @@ from tests.fakes import (
     MovementConnectionQuery,
 )
 
-_CREATE_PATH = "/v1/journeys/"
-_MAP_PATH = "/v1/journeys/map/"
-_GLOBE_PATH = "/v1/journeys/globe/"
-_MOVEMENTS_PATH = "/v1/journeys/movements/"
-_FEED_PATH = "/v1/journeys/"
-_YEARS_PATH = "/v1/journeys/years/"
-_DISTANCE_PATH = "/v1/journeys/distance/"
-_ROUTE = {"originCityId": str(MOSCOW_CITY_ID), "destinationCityId": str(LONDON_CITY_ID)}
-_VALID_BODY: dict[str, Any] = {
+_CREATE_PATH: Final[str] = "/v1/journeys/"
+_MAP_PATH: Final[str] = "/v1/journeys/map/"
+_GLOBE_PATH: Final[str] = "/v1/journeys/globe/"
+_MOVEMENTS_PATH: Final[str] = "/v1/journeys/movements/"
+_FEED_PATH: Final[str] = "/v1/journeys/"
+_YEARS_PATH: Final[str] = "/v1/journeys/years/"
+_DISTANCE_PATH: Final[str] = "/v1/journeys/distance/"
+_ROUTE: Final[dict[str, str]] = {"originCityId": str(MOSCOW_CITY_ID), "destinationCityId": str(LONDON_CITY_ID)}
+_VALID_BODY: Final[dict[str, Any]] = {
     **_ROUTE,
     "transportType": "air",
     "traveledYear": 2020,
 }
-_CURRENT_YEAR = dt.datetime.now(tz=dt.UTC).year
+_CURRENT_YEAR: Final[int] = dt.datetime.now(tz=dt.UTC).year
 
 
 async def test_create_journey_returns_201_and_persists(
@@ -245,11 +236,11 @@ async def test_get_journeys_map_returns_aggregated_countries(
     user_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
         VisitedCity(
-            city=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+            city=LONDON_POINT,
             years=(2020,),
         ),
         VisitedCity(
-            city=make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.75, longitude=37.62),
+            city=MOSCOW_POINT,
             years=(2020,),
         ),
     ]
@@ -295,7 +286,7 @@ async def test_get_journeys_globe_returns_cities_without_country(
     user_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
         VisitedCity(
-            city=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+            city=LONDON_POINT,
             years=(2020,),
         ),
     ]
@@ -342,8 +333,8 @@ async def test_get_movements_map_returns_routes_and_year_bounds(
     ]
     fake_journey_repository.movement_connections_by_user_id[user_id] = [
         MovementConnection(
-            origin=make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.75, longitude=37.62),
-            destination=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+            origin=MOSCOW_POINT,
+            destination=LONDON_POINT,
             years=(2018, 2021),
         ),
     ]

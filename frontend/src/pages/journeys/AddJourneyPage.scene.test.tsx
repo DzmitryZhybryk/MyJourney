@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { Route, Routes } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useGlobeScene } from "../../components/globe/globeScene";
 import { pickCity, pickOption, submitMoscowToLondon } from "../../test/addJourney";
@@ -40,11 +40,6 @@ function renderWithSceneProbe() {
 }
 
 describe("AddJourneyPage — сцена глобуса", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
-
   it("публикует глобусу маршрут по мере заполнения формы", async () => {
     const { user } = renderWithSceneProbe();
     const scene = screen.getByTestId("scene");

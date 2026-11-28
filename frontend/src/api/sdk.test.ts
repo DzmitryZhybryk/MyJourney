@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearAccessToken, setAccessToken } from "../auth/tokenStore";
+import { setAccessToken } from "../auth/tokenStore";
 import { jsonResponse, type FetchSignature } from "../test/fetchStub";
 import { ApiError } from "./errors";
 import { createJourney, getCurrentUser } from "./sdk";
@@ -22,13 +22,8 @@ function requestAt(index: number): Request {
 }
 
 beforeEach(() => {
-  clearAccessToken();
   fetchMock = vi.fn<FetchSignature>();
   vi.stubGlobal("fetch", fetchMock);
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
 });
 
 /*

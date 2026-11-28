@@ -1,11 +1,4 @@
-"""
-Интеграционные тесты версий конфига media против реального Postgres: JSONB-снапшот туда и обратно,
-последняя версия по номеру, повтор номера как конфликт, seed поверх уже записанного конфига и seed поверх
-строки, которую код уже не читает.
-"""
-
 import json
-from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -17,9 +10,7 @@ from app.media.application.services.media_config import MediaConfigService
 from app.media.infra.repositories import MediaConfigRepository
 from app.media.infra.uow import MediaUnitOfWork
 from app.shared.versioned_config import ConfigVersionConflictError
-from tests.builders import make_media_config_snapshot
-
-ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000ad")
+from tests.builders import ADMIN_ID, make_media_config_snapshot
 
 
 async def test_find_latest_media_config_empty_table_returns_none(db_session: AsyncSession) -> None:

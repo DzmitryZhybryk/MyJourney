@@ -1,8 +1,3 @@
-"""
-Backoffice-данные для generic api-проводки (``tests/api/conftest.py``): админский роутер под боевым
-префиксом и подмена листовой зависимости — UoW. Сервис остаётся настоящим, хранилище — фейк.
-"""
-
 from collections.abc import Callable
 from typing import Any
 

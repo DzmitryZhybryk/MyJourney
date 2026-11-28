@@ -1,7 +1,7 @@
 """Стратегия повторов фоновой задачи, которая слушает срок, названный внешней зависимостью."""
 
+import datetime as dt
 import math
-from datetime import timedelta
 from typing import ClassVar
 
 from procrastinate import RetryDecision, RetryStrategy
@@ -22,7 +22,7 @@ class RetryAfterStrategy(RetryStrategy):
     повторяется; подкласс переопределяет потолок.
     """
 
-    _MAX_RETRY_AFTER: ClassVar[timedelta] = timedelta(minutes=5)
+    _MAX_RETRY_AFTER: ClassVar[dt.timedelta] = dt.timedelta(minutes=5)
 
     def get_retry_decision(self, *, exception: BaseException, job: Job) -> RetryDecision | None:
         """

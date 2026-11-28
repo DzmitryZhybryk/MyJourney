@@ -1,12 +1,5 @@
-"""
-Интеграционные тесты ``UserRepository`` против реального Postgres.
-
-Покрывают round-trip entity↔БД по каждой колонке профиля, то, что soft-deleted
-запись репозиторий отдаёт как есть (интерпретация удаления — забота домена), реальный
-row-лок ``find_user_by_id_for_update`` и запись правки профиля ``update_user_by_id``.
-"""
-
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -19,15 +12,15 @@ from app.users.infra.models import User
 from app.users.infra.repositories import UserRepository
 from tests.builders import make_user_entity
 
-_TERMS_ACCEPTED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
-_UPDATED_AT = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
-_DELETED_AT = dt.datetime(2026, 1, 3, tzinfo=dt.UTC)
+_TERMS_ACCEPTED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+_UPDATED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 3, tzinfo=dt.UTC)
 
 
-async def test_insert_then_find_by_id_roundtrip(
+async def test_insert_then_find_user_by_id_roundtrip(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """insert + commit → ``find_user_by_id`` возвращает сущность со всеми полями профиля."""
+    """Insert и commit → поиск по id отдаёт сущность со всеми полями профиля."""
     user_entity = make_user_entity(
         display_name="Alice D.",
         terms_accepted_at=_TERMS_ACCEPTED_AT,
@@ -51,7 +44,7 @@ async def test_insert_then_find_by_id_roundtrip(
     assert found.deleted_at is None
 
 
-async def test_find_by_id_returns_soft_deleted_user(
+async def test_find_user_by_id_returns_soft_deleted_user(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Soft-deleted запись не фильтруется: репозиторий отдаёт её с ``deleted_at``."""
@@ -68,7 +61,7 @@ async def test_find_by_id_returns_soft_deleted_user(
     assert found.is_deleted is True
 
 
-async def test_find_by_unknown_id_returns_none(db_session: AsyncSession) -> None:
+async def test_find_user_by_id_unknown_id_returns_none(db_session: AsyncSession) -> None:
     """Неизвестный id → ``None``."""
     found = await UserRepository(db_session).find_user_by_id(uuid4())
 
@@ -78,7 +71,7 @@ async def test_find_by_unknown_id_returns_none(db_session: AsyncSession) -> None
 async def test_find_user_by_id_for_update_locks_row(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """``find_user_by_id_for_update`` берёт реальный row-лок: вторая сессия не возьмёт его под ``NOWAIT``."""
+    """Row-лок реальный: вторая сессия не возьмёт строку под ``NOWAIT``."""
     user_entity = make_user_entity()
     async with session_factory() as writer:
         await UserRepository(writer).insert_user(user_entity)
@@ -119,7 +112,7 @@ async def test_find_user_by_id_for_update_unknown_id_returns_none(db_session: As
 async def test_update_user_by_id_persists_profile_changes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """``update_user_by_id`` записывает изменённые поля и updated_at; created_at и terms не меняются."""
+    """Изменённые поля и ``updated_at`` записаны; ``created_at`` и дата принятия условий прежние."""
     user_entity = make_user_entity(
         display_name="alice",
         marketing_emails_consent=True,
@@ -150,7 +143,7 @@ async def test_update_user_by_id_persists_profile_changes(
     assert found.terms_accepted_at == _TERMS_ACCEPTED_AT
 
 
-async def test_update_user_by_id_with_entity_changed_twice_raises_stale_and_keeps_row(
+async def test_update_user_by_id_entity_changed_twice_raises_stale(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Сущность изменена дважды после чтения → ``StaleRowVersionError``, в базе прежнее имя и версия."""

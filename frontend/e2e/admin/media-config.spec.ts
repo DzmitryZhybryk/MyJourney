@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { E2E_ADMIN, HAS_E2E_ADMIN } from "../helpers/admin";
 import { loginViaUi } from "../helpers/users";
@@ -11,7 +11,7 @@ import { loginViaUi } from "../helpers/users";
  */
 test.describe.configure({ mode: "serial" });
 
-test.describe("Admin: upload rules", () => {
+test.describe("Админка: правила загрузки", () => {
   test.skip(!HAS_E2E_ADMIN, "only the throwaway stack (make test-e2e) has the e2e admin");
 
   test("админ меняет лимит аватара и видит новую версию после перезагрузки", async ({ page, browserName }) => {

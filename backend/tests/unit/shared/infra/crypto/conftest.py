@@ -1,5 +1,3 @@
-"""Фикстуры crypto-инфраструктуры: реальный Argon2-hasher для roundtrip-тестов."""
-
 import pytest
 
 from app.shared.infra.crypto.argon2 import Argon2SaltedHasher

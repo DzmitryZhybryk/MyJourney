@@ -1,11 +1,4 @@
-"""
-Unit-тесты ``ProcrastinateTaskBus`` поверх реального ``App`` + ``InMemoryConnector``.
-
-Реальная App + in-memory коннектор (без сети, как в ``test_tasks.py``) — classicist:
-ассертим итоговое состояние (job лёг в коннектор), а не порядок вызовов. Атомарный
-defer в SA-транзакции (``ProcrastinateSessionBoundTaskBus.defer``) требует живой
-сессии и проверяется на integration-уровне.
-"""
+"""Атомарная постановка в транзакции сессии требует живой базы и проверяется на integration-уровне."""
 
 from procrastinate.testing import InMemoryConnector
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +8,7 @@ from app.shared.infra.procrastinate.component import ProcrastinateApp
 
 
 async def test_defer_enqueues_job_with_name_lock_and_args() -> None:
-    """``defer`` ставит job в очередь с именем задачи, lock'ом и переданными kwargs."""
+    """Задача встаёт в очередь с именем, lock'ом и переданными аргументами."""
     connector = InMemoryConnector()
     app = ProcrastinateApp(connector=connector)
 
@@ -33,7 +26,7 @@ async def test_defer_enqueues_job_with_name_lock_and_args() -> None:
 
 
 def test_bind_to_returns_session_bound_bus() -> None:
-    """``bind_to`` возвращает сессионно-привязанный view (``ProcrastinateSessionBoundTaskBus``)."""
+    """Привязка к сессии отдаёт ``ProcrastinateSessionBoundTaskBus``."""
     app = ProcrastinateApp(connector=InMemoryConnector())
 
     bound = ProcrastinateTaskBus(app).bind_to(AsyncSession())

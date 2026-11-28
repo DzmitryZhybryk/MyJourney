@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { makeUserData } from "../helpers/users";
 
@@ -12,7 +12,7 @@ import { makeUserData } from "../helpers/users";
  * Field micro-validation (A2) and 409 conflicts (L) are covered by the component
  * `SignUpPage.test.tsx` and are not duplicated here.
  */
-test.describe("Sign up", () => {
+test.describe("Регистрация", () => {
   test("валидная регистрация ведёт на главную и сохраняет токен сессии", async ({ page }) => {
     const { username, email, password } = makeUserData();
 

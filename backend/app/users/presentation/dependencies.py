@@ -10,9 +10,15 @@ from app.users.application.services.user import UserService
 from app.users.infra.uow import UserUnitOfWork
 
 
+def user_uow_dependency(
+    session: Annotated[AsyncSession, Depends(db_session_dependency)],
+) -> UserUnitOfWork:
+    return UserUnitOfWork(session)
+
+
 def user_service_dependency(
     *,
-    session: Annotated[AsyncSession, Depends(db_session_dependency)],
+    uow: Annotated[UserUnitOfWork, Depends(user_uow_dependency)],
     event_publisher: Annotated[EventPublisherPort, Depends(event_publisher_dependency)],
 ) -> UserService:
-    return UserService(uow=UserUnitOfWork(session), event_publisher=event_publisher)
+    return UserService(uow=uow, event_publisher=event_publisher)

@@ -1,5 +1,5 @@
 import { fireEvent, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { MapCountry } from "../../../components/WorldMap";
 import { WORLD_VIEW_BOX } from "../../../components/worldProjection";
@@ -63,10 +63,6 @@ async function findMap(container: HTMLElement): Promise<HTMLElement> {
     return wrap;
   });
 }
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe("JourneysMapHost", () => {
   it("одна и та же карта переживает переход между вкладками и меняет слой", async () => {

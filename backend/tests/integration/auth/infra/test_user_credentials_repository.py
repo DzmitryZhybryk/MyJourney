@@ -1,12 +1,6 @@
-"""
-Интеграционные тесты ``UserCredentialsRepository`` против реального Postgres.
-
-Покрывают round-trip entity↔БД, поиск по email/username без учёта регистра, реальные
-unique-индексы по ``lower(email)`` / ``lower(username)`` и уровень row-лока, которые на фейках не проверить.
-"""
-
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -20,13 +14,13 @@ from app.auth.infra.repositories import ChallengeRepository, UserCredentialsRepo
 from app.shared.infra.db.postgres.exceptions import StaleRowVersionError
 from tests.builders import make_challenge, make_user_credentials
 
-_VERIFIED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
+_VERIFIED_AT: Final[dt.datetime] = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
 
-async def test_insert_then_find_by_user_id_roundtrip(
+async def test_insert_then_find_user_credentials_by_user_id_roundtrip(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """insert + commit → ``find_user_credentials_by_user_id`` возвращает ту же сущность."""
+    """Insert и commit → поиск по user_id отдаёт ту же сущность."""
     user_id = uuid4()
     user_credentials_entity = make_user_credentials(
         user_id=user_id,
@@ -53,11 +47,11 @@ async def test_insert_then_find_by_user_id_roundtrip(
 
 
 @pytest.mark.parametrize("lookup_email", ["first@example.com", "FIRST@EXAMPLE.COM", "First@Example.com"])
-async def test_find_by_email_ignores_case(
+async def test_find_user_credentials_by_email_ignores_case(
     session_factory: async_sessionmaker[AsyncSession],
     lookup_email: str,
 ) -> None:
-    """``find_user_credentials_by_email`` находит запись в любом регистре и не задевает соседей."""
+    """Запись находится по email в любом регистре; соседи не задеты."""
     user_id = uuid4()
     async with session_factory() as writer:
         repository = UserCredentialsRepository(writer)
@@ -75,11 +69,11 @@ async def test_find_by_email_ignores_case(
 
 
 @pytest.mark.parametrize("lookup_username", ["Neo", "neo", "NEO"])
-async def test_find_by_username_ignores_case(
+async def test_find_user_credentials_by_username_ignores_case(
     session_factory: async_sessionmaker[AsyncSession],
     lookup_username: str,
 ) -> None:
-    """``find_user_credentials_by_username`` находит запись в любом регистре и не задевает соседей."""
+    """Запись находится по username в любом регистре; соседи не задеты."""
     user_id = uuid4()
     async with session_factory() as writer:
         repository = UserCredentialsRepository(writer)
@@ -97,11 +91,11 @@ async def test_find_by_username_ignores_case(
 
 
 @pytest.mark.parametrize("login", ["neo@example.com", "NEO@Example.com", "neo", "NEO"])
-async def test_find_by_login_matches_email_or_username_ignoring_case(
+async def test_find_user_credentials_by_login_matches_email_or_username_ignoring_case(
     session_factory: async_sessionmaker[AsyncSession],
     login: str,
 ) -> None:
-    """``find_user_credentials_by_login`` находит учётку и по email, и по username в любом регистре."""
+    """Учётка находится и по email, и по username в любом регистре."""
     user_id = uuid4()
     async with session_factory() as writer:
         repository = UserCredentialsRepository(writer)
@@ -118,7 +112,7 @@ async def test_find_by_login_matches_email_or_username_ignoring_case(
     assert found.user_id == user_id
 
 
-async def test_find_by_login_prefers_email_owner_over_matching_username(
+async def test_find_user_credentials_by_login_prefers_email_owner_over_matching_username(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Логин — чей-то email и одновременно чужой username → возвращается владелец email."""
@@ -140,7 +134,9 @@ async def test_find_by_login_prefers_email_owner_over_matching_username(
     assert found.user_id == email_owner_id
 
 
-async def test_find_by_email_username_and_login_no_match_returns_none(db_session: AsyncSession) -> None:
+async def test_find_user_credentials_by_email_username_or_login_no_match_returns_none(
+    db_session: AsyncSession,
+) -> None:
     """Поиск без совпадений возвращает ``None``, а не падает."""
     repository = UserCredentialsRepository(db_session)
 
@@ -149,10 +145,10 @@ async def test_find_by_email_username_and_login_no_match_returns_none(db_session
     assert await repository.find_user_credentials_by_login("nobody") is None
 
 
-async def test_insert_email_differing_only_by_case_raises_integrity_error(
+async def test_insert_user_credentials_email_differing_only_by_case_raises_integrity_error(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Email, отличающийся только регистром, нарушает unique-индекс по lower(email) — ``IntegrityError``."""
+    """Email, отличающийся только регистром, нарушает unique-индекс по ``lower(email)`` → ``IntegrityError``."""
     existing = make_user_credentials(email="dup@example.com", username="original_user")
     async with session_factory() as writer:
         await UserCredentialsRepository(writer).insert_user_credentials(existing)
@@ -165,10 +161,10 @@ async def test_insert_email_differing_only_by_case_raises_integrity_error(
             await writer.commit()
 
 
-async def test_insert_username_differing_only_by_case_raises_integrity_error(
+async def test_insert_user_credentials_username_differing_only_by_case_raises_integrity_error(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Username, отличающийся только регистром, нарушает unique-индекс по lower(username) — ``IntegrityError``."""
+    """Username, отличающийся только регистром, нарушает unique-индекс по ``lower(username)`` → ``IntegrityError``."""
     existing = make_user_credentials(email="original@example.com", username="dup_user")
     async with session_factory() as writer:
         await UserCredentialsRepository(writer).insert_user_credentials(existing)
@@ -181,10 +177,10 @@ async def test_insert_username_differing_only_by_case_raises_integrity_error(
             await writer.commit()
 
 
-async def test_update_persists_email_verified_at(
+async def test_update_user_credentials_by_user_id_persists_email_verified_at(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """``update_user_credentials_by_user_id`` персистит ``email_verified_at`` (виден из новой сессии)."""
+    """Изменённый ``email_verified_at`` виден из новой сессии."""
     user_id = uuid4()
     user_credentials_entity = make_user_credentials(
         user_id=user_id, email="uc-update@example.com", username="uc_update"
@@ -212,7 +208,7 @@ async def test_update_persists_email_verified_at(
 
 
 @pytest.mark.parametrize("stale_version", [1, 3], ids=["same-as-stored", "skips-a-version"])
-async def test_update_with_version_not_next_to_stored_raises_stale_and_keeps_row(
+async def test_update_user_credentials_by_user_id_version_not_next_to_stored_raises_stale(
     session_factory: async_sessionmaker[AsyncSession],
     stale_version: int,
 ) -> None:
@@ -243,10 +239,10 @@ async def test_update_with_version_not_next_to_stored_raises_stale_and_keeps_row
     assert found.version == 1
 
 
-async def test_find_by_user_ids_returns_matching_rows_incl_deleted_and_skips_unknown(
+async def test_find_user_credentials_by_user_ids_returns_matching_rows_incl_deleted(
     db_session: AsyncSession,
 ) -> None:
-    """``find_user_credentials_by_user_ids`` отдаёт строки по набору id, удалённые тоже; неизвестный id пропускает."""
+    """Строки по набору id, удалённые тоже; неизвестный id пропущен."""
     repository = UserCredentialsRepository(db_session)
     active_entity = make_user_credentials(email="uc-ids-active@example.com", username="uc_ids_active")
     deleted_entity = make_user_credentials(
@@ -268,11 +264,11 @@ async def test_find_by_user_ids_returns_matching_rows_incl_deleted_and_skips_unk
     }
 
 
-async def test_find_by_user_id_for_update_locks_row_against_second_locker(
+async def test_find_user_credentials_by_user_id_for_update_locks_row(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``find_user_credentials_by_user_id_for_update`` берёт row-лок: второй такой же под ``NOWAIT`` падает."""
+    """Row-лок реальный: второй такой же под ``NOWAIT`` падает."""
     user_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="uc-lock@example.com", username="uc_lock")
 
@@ -289,7 +285,7 @@ async def test_find_by_user_id_for_update_locks_row_against_second_locker(
             await contender.execute(nowait_query)
 
 
-async def test_find_by_user_id_for_update_lets_referencing_row_insert(
+async def test_find_user_credentials_by_user_id_for_update_lets_referencing_row_insert(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:

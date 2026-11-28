@@ -1,13 +1,6 @@
-"""
-Интеграционные тесты ``ChallengeRepository`` против реального Postgres.
-
-Покрывают round-trip, фильтр «только активный» (``used_at IS NULL``), партиальный
-unique-индекс (один активный challenge типа на пользователя) и реальный row-лок
-``SELECT ... FOR UPDATE`` (защита от потери инкремента попыток в verify-флоу).
-"""
-
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -20,16 +13,16 @@ from app.auth.infra.models import Challenge
 from app.auth.infra.repositories import ChallengeRepository
 from tests.builders import make_challenge
 
-_EXPIRES_AT = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
-_LAST_SENT_AT = dt.datetime(2029, 12, 31, 23, 45, tzinfo=dt.UTC)
-_USED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
+_EXPIRES_AT: Final[dt.datetime] = dt.datetime(2030, 1, 1, tzinfo=dt.UTC)
+_LAST_SENT_AT: Final[dt.datetime] = dt.datetime(2029, 12, 31, 23, 45, tzinfo=dt.UTC)
+_USED_AT: Final[dt.datetime] = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
 
-async def test_insert_then_find_active_for_update_roundtrip(
+async def test_insert_then_find_active_challenge_for_update_roundtrip(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """insert + commit → ``find_active_challenge_for_update`` возвращает ту же сущность."""
+    """Insert и commit → поиск активного challenge отдаёт ту же сущность."""
     user_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="ch-roundtrip@example.com", username="ch_roundtrip")
     challenge_entity = make_challenge(
@@ -59,7 +52,7 @@ async def test_insert_then_find_active_for_update_roundtrip(
     assert found.attempts == 0
 
 
-async def test_find_active_excludes_used_challenge(
+async def test_find_active_challenge_for_update_skips_used_challenge(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
@@ -85,11 +78,11 @@ async def test_find_active_excludes_used_challenge(
     assert found is None
 
 
-async def test_update_challenge_persists_attempts_and_resend(
+async def test_update_challenge_by_id_persists_attempts_and_resend(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``update_challenge_by_id`` персистит счётчик попыток и продление после повторной отправки."""
+    """Счётчик попыток и продление после повторной отправки записываются."""
     user_id = uuid4()
     challenge_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="ch-update@example.com", username="ch_update")
@@ -129,7 +122,7 @@ async def test_update_challenge_persists_attempts_and_resend(
     assert found.expires_at == resent_at + dt.timedelta(minutes=15)
 
 
-async def test_second_active_same_type_raises_integrity_error(
+async def test_insert_challenge_second_active_of_same_type_raises_integrity_error(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
@@ -150,11 +143,11 @@ async def test_second_active_same_type_raises_integrity_error(
             await writer.commit()
 
 
-async def test_find_active_for_update_locks_row(
+async def test_find_active_challenge_for_update_locks_row(
     session_factory: async_sessionmaker[AsyncSession],
     seed_user_credentials: Callable[..., Awaitable[None]],
 ) -> None:
-    """``find_active_challenge_for_update`` берёт реальный row-лок: вторая сессия не возьмёт его под ``NOWAIT``."""
+    """Row-лок реальный: вторая сессия не возьмёт строку под ``NOWAIT``."""
     user_id = uuid4()
     await seed_user_credentials(user_id=user_id, email="ch-lock@example.com", username="ch_lock")
     challenge_entity = make_challenge(

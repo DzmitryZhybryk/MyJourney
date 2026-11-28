@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import jwt
@@ -8,9 +9,9 @@ from app.shared.infra.jwt import AccessTokenClaims, JWTDecodeError
 from app.shared.infra.jwt.service import JWTService
 from app.shared.types import DictStrAny
 
-_ISSUED_AT = int(dt.datetime(2026, 1, 1, tzinfo=dt.UTC).timestamp())
-_FAR_FUTURE = int(dt.datetime(2100, 1, 1, tzinfo=dt.UTC).timestamp())
-_VALID_CLAIMS: DictStrAny = {
+_ISSUED_AT: Final[int] = int(dt.datetime(2026, 1, 1, tzinfo=dt.UTC).timestamp())
+_FAR_FUTURE: Final[int] = int(dt.datetime(2100, 1, 1, tzinfo=dt.UTC).timestamp())
+_VALID_CLAIMS: Final[DictStrAny] = {
     "role": "user",
     "plan": "free",
     "email_verified": True,

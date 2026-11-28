@@ -1,10 +1,7 @@
-"""
-Unit-тесты ``RetryAfterStrategy``: решение о повторе — за procrastinate, срок зависимости меняет только время.
+"""Время повтора проверяется окном: ``retry_at`` лежит между моментами до и после вызова плюс ожидаемая пауза."""
 
-Время повтора проверяется окном: ``retry_at`` лежит между моментами до и после вызова плюс ожидаемая пауза.
-"""
-
-from datetime import UTC, datetime, timedelta
+import datetime as dt
+from typing import Final
 
 import pytest
 from procrastinate.jobs import Job
@@ -13,26 +10,28 @@ from structlog.testing import capture_logs
 from app.shared.exceptions import InternalError, TemporaryError
 from app.shared.infra.procrastinate.retry import RetryAfterStrategy
 
-_STRATEGY = RetryAfterStrategy(max_attempts=3, wait=10, exponential_wait=2, retry_exceptions={TemporaryError})
+_STRATEGY: Final[RetryAfterStrategy] = RetryAfterStrategy(
+    max_attempts=3, wait=10, exponential_wait=2, retry_exceptions={TemporaryError}
+)
 
 
 @pytest.mark.parametrize(
     ("retry_after", "expected_delay"),
     [
-        (None, timedelta(seconds=12)),
-        (timedelta(seconds=60), timedelta(seconds=60)),
-        (timedelta(seconds=59.2), timedelta(seconds=60)),
-        (timedelta(0), timedelta(0)),
-        (timedelta(minutes=5), timedelta(minutes=5)),
+        (None, dt.timedelta(seconds=12)),
+        (dt.timedelta(seconds=60), dt.timedelta(seconds=60)),
+        (dt.timedelta(seconds=59.2), dt.timedelta(seconds=60)),
+        (dt.timedelta(0), dt.timedelta(0)),
+        (dt.timedelta(minutes=5), dt.timedelta(minutes=5)),
     ],
 )
 def test_retry_after_strategy_retries_after_dependency_delay_or_own_backoff(
-    failed_job: Job, retry_after: timedelta | None, expected_delay: timedelta
+    failed_job: Job, retry_after: dt.timedelta | None, expected_delay: dt.timedelta
 ) -> None:
     """Без срока — пауза procrastinate (10 + 2¹ с); со сроком до потолка включительно — срок, округлённый вверх."""
-    before = datetime.now(tz=UTC)
+    before = dt.datetime.now(tz=dt.UTC)
     decision = _STRATEGY.get_retry_decision(exception=TemporaryError(retry_after=retry_after), job=failed_job)
-    after = datetime.now(tz=UTC)
+    after = dt.datetime.now(tz=dt.UTC)
 
     assert decision is not None
     assert decision.retry_at is not None
@@ -43,7 +42,7 @@ def test_retry_after_strategy_gives_up_on_delay_over_limit(failed_job: Job) -> N
     """Срок длиннее 5 минут — задача не повторяется, причина пишется WARNING'ом."""
     with capture_logs() as logs:
         decision = _STRATEGY.get_retry_decision(
-            exception=TemporaryError(retry_after=timedelta(minutes=5, seconds=1)), job=failed_job
+            exception=TemporaryError(retry_after=dt.timedelta(minutes=5, seconds=1)), job=failed_job
         )
 
     assert decision is None
@@ -63,7 +62,7 @@ def test_retry_after_strategy_keeps_procrastinate_attempt_limit(failed_job: Job)
     """Повторы кончились — срок зависимости не продлевает их, и WARNING о потолке не пишется."""
     with capture_logs() as logs:
         decision = _STRATEGY.get_retry_decision(
-            exception=TemporaryError(retry_after=timedelta(minutes=10)), job=failed_job.evolve(attempts=3)
+            exception=TemporaryError(retry_after=dt.timedelta(minutes=10)), job=failed_job.evolve(attempts=3)
         )
 
     assert decision is None

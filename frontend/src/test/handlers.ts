@@ -123,11 +123,19 @@ export const GEO_CITIES: readonly CitySearchItem[] = [
 ];
 
 /** base64url encoding of a JWT payload segment (`+/` -> `-_`, no padding). */
-function base64Url(value: string): string {
+export function base64Url(value: string): string {
   return btoa(value)
     .replace(/\+/gu, "-")
     .replace(/\//gu, "_")
     .replace(/=+$/u, "");
+}
+
+/**
+ * A `header.<payload>.signature` token with an arbitrary payload. The signature is not checked: the
+ * frontend decodes the payload without verification, see `jwt.ts`.
+ */
+export function makeToken(payload: Readonly<Record<string, unknown>>): string {
+  return `header.${base64Url(JSON.stringify(payload))}.signature`;
 }
 
 type TokenClaims = {
@@ -137,19 +145,15 @@ type TokenClaims = {
 };
 
 /**
- * Builds a decodable `header.<payload>.signature` token with the given claims (the signature is
- * not checked: the frontend decodes the payload without verification, see `jwt.ts`).
- * `email_verified: true` by default so a successful login does not open the verify dialog in tests
- * that do not check it.
+ * An access token with the given claims. `email_verified: true` by default so a successful login does
+ * not open the verify dialog in tests that do not check it.
  */
 export function makeAccessToken(claims: TokenClaims = {}): string {
-  const payload = {
+  return makeToken({
     sub: claims.sub ?? "user-test",
     email_verified: claims.email_verified ?? true,
     exp: claims.exp ?? 4_102_444_800, // 2100-01-01, safely in the future
-  };
-
-  return `header.${base64Url(JSON.stringify(payload))}.signature`;
+  });
 }
 
 /** Default token for successful login/register responses. */

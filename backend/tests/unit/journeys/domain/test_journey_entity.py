@@ -1,6 +1,5 @@
-"""Unit-тесты сущности ``JourneyEntity`` — новая поездка, правка, перенос и удаление."""
-
 import datetime as dt
+from typing import Final
 from uuid import uuid4
 
 import pytest
@@ -8,16 +7,16 @@ import pytest
 from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.exceptions import JourneyNotFoundError
-from tests.builders import LONDON_CITY_ID, MOSCOW_CITY_ID, make_geo_point, make_journey
+from tests.builders import LONDON_POINT, MOSCOW_POINT, make_geo_point, make_journey
 
-_DELETED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+_DELETED_AT: Final[dt.datetime] = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
 
 def test_create_assigns_fields_and_mints_id() -> None:
-    """create: чеканит собственный journey_id (uuid4) и прокидывает переданные поля."""
+    """Собственный ``journey_id`` и переданные поля."""
     user_id = uuid4()
-    origin = make_geo_point(city_id=MOSCOW_CITY_ID, latitude=55.75, longitude=37.62)
-    destination = make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12)
+    origin = MOSCOW_POINT
+    destination = LONDON_POINT
 
     journey_entity = JourneyEntity.create(
         user_id=user_id,
@@ -40,11 +39,11 @@ def test_create_assigns_fields_and_mints_id() -> None:
 
 
 def test_create_mints_distinct_ids_per_call() -> None:
-    """create: каждый вызов чеканит новый идентификатор (id не переиспользуется)."""
+    """Каждый вызов даёт новый идентификатор."""
     first = JourneyEntity.create(
         user_id=uuid4(),
-        origin=make_geo_point(city_id=MOSCOW_CITY_ID, latitude=55.75, longitude=37.62),
-        destination=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+        origin=MOSCOW_POINT,
+        destination=LONDON_POINT,
         transport_type=TransportTypeEnum.AIR,
         distance_km=2500,
         traveled_year=2020,
@@ -52,8 +51,8 @@ def test_create_mints_distinct_ids_per_call() -> None:
     )
     second = JourneyEntity.create(
         user_id=uuid4(),
-        origin=make_geo_point(city_id=MOSCOW_CITY_ID, latitude=55.75, longitude=37.62),
-        destination=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+        origin=MOSCOW_POINT,
+        destination=LONDON_POINT,
         transport_type=TransportTypeEnum.AIR,
         distance_km=2500,
         traveled_year=2020,
@@ -64,7 +63,7 @@ def test_create_mints_distinct_ids_per_call() -> None:
 
 
 def test_revise_replaces_route_transport_and_distance_and_marks_updated() -> None:
-    """revise: меняет города, транспорт и расстояние, ставит updated_at; год и ключ не трогает."""
+    """Меняются города, транспорт и расстояние, ``updated_at`` обновлён; год и ключ прежние."""
     journey_entity = make_journey(traveled_year=2019, sort_key="a1", transport_type=TransportTypeEnum.AIR)
     origin = make_geo_point(city_id=uuid4(), country_code="FR", latitude=48.85, longitude=2.35)
     destination = make_geo_point(city_id=uuid4(), country_code="DE", latitude=52.52, longitude=13.4)
@@ -85,7 +84,7 @@ def test_revise_replaces_route_transport_and_distance_and_marks_updated() -> Non
 
 
 def test_move_sets_year_and_sort_key_and_marks_updated() -> None:
-    """move: ставит новый год и ключ вместе и обновляет updated_at."""
+    """Новый год и ключ ставятся вместе, ``updated_at`` обновлён."""
     journey_entity = make_journey(traveled_year=2019, sort_key="a1")
     started_at = dt.datetime.now(tz=dt.UTC)
 
@@ -98,7 +97,7 @@ def test_move_sets_year_and_sort_key_and_marks_updated() -> None:
 
 
 def test_delete_marks_deleted_at_and_updated_at_with_one_moment() -> None:
-    """delete: soft-delete — deleted_at и updated_at выставлены одним моментом."""
+    """Soft-delete: ``deleted_at`` и ``updated_at`` — один и тот же момент."""
     journey_entity = make_journey()
 
     journey_entity.delete()
@@ -108,13 +107,13 @@ def test_delete_marks_deleted_at_and_updated_at_with_one_moment() -> None:
     assert journey_entity.updated_at == journey_entity.deleted_at
 
 
-def test_ensure_not_deleted_passes_for_live_journey() -> None:
-    """ensure_not_deleted: неудалённая поездка проходит без ошибки."""
+def test_ensure_not_deleted_live_journey_passes() -> None:
+    """Неудалённая поездка — ошибки нет."""
     make_journey().ensure_not_deleted()
 
 
-def test_ensure_not_deleted_raises_for_deleted_journey() -> None:
-    """ensure_not_deleted: удалённая поездка → JourneyNotFoundError."""
+def test_ensure_not_deleted_deleted_journey_raises_not_found() -> None:
+    """Удалённая поездка → ``JourneyNotFoundError``."""
     journey_entity = make_journey(deleted_at=_DELETED_AT)
 
     with pytest.raises(JourneyNotFoundError):

@@ -25,7 +25,7 @@ async def test_get_current_account_returns_login_identifiers(
     email_verified_at: dt.datetime | None,
     expected_email_verified: bool,
 ) -> None:
-    """get_current_account отдаёт email, username и статус подтверждения email учётной записи."""
+    """Email, username и статус подтверждения email учётной записи."""
     user_credentials_entity = make_user_credentials(
         email="neo@example.com",
         username="neo",
@@ -44,21 +44,21 @@ async def test_get_current_account_returns_login_identifiers(
 
 async def test_get_current_account_unknown_user_raises_account_not_found(
     account_service: AccountService,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
 ) -> None:
-    """get_current_account без учётной записи → AccountNotFoundError, без коммита."""
+    """Нет учётной записи → ``AccountNotFoundError``, без коммита."""
     with pytest.raises(AccountNotFoundError):
         await account_service.get_current_account(uuid4())
 
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
 async def test_find_accounts_by_ids_returns_found_and_deleted_and_skips_unknown(
     account_service: AccountService,
     fake_user_credentials_repository: FakeUserCredentialsRepository,
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
 ) -> None:
-    """find_accounts_by_ids отдаёт живые и удалённые учётные записи с пометкой, а id без записи пропускает."""
+    """Живые и удалённые учётные записи — с пометкой удаления; id без записи пропущен."""
     active_entity = make_user_credentials(email="neo@example.com", username="neo")
     deleted_entity = make_user_credentials(
         email="smith@example.com",
@@ -79,11 +79,11 @@ async def test_find_accounts_by_ids_returns_found_and_deleted_and_skips_unknown(
             Account(id=deleted_entity.user_id, email="smith@example.com", is_deleted=True),
         }
     )
-    fake_uow.commit_mock.assert_not_awaited()
+    fake_auth_uow.commit_mock.assert_not_awaited()
 
 
 def test_get_account_options_returns_every_role_and_plan_in_declaration_order(account_service: AccountService) -> None:
-    """get_account_options отдаёт все роли и тарифы в порядке объявления enum'ов."""
+    """Все роли и тарифы в порядке объявления enum'ов."""
     result = account_service.get_account_options()
 
     assert result == AccountOptionsResult(

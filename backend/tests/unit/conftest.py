@@ -1,39 +1,26 @@
 """
-Cross-доменные фикстуры **уровня unit**.
+Фикстуры unit-уровня, нужные больше чем одному домену.
 
-Живут здесь, а не в корневом ``tests/conftest.py`` и не в conftest конкретного
-домена, потому что:
-
-- нужны более чем одному домену (``jwt_service`` потребляют и auth —
-  ``token_issuer``/``auth_service``, и shared — тест самого ``JWTService``), а
-  pytest резолвит фикстуры только вверх по дереву → нужен общий предок;
-- но специфичны именно для unit: ``JWTService`` строится с **явным** тестовым
-  секретом в обход ``settings`` (философия unit — конфиг из конструктора, а не из
-  синглтона). api-тесты так переиспользовать его не смогут — приложение декодит
-  секретом из ``settings``, поэтому им нужна своя согласованная с settings проводка.
-
-Корневой ``tests/conftest.py`` импортируется pytest'ом раньше дочерних, поэтому
-здесь ``app`` импортируется обычным top-level импортом — env-bootstrap уже отработал.
-``jwt_secret``/``jwt_algorithm`` отданы рядом, чтобы тесты, собирающие «сырой» токен
-вручную (истёкший, с кривым ``sub``), брали тот же секрет, что и ``jwt_service`` —
-один источник истины, без рассинхрона литералов.
-
-``module_name_of`` нужна и guard'у гигиены импортов, и сборке дерева исключений: оба обходят
-файлы ``app`` и превращают путь в имя модуля.
+``jwt_service`` собран с литеральным секретом в обход ``settings``; api-уровень его переиспользовать не
+может — приложение декодирует токен секретом из ``settings``.
 """
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Final
 
 import pytest
 
+from app.geo.application.services.city import CityService
 from app.shared.infra.jwt.service import JWTService
+from app.users.application.services.user import UserService
+from tests.fakes import FakeEventPublisher, FakeGeoUnitOfWork, FakeUserUnitOfWork
 
 # tests/unit/<этот файл> → backend/
-_BACKEND_DIR = Path(__file__).resolve().parents[2]
-_JWT_SECRET = "unit-test-secret-at-least-32-bytes-long"
-_JWT_ALGORITHM = "HS256"
-_ACCESS_TOKEN_EXPIRE_MINUTES = 15
+_BACKEND_DIR: Final[Path] = Path(__file__).resolve().parents[2]
+_JWT_SECRET: Final[str] = "unit-test-secret-at-least-32-bytes-long"
+_JWT_ALGORITHM: Final[str] = "HS256"
+_ACCESS_TOKEN_EXPIRE_MINUTES: Final[int] = 15
 
 
 @pytest.fixture
@@ -53,6 +40,16 @@ def jwt_service() -> JWTService:
         algorithm=_JWT_ALGORITHM,
         access_token_expire_minutes=_ACCESS_TOKEN_EXPIRE_MINUTES,
     )
+
+
+@pytest.fixture
+def user_service(fake_user_uow: FakeUserUnitOfWork, fake_event_publisher: FakeEventPublisher) -> UserService:
+    return UserService(uow=fake_user_uow, event_publisher=fake_event_publisher)
+
+
+@pytest.fixture
+def city_service(fake_geo_uow: FakeGeoUnitOfWork) -> CityService:
+    return CityService(uow=fake_geo_uow)
 
 
 @pytest.fixture(scope="session")

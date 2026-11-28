@@ -1,6 +1,6 @@
 import { fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { WORLD_VIEW_BOX } from "../../components/worldProjection";
 import { GEO_CITIES, MOVEMENTS_RESPONSE, server } from "../../test/handlers";
@@ -65,10 +65,6 @@ async function waitForAllRoutes(container: HTMLElement): Promise<void> {
 }
 
 describe("MovementsMapView", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("рисует дугу со стрелкой на каждый маршрут и точку на каждый город", async () => {
     const { container } = renderMovements();
 

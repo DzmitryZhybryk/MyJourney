@@ -1,9 +1,4 @@
-"""
-api-тесты админской ручки учётных записей по списку id.
-
-Токены выпускает настоящий ``TokenIssuer`` (``issue_access_token``): право администратора приходит из
-карты ролей, а не задаётся руками. Репозиторий — фейк за UoW.
-"""
+"""Токены выпускает настоящий ``TokenIssuer`` (``issue_access_token``): право приходит из карты ролей, а не руками."""
 
 import datetime as dt
 from collections.abc import Callable
@@ -52,7 +47,7 @@ async def test_find_accounts_by_ids_admin_token_returns_email_and_deleted_flag(
     ]
 
 
-async def test_find_accounts_by_ids_user_token_returns_permission_required(
+async def test_find_accounts_by_ids_user_token_returns_403(
     client: AsyncClient,
     issue_access_token: Callable[[UserCredentialsEntity], str],
 ) -> None:
@@ -64,7 +59,7 @@ async def test_find_accounts_by_ids_user_token_returns_permission_required(
     assert (response.status_code, response.json()["code"]) == (403, "permission_required")
 
 
-async def test_find_accounts_by_ids_without_token_returns_unauthenticated(client: AsyncClient) -> None:
+async def test_find_accounts_by_ids_without_token_returns_401(client: AsyncClient) -> None:
     """401 без Bearer."""
     response = await client.get(_PATH, params={"ids": [str(uuid4())]})
 
@@ -79,7 +74,7 @@ async def test_find_accounts_by_ids_without_token_returns_unauthenticated(client
         pytest.param(["not-a-uuid"], id="malformed"),
     ],
 )
-async def test_find_accounts_by_ids_invalid_ids_returns_validation_error(
+async def test_find_accounts_by_ids_invalid_ids_returns_422(
     client: AsyncClient,
     issue_access_token: Callable[[UserCredentialsEntity], str],
     ids: list[str],
@@ -105,7 +100,7 @@ async def test_get_account_options_admin_token_returns_roles_and_plans(
     assert response.json() == {"roles": ["user", "admin"], "plans": ["free", "premium"]}
 
 
-async def test_get_account_options_user_token_returns_permission_required(
+async def test_get_account_options_user_token_returns_403(
     client: AsyncClient,
     issue_access_token: Callable[[UserCredentialsEntity], str],
 ) -> None:
@@ -117,7 +112,7 @@ async def test_get_account_options_user_token_returns_permission_required(
     assert (response.status_code, response.json()["code"]) == (403, "permission_required")
 
 
-async def test_get_account_options_without_token_returns_unauthenticated(client: AsyncClient) -> None:
+async def test_get_account_options_without_token_returns_401(client: AsyncClient) -> None:
     """401 без Bearer."""
     response = await client.get(_OPTIONS_PATH)
 

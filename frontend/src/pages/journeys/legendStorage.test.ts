@@ -1,18 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { breakStorage } from "../../test/storage";
 import { isLegendCollapsed, setLegendCollapsed } from "./legendStorage";
 
 const KEY = "journeys-legend-collapsed";
 
 describe("legendStorage", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("по умолчанию (ничего не сохранено) легенда не свёрнута", () => {
     expect(isLegendCollapsed()).toBe(false);
   });
@@ -41,16 +34,12 @@ describe("legendStorage", () => {
   });
 
   it("недоступный localStorage при чтении → false (без исключения)", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("localStorage disabled");
-    });
+    breakStorage("getItem");
     expect(isLegendCollapsed()).toBe(false);
   });
 
   it("недоступный localStorage при записи → тихо проглатываем", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("localStorage disabled");
-    });
+    breakStorage("setItem");
     expect(() => setLegendCollapsed(true)).not.toThrow();
   });
 });

@@ -19,7 +19,7 @@ class _Row(_Base):
 
 @pytest.mark.parametrize(("direction", "keyword"), [(SortDirectionEnum.ASC, "ASC"), (SortDirectionEnum.DESC, "DESC")])
 def test_directed_order_sorts_column_in_given_direction(direction: SortDirectionEnum, keyword: str) -> None:
-    """``directed_order`` сортирует колонку в переданном направлении."""
+    """Колонка сортируется в переданном направлении."""
     query = select(_Row.row_id).order_by(directed_order(column=_Row.row_id, direction=direction))
 
     compiled = str(query.compile(dialect=postgresql.dialect()))

@@ -1,14 +1,9 @@
 """
-Фикстуры api-тестов shared-инфры.
-
-``middleware_app`` — минимальное приложение, собранное как боевое API: ``HTTPLoggingMiddleware``, хендлеры ошибок
-и телеметрия, — с роутами под каждый исход запроса. Часть роутов подключена роутером с префиксом: маршрут внутри
-роутера знает только свой кусок пути, а в строке лога шаблон должен быть полным.
-
-``request_log_processors`` — процессоры, которые ``capture_logs`` прогоняет перед захватом: без них строка не
-получит контекст запроса (``trace_id``, ``user_id``). Боевую цепочку целиком проверяют unit-тесты настройки логов.
+Часть роутов ``middleware_app`` подключена роутером с префиксом: маршрут внутри роутера знает только свой кусок
+пути, а в строке лога шаблон должен быть полным.
 """
 
+from collections.abc import AsyncIterator, Callable
 from typing import Annotated
 from uuid import UUID
 
@@ -16,10 +11,12 @@ import pytest
 import structlog
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from httpx import AsyncClient
 from pydantic import BaseModel, Field
+from structlog.testing import capture_logs
 from structlog.typing import Processor
 
-from app.shared.exceptions import InternalError, NotFoundError, TemporaryError
+from app.shared.exceptions import InternalError, InvalidInputError, NotFoundError, TemporaryError
 from app.shared.exceptions.handlers import register_exception_handlers
 from app.shared.infra.jwt import AccessTokenClaims, PermissionEnum
 from app.shared.infra.jwt.dependency import current_user_id_dependency
@@ -83,6 +80,24 @@ def middleware_app() -> BFastAPI:
         raise RuntimeError("unhandled failure")  # noqa: TRY003 — намеренный сбой роута
 
     return app
+
+
+@pytest.fixture
+async def error_contract_client(
+    middleware_app: BFastAPI,
+    make_async_client: Callable[[BFastAPI], AsyncClient],
+) -> AsyncIterator[AsyncClient]:
+    """Клиент ``middleware_app`` с маршрутом ``/field-error`` — ошибкой, привязанной к полю формы."""
+
+    @middleware_app.get("/field-error")
+    async def _field_error() -> JSONResponse:
+        raise InvalidInputError(details={"field": "password"})
+
+    # Without the capture the request line goes to the console renderer, which prints the traceback of an
+    # unhandled error with every local and alone takes more than the per-test time cap.
+    with capture_logs():
+        async with make_async_client(middleware_app) as client:
+            yield client
 
 
 @pytest.fixture

@@ -7,10 +7,8 @@ from app.media.application.schemas.commands import SeedMediaConfigCommand, Updat
 from app.media.application.services.media_config import MediaConfigService
 from app.media.domain.enums import SideAxisEnum
 from app.shared.versioned_config import ConfigMissingError, ConfigVersionConflictError
-from tests.builders import make_media_config_snapshot
+from tests.builders import ADMIN_ID, make_media_config_snapshot
 from tests.fakes import FakeMediaConfigRepository, FakeMediaUnitOfWork
-
-ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000ad")
 
 
 async def test_get_upload_rules_latest_version_joins_rules_with_side_axis(

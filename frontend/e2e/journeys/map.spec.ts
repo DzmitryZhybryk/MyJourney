@@ -15,7 +15,7 @@ import { getStoredAccessToken } from "../helpers/session";
  * cookie (see isBootstrapping), so webkit's Secure-cookie-over-http limitation is irrelevant and no skip is needed.
  */
 
-test.describe("Journeys map", () => {
+test.describe("Карта поездок", () => {
   test("посещённая поездка появляется точками-городами на карте", async ({ authedPage, request }) => {
     const token = await getStoredAccessToken(authedPage);
     expect(token, "после логина ожидается access-токен в sessionStorage").not.toBeNull();

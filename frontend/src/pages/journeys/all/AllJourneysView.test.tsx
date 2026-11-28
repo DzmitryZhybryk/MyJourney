@@ -6,26 +6,10 @@ import { FEED_JOURNEYS, server } from "../../../test/handlers";
 import { intersectAllObserved, reportIntersection } from "../../../test/intersection";
 import { stubScreenLayout } from "../../../test/layout";
 import { matchMediaQueries } from "../../../test/motion";
-import { renderAllJourneys } from "../../../test/journeysMap";
+import { recordFeedRequests, renderAllJourneys } from "../../../test/journeysMap";
 import { act, screen, waitFor, within } from "../../../test/render";
 
 const DESKTOP_QUERY = "(min-width: 62em)";
-
-/** Replaces the feed and records each request's query, so the test sees which filters went out. */
-function recordFeedRequests(
-  respond: (params: URLSearchParams) => Response | Promise<Response> = () =>
-    HttpResponse.json({ items: FEED_JOURNEYS, nextCursor: null }),
-) {
-  const requests: URLSearchParams[] = [];
-  server.use(
-    http.get("/v1/journeys/", ({ request }) => {
-      const params = new URL(request.url).searchParams;
-      requests.push(params);
-      return respond(params);
-    }),
-  );
-  return requests;
-}
 
 describe("AllJourneysView", () => {
   it("показывает поездки по годам — свежий год сверху — с названиями мест и расстоянием", async () => {

@@ -1,5 +1,8 @@
+from typing import Final
+
 from pydantic import BaseModel
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.engine import Dialect
 
 from app.shared.infra.db.postgres.jsonb import PydanticJSONB
 
@@ -9,7 +12,7 @@ class _Limits(BaseModel):
     tags: frozenset[str]
 
 
-_DIALECT = postgresql.dialect()
+_DIALECT: Final[Dialect] = postgresql.dialect()
 
 
 def test_pydantic_jsonb_roundtrip_returns_equal_model() -> None:

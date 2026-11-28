@@ -1,5 +1,3 @@
-"""Unit-тесты общих полей запроса страницы: значения по умолчанию и границы ``limit`` и ``cursor``."""
-
 import pytest
 from pydantic import ValidationError
 

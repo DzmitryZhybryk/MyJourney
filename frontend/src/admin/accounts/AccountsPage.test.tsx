@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AdminAccountsListResponse } from "../../api/sdk";
 import { server, TEST_ACCOUNTS_PAGE } from "../../test/handlers";
-import { makeAuthValue, renderWithProviders, screen, waitFor, within } from "../../test/render";
+import { makeVerifiedAuthValue, renderWithProviders, screen, waitFor, within } from "../../test/render";
 import { AccountsPage } from "./AccountsPage";
 
 const ACCOUNTS_PATH = "/v1/admin/backoffice/accounts/";
@@ -11,7 +11,7 @@ const ACCOUNTS_PATH = "/v1/admin/backoffice/accounts/";
 function renderPage(route = "/admin/accounts") {
   return renderWithProviders(<AccountsPage />, {
     route,
-    authValue: makeAuthValue({ isAuthenticated: true, emailVerified: true }),
+    authValue: makeVerifiedAuthValue(),
   });
 }
 

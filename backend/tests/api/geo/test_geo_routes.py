@@ -1,13 +1,5 @@
-"""
-api-тесты роутов geo на ASGI-приложении: ``GET /v1/geo/cities/search/`` и
-``POST /v1/geo/cities/resolve/``.
-
-Реальная проводка ``city_service`` поверх фейк-репозитория, реальный декод Bearer-токена
-(подписан settings-секретом через ``mint_access_token``). Пиннят camelCase-контракт ответа,
-401 без токена и 422 на невалидный ввод.
-"""
-
 from collections.abc import Callable
+from typing import Final
 from uuid import UUID, uuid4
 
 import pytest
@@ -16,8 +8,8 @@ from httpx import AsyncClient
 from tests.builders import make_city
 from tests.fakes import FakeCityRepository
 
-_SEARCH_PATH = "/v1/geo/cities/search/"
-_RESOLVE_PATH = "/v1/geo/cities/resolve/"
+_SEARCH_PATH: Final[str] = "/v1/geo/cities/search/"
+_RESOLVE_PATH: Final[str] = "/v1/geo/cities/resolve/"
 
 
 async def test_search_cities_returns_camelcase_candidates(

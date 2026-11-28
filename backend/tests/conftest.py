@@ -16,10 +16,11 @@
 """
 
 import os
+from typing import Final
 
 import pytest
 
-_TEST_ENV_DEFAULTS = {
+_TEST_ENV_DEFAULTS: Final[dict[str, str]] = {
     "POSTGRES_USER": "test",
     "POSTGRES_PASSWORD": "test",
     "POSTGRES_DB": "test",
@@ -45,7 +46,7 @@ from app.auth.application.config import EmailVerificationConfig  # noqa: E402
 from app.shared.infra.crypto import get_fernet_secret_cipher  # noqa: E402
 from app.shared.infra.crypto.fernet import FernetSecretCipher  # noqa: E402
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher  # noqa: E402
-from tests.builders import LONDON_CITY_ID, make_city_location_response  # noqa: E402
+from tests.builders import LONDON_POINT, MOSCOW_POINT, make_city_location_response  # noqa: E402
 from tests.fakes import (  # noqa: E402
     FakeAccountRepository,
     FakeAuthUnitOfWork,
@@ -68,20 +69,29 @@ from tests.fakes import (  # noqa: E402
     FakeUserUnitOfWork,
 )
 
-_EMAIL_VERIFICATION_TTL_MINUTES = 15
-_EMAIL_VERIFICATION_MAX_ATTEMPTS = 5
-_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
+_EMAIL_VERIFICATION_TTL_MINUTES: Final[int] = 15
+_EMAIL_VERIFICATION_MAX_ATTEMPTS: Final[int] = 5
+_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: Final[int] = 60
 
 
 # Оси маркеров, выводимые из пути файла: tests/<level>/<domain>/...
 # При добавлении нового уровня/домена обнови и эти кортежи, и список ``markers`` в
 # pyproject.toml (``--strict-markers`` запрещает незарегистрированные маркеры).
-_LEVEL_MARKERS = ("unit", "integration", "api")
-_DOMAIN_MARKERS = ("auth", "users", "shared", "journeys", "geo", "health", "media", "backoffice")
+_LEVEL_MARKERS: Final[tuple[str, ...]] = ("unit", "integration", "api")
+_DOMAIN_MARKERS: Final[tuple[str, ...]] = (
+    "auth",
+    "users",
+    "shared",
+    "journeys",
+    "geo",
+    "health",
+    "media",
+    "backoffice",
+)
 
 # Потолок времени на один тест по уровню. Integration считает только сам тест: подъём
 # контейнера в session-фикстуре приходится на setup первого теста и в лимит не входит.
-_LEVEL_TIMEOUTS = {
+_LEVEL_TIMEOUTS: Final[dict[str, pytest.MarkDecorator]] = {
     "unit": pytest.mark.timeout(timeout=1),
     "api": pytest.mark.timeout(timeout=1),
     "integration": pytest.mark.timeout(timeout=30, func_only=True),
@@ -147,7 +157,7 @@ def fake_challenge_repository() -> FakeChallengeRepository:
 
 
 @pytest.fixture
-def fake_uow(
+def fake_auth_uow(
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_refresh_token_repository: FakeRefreshTokenRepository,
     fake_challenge_repository: FakeChallengeRepository,
@@ -238,12 +248,7 @@ def fake_media_uow(fake_media_config_repository: FakeMediaConfigRepository) -> F
 @pytest.fixture
 def fake_cities_client() -> FakeCitiesClient:
     """Справочник с Москвой и Лондоном — в порядке запроса поездки Москва → Лондон."""
-    return FakeCitiesClient(
-        (
-            make_city_location_response(),
-            make_city_location_response(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
-        )
-    )
+    return FakeCitiesClient((make_city_location_response(MOSCOW_POINT), make_city_location_response(LONDON_POINT)))
 
 
 @pytest.fixture

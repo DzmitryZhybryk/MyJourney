@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { server } from "../test/handlers";
-import { findMenuItem, makeAuthValue, renderRoutes, screen, waitFor } from "../test/render";
+import { findMenuItem, makeAuthValue, makeVerifiedAuthValue, renderRoutes, screen, waitFor } from "../test/render";
 import type { AuthContextValue } from "../auth/useAuth";
 import { HomePage } from "./HomePage";
 
@@ -20,13 +20,13 @@ function renderHome(authValue: AuthContextValue) {
 
 describe("HomePage", () => {
   it("логотип ведёт сразу на /home, без хопа через редирект с корня", () => {
-    renderHome(makeAuthValue({ isAuthenticated: true, emailVerified: true }));
+    renderHome(makeVerifiedAuthValue());
 
     expect(screen.getByRole("link", { name: "MyJourney" })).toHaveAttribute("href", "/home");
   });
 
   it("logout: меню → Logout → очищает сессию и уводит на /login", async () => {
-    const authValue = makeAuthValue({ isAuthenticated: true, emailVerified: true });
+    const authValue = makeVerifiedAuthValue();
     const { user } = renderHome(authValue);
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }));
@@ -38,7 +38,7 @@ describe("HomePage", () => {
 
   it("logout идемпотентен: при сетевой ошибке всё равно очищает сессию и уводит на /login", async () => {
     server.use(http.post("/v1/auth/logout/", () => HttpResponse.error()));
-    const authValue = makeAuthValue({ isAuthenticated: true, emailVerified: true });
+    const authValue = makeVerifiedAuthValue();
     const { user } = renderHome(authValue);
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }));
@@ -61,7 +61,7 @@ describe("HomePage", () => {
   });
 
   it("дата видна сразу, приветствие с displayName появляется после загрузки профиля", async () => {
-    renderHome(makeAuthValue({ isAuthenticated: true, emailVerified: true }));
+    renderHome(makeVerifiedAuthValue());
 
     // The date does not depend on the network and is there from the first render; the greeting line is not yet.
     expect(screen.getByText(/^[A-Za-z]+ · [A-Za-z]+ \d{4}$/u)).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("HomePage", () => {
       ),
     );
 
-    renderHome(makeAuthValue({ isAuthenticated: true, emailVerified: true }));
+    renderHome(makeVerifiedAuthValue());
 
     // Wait for the request to finish (the provider moves to error), then check the DOM.
     await waitFor(() => {
@@ -87,7 +87,7 @@ describe("HomePage", () => {
   });
 
   it("верифицированный email: нет баннера и нет пункта Verify email", async () => {
-    const authValue = makeAuthValue({ isAuthenticated: true, emailVerified: true });
+    const authValue = makeVerifiedAuthValue();
     const { user } = renderHome(authValue);
 
     expect(screen.queryByText(BANNER_MESSAGE)).not.toBeInTheDocument();

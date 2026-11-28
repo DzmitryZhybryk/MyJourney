@@ -16,7 +16,7 @@ async def test_create_user_inserts_mapped_entity(
     user_service: UserService,
     fake_user_repository: FakeUserRepository,
 ) -> None:
-    """`create_user` кладёт в репозиторий entity с полями из команды."""
+    """В репозиторий ложится пользователь с полями из команды."""
     command = CreateUserCommand(
         user_id=uuid4(),
         display_name="alice",
@@ -36,7 +36,7 @@ async def test_create_user_does_not_commit(
     user_service: UserService,
     fake_user_uow: FakeUserUnitOfWork,
 ) -> None:
-    """`create_user` НЕ коммитит — фиксацией владеет вызывающий use-case (Option A)."""
+    """Коммита нет: транзакцией владеет вызывающий use case другого домена."""
     command = CreateUserCommand(
         user_id=uuid4(),
         display_name="alice",
@@ -54,7 +54,7 @@ async def test_create_user_publishes_profile_changed_with_first_version(
     fake_user_uow: FakeUserUnitOfWork,
     fake_event_publisher: FakeEventPublisher,
 ) -> None:
-    """`create_user` публикует в сессии UoW снимок нового профиля с версией 1."""
+    """В сессии UoW публикуется снимок нового профиля с версией 1."""
     command = CreateUserCommand(
         user_id=uuid4(),
         display_name="alice",
@@ -80,7 +80,7 @@ async def test_get_current_user_returns_profile(
     user_service: UserService,
     fake_user_repository: FakeUserRepository,
 ) -> None:
-    """`get_current_user` отдаёт имя и согласие на рассылку найденного пользователя."""
+    """Имя и согласие на рассылку найденного пользователя."""
     user_entity = make_user_entity(display_name="Alice D.", marketing_emails_consent=True)
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
@@ -94,7 +94,7 @@ async def test_get_current_user_does_not_commit(
     fake_user_repository: FakeUserRepository,
     fake_user_uow: FakeUserUnitOfWork,
 ) -> None:
-    """`get_current_user` — read-only use case: транзакция закрывается без commit."""
+    """Чтение: транзакция закрывается без коммита."""
     user_entity = make_user_entity()
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
@@ -104,7 +104,7 @@ async def test_get_current_user_does_not_commit(
 
 
 async def test_get_current_user_unknown_id_raises_not_found(user_service: UserService) -> None:
-    """`get_current_user` по неизвестному id бросает UserNotFoundError."""
+    """Неизвестный id → ``UserNotFoundError``."""
     with pytest.raises(UserNotFoundError):
         await user_service.get_current_user(uuid4())
 
@@ -113,7 +113,7 @@ async def test_get_current_user_soft_deleted_raises_gone(
     user_service: UserService,
     fake_user_repository: FakeUserRepository,
 ) -> None:
-    """`get_current_user` для soft-deleted пользователя бросает UserDeletedError."""
+    """Пользователь soft-deleted → ``UserDeletedError``."""
     user_entity = make_user_entity(deleted_at=dt.datetime(2026, 1, 3, tzinfo=dt.UTC))
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
@@ -126,7 +126,7 @@ async def test_update_current_user_writes_commits_and_returns_profile(
     fake_user_repository: FakeUserRepository,
     fake_user_uow: FakeUserUnitOfWork,
 ) -> None:
-    """`update_current_user` меняет переданные поля, записывает, коммитит и отдаёт новый профиль."""
+    """Переданные поля меняются и записываются одним коммитом; в ответе новый профиль."""
     user_entity = make_user_entity(display_name="alice", marketing_emails_consent=True)
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
@@ -146,7 +146,7 @@ async def test_update_current_user_publishes_profile_changed_with_next_version(
     fake_user_uow: FakeUserUnitOfWork,
     fake_event_publisher: FakeEventPublisher,
 ) -> None:
-    """`update_current_user` публикует в сессии UoW снимок нового профиля с версией на единицу выше."""
+    """В сессии UoW публикуется снимок нового профиля с версией на единицу выше."""
     user_entity = make_user_entity(display_name="alice", marketing_emails_consent=True, version=2)
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
@@ -171,7 +171,7 @@ async def test_update_current_user_keeps_fields_not_in_command(
     user_service: UserService,
     fake_user_repository: FakeUserRepository,
 ) -> None:
-    """Поле, которого нет в команде (None), сохраняет прежнее значение."""
+    """Поле, которого нет в команде (``None``), сохраняет прежнее значение."""
     user_entity = make_user_entity(display_name="alice", marketing_emails_consent=True)
     fake_user_repository.by_user_id[user_entity.user_id] = user_entity
 
@@ -188,7 +188,7 @@ async def test_update_current_user_unknown_id_raises_not_found(
     fake_user_repository: FakeUserRepository,
     fake_user_uow: FakeUserUnitOfWork,
 ) -> None:
-    """Неизвестный id → UserNotFoundError; ничего не записано и не закоммичено."""
+    """Неизвестный id → ``UserNotFoundError``; ничего не записано и не закоммичено."""
     with pytest.raises(UserNotFoundError):
         await user_service.update_current_user(
             user_id=uuid4(),
@@ -205,7 +205,7 @@ async def test_update_current_user_soft_deleted_raises_gone_and_changes_nothing(
     fake_user_uow: FakeUserUnitOfWork,
     fake_event_publisher: FakeEventPublisher,
 ) -> None:
-    """Soft-deleted → UserDeletedError; поля и updated_at прежние, записи, события и коммита нет."""
+    """Пользователь soft-deleted → ``UserDeletedError``; поля прежние, ни записи, ни события, ни коммита."""
     updated_at = dt.datetime(2026, 1, 2, tzinfo=dt.UTC)
     user_entity = make_user_entity(
         display_name="alice",

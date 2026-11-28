@@ -1,5 +1,6 @@
 import datetime as dt
 from collections.abc import Awaitable, Callable
+from typing import Final
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -18,7 +19,7 @@ from app.media.exceptions import (
 from app.media.infra.s3_object_storage import S3ObjectStorage
 from tests.fakes import FakeS3ResponseStream
 
-_STORAGE_CALLS: list[tuple[str, Callable[[S3ObjectStorage], Awaitable[object]]]] = [
+_STORAGE_CALLS: Final[list[tuple[str, Callable[[S3ObjectStorage], Awaitable[object]]]]] = [
     ("head_object", lambda storage: storage.head_object("u1/f1/original.jpg")),
     ("get_object", lambda storage: storage.get_object(key="u1/f1/original.jpg", max_bytes=100)),
     (
@@ -68,7 +69,7 @@ async def test_head_object_returns_size_and_type(storage: S3ObjectStorage, s3_st
 
 
 async def test_head_object_missing_object_returns_none(storage: S3ObjectStorage, s3_stubber: AioStubber) -> None:
-    """Отсутствующий объект — `None`, а не ошибка."""
+    """Отсутствующий объект — ``None``, а не ошибка."""
     s3_stubber.add_client_error(method="head_object", service_error_code="404", http_status_code=404)
 
     assert await storage.head_object("u1/f1/original.jpg") is None
@@ -108,7 +109,7 @@ async def test_get_object_over_limit_raises_without_reading_body(
 async def test_get_object_not_found_status_raises_not_found(
     storage: S3ObjectStorage, s3_stubber: AioStubber, error_code: str
 ) -> None:
-    """Любой 404 при чтении — `ObjectNotFoundError`: то же правило, что у HEAD, где кода ошибки нет."""
+    """Любой 404 при чтении — ``ObjectNotFoundError``: то же правило, что у HEAD, где кода ошибки нет."""
     s3_stubber.add_client_error(method="get_object", service_error_code=error_code, http_status_code=404)
 
     with pytest.raises(ObjectNotFoundError):
@@ -140,7 +141,7 @@ async def test_get_object_broken_body_raises_temporary_error(
 
 
 async def test_put_object_sends_type_and_cache_control(storage: S3ObjectStorage, s3_stubber: AioStubber) -> None:
-    """Объект пишется в свой бакет с заданными типом и `Cache-Control`."""
+    """Объект пишется в свой бакет с заданными типом и ``Cache-Control``."""
     s3_stubber.add_response(
         method="put_object",
         service_response={},
@@ -164,7 +165,7 @@ async def test_put_object_sends_type_and_cache_control(storage: S3ObjectStorage,
 async def test_delete_objects_sends_keys_in_batches_of_thousand(
     storage: S3ObjectStorage, s3_stubber: AioStubber
 ) -> None:
-    """Ключи уходят пачками по 1000 — пределу одного `DeleteObjects`."""
+    """Ключи уходят пачками по 1000 — пределу одного ``DeleteObjects``."""
     keys = [f"u1/f{index}/original.jpg" for index in range(1001)]
     for batch in (keys[:1000], keys[1000:]):
         s3_stubber.add_response(
