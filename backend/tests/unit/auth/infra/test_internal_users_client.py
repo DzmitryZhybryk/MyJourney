@@ -1,10 +1,4 @@
-"""
-Юнит-тест адаптера ``InternalUsersClient`` (auth → users).
-
-Реальный ``UserService`` на фейковых UoW/репозитории; фейкаем только I/O-границу users.
-Тест пиннит маппинг ``CreateUserRequest`` → ``CreateUserCommand`` по полям: перепутанное
-или потерянное поле между auth и users всплыло бы тут — ни один другой тест этого не ловит.
-"""
+"""Перепутанное или потерянное поле между ``CreateUserRequest`` и командой users ловит только этот тест."""
 
 import datetime as dt
 from uuid import uuid4
@@ -12,19 +6,19 @@ from uuid import uuid4
 from app.auth.application.ports.users_client import CreateUserRequest
 from app.auth.infra.clients.internal_users_client import InternalUsersClient
 from app.users.application.services.user import UserService
-from tests.fakes import FakeEventPublisher, FakeUserRepository, FakeUserUnitOfWork
+from tests.fakes import FakeUserRepository, FakeUserUnitOfWork
 
 
-async def test_create_user_maps_fields_and_persists_via_user_service() -> None:
-    """create_user маппит поля в users-команду и кладёт пользователя через UserService (commit — за вызывающим)."""
-    user_repository = FakeUserRepository()
-    uow = FakeUserUnitOfWork(user_repository)
-    client = InternalUsersClient(UserService(uow=uow, event_publisher=FakeEventPublisher()))
-
+async def test_create_user_maps_fields_and_persists_via_user_service(
+    user_service: UserService,
+    fake_user_repository: FakeUserRepository,
+    fake_user_uow: FakeUserUnitOfWork,
+) -> None:
+    """Поля запроса доходят до пользователя в users; коммит остаётся за вызывающим."""
     user_id = uuid4()
     terms_accepted_at = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
-    await client.create_user(
+    await InternalUsersClient(user_service).create_user(
         CreateUserRequest(
             user_id=user_id,
             display_name="newuser",
@@ -33,8 +27,8 @@ async def test_create_user_maps_fields_and_persists_via_user_service() -> None:
         ),
     )
 
-    stored = user_repository.by_user_id[user_id]
-    assert stored.display_name == "newuser"
-    assert stored.marketing_emails_consent is True
-    assert stored.terms_accepted_at == terms_accepted_at
-    uow.commit_mock.assert_not_awaited()
+    user_entity = fake_user_repository.by_user_id[user_id]
+    assert user_entity.display_name == "newuser"
+    assert user_entity.marketing_emails_consent is True
+    assert user_entity.terms_accepted_at == terms_accepted_at
+    fake_user_uow.commit_mock.assert_not_awaited()

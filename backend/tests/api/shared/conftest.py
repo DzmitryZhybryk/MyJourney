@@ -9,6 +9,7 @@
 получит контекст запроса (``trace_id``, ``user_id``). Боевую цепочку целиком проверяют unit-тесты настройки логов.
 """
 
+from collections.abc import AsyncIterator, Callable
 from typing import Annotated
 from uuid import UUID
 
@@ -16,10 +17,11 @@ import pytest
 import structlog
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from httpx import AsyncClient
 from pydantic import BaseModel, Field
 from structlog.typing import Processor
 
-from app.shared.exceptions import InternalError, NotFoundError, TemporaryError
+from app.shared.exceptions import InternalError, InvalidInputError, NotFoundError, TemporaryError
 from app.shared.exceptions.handlers import register_exception_handlers
 from app.shared.infra.jwt import AccessTokenClaims, PermissionEnum
 from app.shared.infra.jwt.dependency import current_user_id_dependency
@@ -83,6 +85,21 @@ def middleware_app() -> BFastAPI:
         raise RuntimeError("unhandled failure")  # noqa: TRY003 — намеренный сбой роута
 
     return app
+
+
+@pytest.fixture
+async def error_contract_client(
+    middleware_app: BFastAPI,
+    make_async_client: Callable[[BFastAPI], AsyncClient],
+) -> AsyncIterator[AsyncClient]:
+    """Клиент ``middleware_app`` с маршрутом ``/field-error`` — ошибкой, привязанной к полю формы."""
+
+    @middleware_app.get("/field-error")
+    async def _field_error() -> JSONResponse:
+        raise InvalidInputError(details={"field": "password"})
+
+    async with make_async_client(middleware_app) as client:
+        yield client
 
 
 @pytest.fixture

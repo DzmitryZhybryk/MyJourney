@@ -24,7 +24,9 @@ from app.journeys.presentation.dependencies import cities_client_dependency
 from app.shared.schemas.base import BFastAPI
 from tests.builders import (
     LONDON_CITY_ID,
+    LONDON_POINT,
     MOSCOW_CITY_ID,
+    MOSCOW_POINT,
     make_city,
     make_geo_point,
     make_journey,
@@ -245,11 +247,11 @@ async def test_get_journeys_map_returns_aggregated_countries(
     user_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
         VisitedCity(
-            city=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+            city=LONDON_POINT,
             years=(2020,),
         ),
         VisitedCity(
-            city=make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.75, longitude=37.62),
+            city=MOSCOW_POINT,
             years=(2020,),
         ),
     ]
@@ -295,7 +297,7 @@ async def test_get_journeys_globe_returns_cities_without_country(
     user_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
         VisitedCity(
-            city=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+            city=LONDON_POINT,
             years=(2020,),
         ),
     ]
@@ -342,8 +344,8 @@ async def test_get_movements_map_returns_routes_and_year_bounds(
     ]
     fake_journey_repository.movement_connections_by_user_id[user_id] = [
         MovementConnection(
-            origin=make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.75, longitude=37.62),
-            destination=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+            origin=MOSCOW_POINT,
+            destination=LONDON_POINT,
             years=(2018, 2021),
         ),
     ]

@@ -19,13 +19,11 @@ from app.geo.infra.datasets.identity import gazetteer_id_for
 from app.geo.infra.datasets.loader import load_datasets
 from app.geo.infra.datasets.manifest import DatasetFormatEnum
 from app.shared.settings import PostgresSettings
-from tests.builders import make_dataset_spec
+from tests.builders import CITY_CSV_HEADER, PLACE_CSV_HEADER, make_dataset_spec
 
-_HEADER = "external_id,name_en,name_ru,country_code,latitude,longitude,population"
 _MOSCOW = "GeoNames:524901,Moscow,Москва,RU,55.75,37.62,10000000"
 _MOSTAR = "GeoNames:3194828,Mostar,,BA,43.34,17.81,100000"
 
-_PLACE_HEADER = "external_id,kind,name_en,name_ru,country_codes,latitude,longitude,notability"
 _TIAN_SHAN = 'Wikidata:Q5474,mountain_range,Tian Shan,Тянь-Шань,"CN,KG,KZ,UZ",42.04,80.13,99'
 _BELUKHA = "Wikidata:Q724367,mountain,Belukha,Белуха,RU,49.81,86.59,52"
 
@@ -57,7 +55,7 @@ async def test_load_datasets_inserts_cities_and_records_load(
     tmp_path: Path,
 ) -> None:
     """load_datasets: города из файла в geo_cities (пустой перевод → NULL), загрузка записана в журнал."""
-    content = gzip.compress("\n".join([_HEADER, _MOSCOW, _MOSTAR]).encode())
+    content = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW, _MOSTAR]).encode())
     spec = make_dataset_spec(content=content)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
 
@@ -82,7 +80,7 @@ async def test_load_datasets_skips_already_loaded_version_without_download(
     tmp_path: Path,
 ) -> None:
     """load_datasets: та же версия уже в журнале → файл не скачивается, данные не трогаются."""
-    content = gzip.compress("\n".join([_HEADER, _MOSCOW]).encode())
+    content = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW]).encode())
     spec = make_dataset_spec(content=content)
     requests: list[httpx.Request] = []
 
@@ -115,8 +113,8 @@ async def test_load_datasets_new_version_upserts_cities(
     tmp_path: Path,
 ) -> None:
     """load_datasets: новая версия обновляет существующие города, добавляет новые и заменяет запись журнала."""
-    first = gzip.compress("\n".join([_HEADER, _MOSCOW]).encode())
-    second = gzip.compress("\n".join([_HEADER, _MOSCOW.replace("Москва", "Москва-сити"), _MOSTAR]).encode())
+    first = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW]).encode())
+    second = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW.replace("Москва", "Москва-сити"), _MOSTAR]).encode())
     first_spec = make_dataset_spec(content=first, version="v1")
     second_spec = make_dataset_spec(content=second, version="v2")
     served = {first_spec.url: first}
@@ -150,7 +148,7 @@ async def test_load_datasets_bad_row_rolls_back_whole_load(
     tmp_path: Path,
 ) -> None:
     """load_datasets: город без английского названия → ошибка, ни городов, ни записи в журнале."""
-    content = gzip.compress("\n".join([_HEADER, _MOSCOW, "GeoNames:7,,Город,RU,1,2,3"]).encode())
+    content = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW, "GeoNames:7,,Город,RU,1,2,3"]).encode())
     spec = make_dataset_spec(content=content)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
 
@@ -169,7 +167,7 @@ async def test_load_datasets_inserts_places_with_country_arrays(
     tmp_path: Path,
 ) -> None:
     """load_datasets: места формата places — в geo_places со всеми странами массивом, загрузка в журнале."""
-    content = gzip.compress("\n".join([_PLACE_HEADER, _TIAN_SHAN, _BELUKHA]).encode())
+    content = gzip.compress("\n".join([PLACE_CSV_HEADER, _TIAN_SHAN, _BELUKHA]).encode())
     spec = make_dataset_spec(content=content, name="test-places", format=DatasetFormatEnum.PLACES)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
 
@@ -199,8 +197,8 @@ async def test_load_datasets_puts_each_format_into_its_own_table(
     tmp_path: Path,
 ) -> None:
     """load_datasets: города и места в одном прогоне — каждый датасет в свою таблицу, оба в журнале."""
-    cities = gzip.compress("\n".join([_HEADER, _MOSCOW]).encode())
-    places = gzip.compress("\n".join([_PLACE_HEADER, _BELUKHA]).encode())
+    cities = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW]).encode())
+    places = gzip.compress("\n".join([PLACE_CSV_HEADER, _BELUKHA]).encode())
     cities_spec = make_dataset_spec(content=cities)
     places_spec = make_dataset_spec(
         content=places,
@@ -233,8 +231,8 @@ async def test_load_datasets_new_version_upserts_places_without_deleting(
     tmp_path: Path,
 ) -> None:
     """load_datasets: новая версия мест обновляет страны и имя; место, которого в ней нет, остаётся в базе."""
-    first = gzip.compress("\n".join([_PLACE_HEADER, _TIAN_SHAN.replace("CN,KG,KZ,UZ", "KG,KZ"), _BELUKHA]).encode())
-    second = gzip.compress("\n".join([_PLACE_HEADER, _TIAN_SHAN.replace("Tian Shan", "Tianshan")]).encode())
+    first = gzip.compress("\n".join([PLACE_CSV_HEADER, _TIAN_SHAN.replace("CN,KG,KZ,UZ", "KG,KZ"), _BELUKHA]).encode())
+    second = gzip.compress("\n".join([PLACE_CSV_HEADER, _TIAN_SHAN.replace("Tian Shan", "Tianshan")]).encode())
     first_spec = make_dataset_spec(content=first, name="test-places", format=DatasetFormatEnum.PLACES, version="v1")
     second_spec = make_dataset_spec(content=second, name="test-places", format=DatasetFormatEnum.PLACES, version="v2")
     served = {first_spec.url: first}
@@ -268,7 +266,7 @@ async def test_load_datasets_bad_place_rolls_back_whole_load(
     tmp_path: Path,
 ) -> None:
     """load_datasets: место с неизвестным типом → ошибка, ни мест, ни записи в журнале."""
-    content = gzip.compress("\n".join([_PLACE_HEADER, _BELUKHA, "Wikidata:Q2,river,Volga,,RU,55,37,5"]).encode())
+    content = gzip.compress("\n".join([PLACE_CSV_HEADER, _BELUKHA, "Wikidata:Q2,river,Volga,,RU,55,37,5"]).encode())
     spec = make_dataset_spec(content=content, name="test-places", format=DatasetFormatEnum.PLACES)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
 

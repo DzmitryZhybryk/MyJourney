@@ -30,6 +30,16 @@ Top level by level, then mirror `app/<domain>/<layer>`: `tests/<level>/<domain>/
 Shared pieces: `tests/conftest.py`, `tests/fakes/`, `tests/builders.py`. Read the tree for the
 current domains instead of assuming.
 
+- **One unit under test per file, the file named after it**: the class (`JourneyService` →
+  `test_journey_service.py`, `UserRepository` → `test_user_repository.py`) or, for a module of
+  functions, the module (`rows.py` → `test_rows.py`).
+- A package that groups a layer **by kind** (`services/`, `entities/`, `value_objects/`,
+  `repositories/`, `clients/`) is not mirrored — its tests sit in the layer folder. A **thematic**
+  subpackage (`infra/datasets/`) is mirrored.
+- Code outside `app/` (`devtools/`) is tested under the domain it serves: `tests/<level>/<domain>/devtools/`.
+- Every domain UoW has one integration test that its repositories run on its session; the
+  transaction model itself is tested once, in `shared`.
+
 ## Markers
 
 Applied **automatically from the path** by `pytest_collection_modifyitems` in `tests/conftest.py`;
@@ -59,6 +69,10 @@ one that reaches every consumer:
   explicit test config that bypasses `settings` (`jwt_service` with a literal secret).
   api and integration cannot reuse these, since the app decodes with `settings`.
 - `tests/unit/<domain>/conftest.py` — the domain's service-under-test wired on fakes.
+- `tests/api/<domain>/conftest.py` — the three data fixtures of the generic `app`: `router` (a
+  wrapper mounting the domain's routers under their production sub-prefixes), `router_prefix`
+  (`/v1`) and `dependency_overrides` — leaf dependencies only (UoW, clients, config), never a service,
+  so the real service wiring runs.
 
 A fixture needed from another domain is **promoted up** to the right shared level, never copied.
 Fixtures always live in a `conftest.py`, never inline in a `test_*.py` — even one used by a single

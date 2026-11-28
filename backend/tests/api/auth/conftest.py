@@ -1,21 +1,6 @@
 """
-Auth-данные для generic api-проводки (``tests/api/conftest.py``).
-
-Здесь только то, чьё определение **импортирует auth**: три data-фикстуры, которыми
-generic-фикстура ``app`` собирает приложение — ``router`` (обёртка над публичным и админским
-auth-роутерами под их боевыми префиксами), ``router_prefix`` (``/v1``) и ``dependency_overrides``
-(какие листовые auth-deps чем подменить). Сам
-механизм сборки ``app``, ``client``, фейки shared-инфры (salted/deterministic hasher,
-task-bus) и ``mint_access_token`` живут в родительском ``tests/api/conftest.py``; фейки
-I/O-границы (UoW, users-client, email-настройки) — в корневом ``tests/conftest.py``.
-
-Подменяем лишь **листовые** dependency — UoW, users-client, salted-hasher, task-bus,
-издатель событий, email-настройки. Реальными остаются ``auth_service``/``email_verification_service``/
-``token_issuer``/``current_user_id`` (они эти листья и компонуют) — так тест прогоняет
-настоящую проводку сервисов, выпуск/декод JWT, куки и exception-handler'ы, фейкая только
-ввод-вывод. ``task_bus_dependency`` и ``event_publisher_dependency`` обязательны в overrides:
-боевые читают ``request.app.registry``, а ``api_app`` поднят без компонентов — registry пуст и
-боевые бы упали.
+``task_bus_dependency`` и ``event_publisher_dependency`` обязательны в overrides: боевые читают
+``request.app.registry``, а ``api_app`` поднят без компонентов.
 """
 
 from collections.abc import Callable

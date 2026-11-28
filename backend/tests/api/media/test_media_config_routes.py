@@ -6,22 +6,19 @@ api-тесты конфига media: публичные правила загр�
 """
 
 from collections.abc import Callable
-from typing import Final
-from uuid import UUID
 
 from httpx import AsyncClient
 
 from app.auth.domain.entities import UserCredentialsEntity
 from app.auth.domain.enums import UserRoleEnum
 from app.shared.types import DictStrAny
-from tests.builders import make_media_config_snapshot, make_user_credentials
+from tests.builders import ADMIN_ID, make_media_config_snapshot, make_user_credentials
 from tests.fakes import FakeMediaConfigRepository
 
-_PUBLIC_PATH: Final[str] = "/v1/media/config/"
-_ADMIN_PATH: Final[str] = "/v1/admin/media/config/"
-_ADMIN_ID: Final[UUID] = UUID("00000000-0000-0000-0000-0000000000ad")
+_PUBLIC_PATH = "/v1/media/config/"
+_ADMIN_PATH = "/v1/admin/media/config/"
 
-_EDIT_BODY: Final[DictStrAny] = {
+_EDIT_BODY: DictStrAny = {
     "editedVersion": 1,
     "snapshot": {
         "avatar": {"maxSizeBytes": 1_000, "formats": ["image/jpeg"], "minSide": 640},
@@ -37,7 +34,7 @@ async def test_get_upload_rules_without_token_returns_camelcase_rules(
 ) -> None:
     """Публичные правила отдаются без токена, с осью стороны и без версии и автора."""
     await fake_media_config_repository.insert_media_config(
-        version=1, snapshot=make_media_config_snapshot(), created_by=_ADMIN_ID
+        version=1, snapshot=make_media_config_snapshot(), created_by=ADMIN_ID
     )
 
     response = await client.get(_PUBLIC_PATH)
@@ -56,7 +53,7 @@ async def test_get_media_config_admin_token_returns_version_and_author(
 ) -> None:
     """Админ получает последнюю версию с номером и автором."""
     await fake_media_config_repository.insert_media_config(
-        version=1, snapshot=make_media_config_snapshot(), created_by=_ADMIN_ID
+        version=1, snapshot=make_media_config_snapshot(), created_by=ADMIN_ID
     )
     token = issue_access_token(make_user_credentials(role=UserRoleEnum.ADMIN))
 
@@ -64,7 +61,7 @@ async def test_get_media_config_admin_token_returns_version_and_author(
 
     assert response.status_code == 200
     body = response.json()
-    assert (body["version"], body["createdBy"]) == (1, str(_ADMIN_ID))
+    assert (body["version"], body["createdBy"]) == (1, str(ADMIN_ID))
     assert body["snapshot"]["avatar"]["minSide"] == 512
 
 

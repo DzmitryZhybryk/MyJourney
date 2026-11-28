@@ -40,11 +40,9 @@ from app.journeys.exceptions import (
 )
 from app.shared.fractional_index import MovePlacementEnum
 from app.shared.pagination.cursor import CursorPageQuery
-from tests.builders import LONDON_CITY_ID, MOSCOW_CITY_ID, make_geo_point, make_journey
+from tests.builders import LONDON_CITY_ID, LONDON_POINT, MOSCOW_CITY_ID, MOSCOW_POINT, make_geo_point, make_journey
 from tests.fakes import FakeCitiesClient, FakeJourneyRepository, FakeJourneyUnitOfWork, MovementConnectionQuery
 
-_MOSCOW = make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.75, longitude=37.62)
-_LONDON = make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12)
 _DELETED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
 
@@ -150,8 +148,8 @@ async def test_get_journeys_map_groups_cities_by_country(
         VisitedCity(
             city=make_geo_point(city_id=paris_id, country_code="FR", latitude=48.85, longitude=2.35), years=(2021,)
         ),
-        VisitedCity(city=_LONDON, years=(2019, 2021)),
-        VisitedCity(city=_MOSCOW, years=(2019,)),
+        VisitedCity(city=LONDON_POINT, years=(2019, 2021)),
+        VisitedCity(city=MOSCOW_POINT, years=(2019,)),
     ]
 
     result = await journey_service.get_journeys_map(user_id)
@@ -184,7 +182,7 @@ async def test_get_journeys_map_keeps_several_cities_of_one_country_together(
     petersburg_id = uuid4()
     petersburg = make_geo_point(city_id=petersburg_id, country_code="RU", latitude=59.94, longitude=30.31)
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
-        VisitedCity(city=_MOSCOW, years=(2020,)),
+        VisitedCity(city=MOSCOW_POINT, years=(2020,)),
         VisitedCity(city=petersburg, years=(2021,)),
     ]
 
@@ -202,8 +200,8 @@ async def test_get_journeys_globe_returns_cities_without_years(
     """get_journeys_globe: те же города, что у карты, каждый по одному разу; чтение в транзакции."""
     user_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
-        VisitedCity(city=_LONDON, years=(2019, 2021)),
-        VisitedCity(city=_MOSCOW, years=(2019,)),
+        VisitedCity(city=LONDON_POINT, years=(2019, 2021)),
+        VisitedCity(city=MOSCOW_POINT, years=(2019,)),
     ]
 
     result = await journey_service.get_journeys_globe(user_id)
@@ -220,7 +218,7 @@ async def test_get_movements_map_returns_connections_and_year_bounds(
 ) -> None:
     """get_movements_map: маршруты с годами и годы первой и последней поездки; транспорт доходит до запроса."""
     user_id = uuid4()
-    connection = MovementConnection(origin=_MOSCOW, destination=_LONDON, years=(2019, 2021))
+    connection = MovementConnection(origin=MOSCOW_POINT, destination=LONDON_POINT, years=(2019, 2021))
     fake_journey_repository.journeys = [
         make_journey(user_id=user_id, traveled_year=2019),
         make_journey(user_id=user_id, traveled_year=2022),
@@ -287,8 +285,8 @@ async def test_update_journey_same_year_replaces_fields_and_keeps_position(
     user_id = uuid4()
     journey_entity = make_journey(
         user_id=user_id,
-        origin=_LONDON,
-        destination=_MOSCOW,
+        origin=LONDON_POINT,
+        destination=MOSCOW_POINT,
         transport_type=TransportTypeEnum.WATER,
         distance_km=1,
         traveled_year=2020,

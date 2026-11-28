@@ -28,14 +28,14 @@ from app.shared.fractional_index import generate_key_between
 from app.shared.pagination.cursor import CursorPageQuery
 from tests.builders import (
     LONDON_CITY_ID,
+    LONDON_POINT,
     MOSCOW_CITY_ID,
+    MOSCOW_POINT,
     make_geo_point,
     make_journey,
 )
 
 _PARIS_CITY_ID = UUID("33333333-3333-4333-8333-333333333333")
-_MOSCOW = make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.75, longitude=37.62)
-_LONDON = make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12)
 _PARIS = make_geo_point(city_id=_PARIS_CITY_ID, country_code="FR", latitude=48.85, longitude=2.35)
 _DELETED_AT = dt.datetime(2024, 1, 1, tzinfo=dt.UTC)
 _NO_FILTERS = JourneyFilters(year_from=None, year_to=None, transport_types=None)
@@ -100,9 +100,9 @@ async def test_find_visited_cities_counts_both_ends_with_distinct_sorted_years(d
     user_id = uuid4()
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON, traveled_year=2021),
-        make_journey(user_id=user_id, origin=_LONDON, destination=_MOSCOW, traveled_year=2019),
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON, traveled_year=2021),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT, traveled_year=2021),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=MOSCOW_POINT, traveled_year=2019),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT, traveled_year=2021),
     )
 
     visited_cities = await repository.find_visited_cities_by_user_id(user_id)
@@ -118,8 +118,8 @@ async def test_find_visited_cities_orders_by_country_then_city_id(db_session: As
     second_russian_city = make_geo_point(city_id=second_moscow_id, country_code="RU", latitude=59.9, longitude=30.3)
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_PARIS),
-        make_journey(user_id=user_id, origin=_LONDON, destination=second_russian_city),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=_PARIS),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=second_russian_city),
     )
 
     visited_cities = await repository.find_visited_cities_by_user_id(user_id)
@@ -138,7 +138,7 @@ async def test_find_visited_cities_diverging_copies_of_city_give_one_row(db_sess
     shifted_moscow = make_geo_point(city_id=MOSCOW_CITY_ID, country_code="RU", latitude=55.7, longitude=37.7)
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT),
         make_journey(user_id=user_id, origin=shifted_moscow, destination=_PARIS),
     )
 
@@ -148,7 +148,7 @@ async def test_find_visited_cities_diverging_copies_of_city_give_one_row(db_sess
     assert len(moscow_rows) == 1
     point = (moscow_rows[0].city.latitude, moscow_rows[0].city.longitude)
     assert point in [
-        (pytest.approx(_MOSCOW.latitude, abs=0.001), pytest.approx(_MOSCOW.longitude, abs=0.001)),
+        (pytest.approx(MOSCOW_POINT.latitude, abs=0.001), pytest.approx(MOSCOW_POINT.longitude, abs=0.001)),
         (pytest.approx(55.7, abs=0.001), pytest.approx(37.7, abs=0.001)),
     ]
 
@@ -158,9 +158,9 @@ async def test_find_visited_cities_skips_deleted_and_other_users_journeys(db_ses
     user_id = uuid4()
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON),
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_PARIS, deleted_at=_DELETED_AT),
-        make_journey(user_id=uuid4(), origin=_PARIS, destination=_LONDON),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=_PARIS, deleted_at=_DELETED_AT),
+        make_journey(user_id=uuid4(), origin=_PARIS, destination=LONDON_POINT),
     )
 
     visited_cities = await repository.find_visited_cities_by_user_id(user_id)
@@ -181,10 +181,10 @@ async def test_find_movement_connections_one_row_per_directed_route(db_session: 
     user_id = uuid4()
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON),
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON),
-        make_journey(user_id=user_id, origin=_LONDON, destination=_MOSCOW),
-        make_journey(user_id=user_id, origin=_LONDON, destination=_PARIS),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=MOSCOW_POINT),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=_PARIS),
     )
 
     connections = await repository.find_movement_connections_by_user_id(user_id=user_id, transport_types=None)
@@ -203,15 +203,15 @@ async def test_find_movement_connections_carry_distinct_sorted_years(db_session:
     user_id = uuid4()
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON, traveled_year=2021),
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON, traveled_year=2018),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT, traveled_year=2021),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT, traveled_year=2018),
         make_journey(
             user_id=user_id,
-            origin=_MOSCOW,
-            destination=_LONDON,
+            origin=MOSCOW_POINT,
+            destination=LONDON_POINT,
             traveled_year=2021,
         ),
-        make_journey(user_id=user_id, origin=_LONDON, destination=_MOSCOW, traveled_year=2019),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=MOSCOW_POINT, traveled_year=2019),
     )
 
     connections = await repository.find_movement_connections_by_user_id(user_id=user_id, transport_types=None)
@@ -232,15 +232,15 @@ async def test_find_movement_connections_years_only_from_selected_transport(db_s
         db_session,
         make_journey(
             user_id=user_id,
-            origin=_MOSCOW,
-            destination=_LONDON,
+            origin=MOSCOW_POINT,
+            destination=LONDON_POINT,
             transport_type=TransportTypeEnum.AIR,
             traveled_year=2019,
         ),
         make_journey(
             user_id=user_id,
-            origin=_MOSCOW,
-            destination=_LONDON,
+            origin=MOSCOW_POINT,
+            destination=LONDON_POINT,
             transport_type=TransportTypeEnum.LAND,
             traveled_year=2022,
         ),
@@ -258,9 +258,11 @@ async def test_find_movement_connections_filters_by_transport(db_session: AsyncS
     user_id = uuid4()
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON, transport_type=TransportTypeEnum.AIR),
-        make_journey(user_id=user_id, origin=_LONDON, destination=_PARIS, transport_type=TransportTypeEnum.LAND),
-        make_journey(user_id=user_id, origin=_PARIS, destination=_MOSCOW, transport_type=TransportTypeEnum.WATER),
+        make_journey(
+            user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT, transport_type=TransportTypeEnum.AIR
+        ),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=_PARIS, transport_type=TransportTypeEnum.LAND),
+        make_journey(user_id=user_id, origin=_PARIS, destination=MOSCOW_POINT, transport_type=TransportTypeEnum.WATER),
     )
 
     async def destinations(transport_types: frozenset[TransportTypeEnum] | None) -> set[UUID]:
@@ -281,9 +283,9 @@ async def test_find_movement_connections_skips_deleted_and_other_users_journeys(
     user_id = uuid4()
     repository = await _insert(
         db_session,
-        make_journey(user_id=user_id, origin=_MOSCOW, destination=_LONDON),
-        make_journey(user_id=user_id, origin=_LONDON, destination=_PARIS, deleted_at=_DELETED_AT),
-        make_journey(user_id=uuid4(), origin=_PARIS, destination=_MOSCOW),
+        make_journey(user_id=user_id, origin=MOSCOW_POINT, destination=LONDON_POINT),
+        make_journey(user_id=user_id, origin=LONDON_POINT, destination=_PARIS, deleted_at=_DELETED_AT),
+        make_journey(user_id=uuid4(), origin=_PARIS, destination=MOSCOW_POINT),
     )
 
     connections = await repository.find_movement_connections_by_user_id(user_id=user_id, transport_types=None)
@@ -528,7 +530,9 @@ async def test_update_journey_by_id_persists_revise_and_move(db_session: AsyncSe
     )
     repository = await _insert(db_session, journey_entity)
 
-    journey_entity.revise(origin=_PARIS, destination=_MOSCOW, transport_type=TransportTypeEnum.LAND, distance_km=2480)
+    journey_entity.revise(
+        origin=_PARIS, destination=MOSCOW_POINT, transport_type=TransportTypeEnum.LAND, distance_km=2480
+    )
     journey_entity.move(traveled_year=2018, sort_key="b")
     await repository.update_journey_by_id(journey_entity)
     await db_session.commit()

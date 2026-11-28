@@ -1,11 +1,3 @@
-"""
-Media-данные для generic api-проводки (``tests/api/conftest.py``).
-
-Публичный роутер и админский монтируются под их боевыми префиксами (``/v1/media``, ``/v1/admin/media``)
-через один роутер-обёртку: generic ``app`` принимает один роутер. Подменяется только листовая
-зависимость — UoW; сервис, ``PermissionChecker`` и декод Bearer остаются настоящими.
-"""
-
 from collections.abc import Callable
 from typing import Any
 
@@ -32,5 +24,7 @@ def router_prefix() -> str:
 
 
 @pytest.fixture
-def dependency_overrides(fake_media_uow: FakeMediaUnitOfWork) -> dict[Callable[..., Any], Callable[..., Any]]:
+def dependency_overrides(
+    fake_media_uow: FakeMediaUnitOfWork,
+) -> dict[Callable[..., Any], Callable[..., Any]]:
     return {media_uow_dependency: lambda: fake_media_uow}

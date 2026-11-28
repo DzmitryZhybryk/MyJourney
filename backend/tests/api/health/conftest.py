@@ -1,10 +1,4 @@
-"""
-Health-данные для generic api-проводки (``tests/api/conftest.py``).
-
-Операционный роутер без зависимостей и без версионного префикса — три data-фикстуры вырождены:
-роутер health, пустой префикс (``/healthz/`` монтируется в корень), пустая карта override'ов.
-Механизм сборки ``app``/``client`` живёт в родительском ``tests/api/conftest.py``.
-"""
+"""Health — операционный роутер вне ``/v1`` и без зависимостей: префикс пустой, подменять нечего."""
 
 from collections.abc import Callable
 from typing import Any

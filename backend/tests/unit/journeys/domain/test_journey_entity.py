@@ -8,7 +8,7 @@ import pytest
 from app.journeys.domain.entities import JourneyEntity
 from app.journeys.domain.enums import TransportTypeEnum
 from app.journeys.exceptions import JourneyNotFoundError
-from tests.builders import LONDON_CITY_ID, MOSCOW_CITY_ID, make_geo_point, make_journey
+from tests.builders import LONDON_POINT, MOSCOW_POINT, make_geo_point, make_journey
 
 _DELETED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
@@ -16,8 +16,8 @@ _DELETED_AT = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 def test_create_assigns_fields_and_mints_id() -> None:
     """create: чеканит собственный journey_id (uuid4) и прокидывает переданные поля."""
     user_id = uuid4()
-    origin = make_geo_point(city_id=MOSCOW_CITY_ID, latitude=55.75, longitude=37.62)
-    destination = make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12)
+    origin = MOSCOW_POINT
+    destination = LONDON_POINT
 
     journey_entity = JourneyEntity.create(
         user_id=user_id,
@@ -43,8 +43,8 @@ def test_create_mints_distinct_ids_per_call() -> None:
     """create: каждый вызов чеканит новый идентификатор (id не переиспользуется)."""
     first = JourneyEntity.create(
         user_id=uuid4(),
-        origin=make_geo_point(city_id=MOSCOW_CITY_ID, latitude=55.75, longitude=37.62),
-        destination=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+        origin=MOSCOW_POINT,
+        destination=LONDON_POINT,
         transport_type=TransportTypeEnum.AIR,
         distance_km=2500,
         traveled_year=2020,
@@ -52,8 +52,8 @@ def test_create_mints_distinct_ids_per_call() -> None:
     )
     second = JourneyEntity.create(
         user_id=uuid4(),
-        origin=make_geo_point(city_id=MOSCOW_CITY_ID, latitude=55.75, longitude=37.62),
-        destination=make_geo_point(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
+        origin=MOSCOW_POINT,
+        destination=LONDON_POINT,
         transport_type=TransportTypeEnum.AIR,
         distance_km=2500,
         traveled_year=2020,

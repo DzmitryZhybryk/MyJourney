@@ -45,7 +45,7 @@ from app.auth.application.config import EmailVerificationConfig  # noqa: E402
 from app.shared.infra.crypto import get_fernet_secret_cipher  # noqa: E402
 from app.shared.infra.crypto.fernet import FernetSecretCipher  # noqa: E402
 from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher  # noqa: E402
-from tests.builders import LONDON_CITY_ID, make_city_location_response  # noqa: E402
+from tests.builders import LONDON_POINT, MOSCOW_POINT, make_city_location_response  # noqa: E402
 from tests.fakes import (  # noqa: E402
     FakeAccountRepository,
     FakeAuthUnitOfWork,
@@ -238,12 +238,7 @@ def fake_media_uow(fake_media_config_repository: FakeMediaConfigRepository) -> F
 @pytest.fixture
 def fake_cities_client() -> FakeCitiesClient:
     """Справочник с Москвой и Лондоном — в порядке запроса поездки Москва → Лондон."""
-    return FakeCitiesClient(
-        (
-            make_city_location_response(),
-            make_city_location_response(city_id=LONDON_CITY_ID, country_code="GB", latitude=51.5, longitude=-0.12),
-        )
-    )
+    return FakeCitiesClient((make_city_location_response(MOSCOW_POINT), make_city_location_response(LONDON_POINT)))
 
 
 @pytest.fixture
