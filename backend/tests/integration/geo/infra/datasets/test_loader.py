@@ -1,10 +1,4 @@
-"""
-Интеграционные тесты загрузчика датасетов газеттира против реального Postgres.
-
-Проверяют то, что на фейках не увидеть: COPY во временную таблицу, upsert в таблицу формата
-(``geo_cities``, ``geo_places`` с массивом стран), журнал загрузок ``geo_dataset_loads`` и откат
-всей загрузки при битом файле. Файл отдаёт ``httpx.MockTransport`` — сеть не нужна.
-"""
+"""Файл датасета отдаёт ``httpx.MockTransport``: сеть не нужна."""
 
 import gzip
 from pathlib import Path
@@ -54,7 +48,7 @@ async def test_load_datasets_inserts_cities_and_records_load(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: города из файла в geo_cities (пустой перевод → NULL), загрузка записана в журнал."""
+    """Города из файла — в ``geo_cities`` (пустой перевод → NULL), загрузка записана в журнал."""
     content = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW, _MOSTAR]).encode())
     spec = make_dataset_spec(content=content)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
@@ -79,7 +73,7 @@ async def test_load_datasets_skips_already_loaded_version_without_download(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: та же версия уже в журнале → файл не скачивается, данные не трогаются."""
+    """Та же версия уже в журнале → файл не скачивается, данные не трогаются."""
     content = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW]).encode())
     spec = make_dataset_spec(content=content)
     requests: list[httpx.Request] = []
@@ -112,7 +106,7 @@ async def test_load_datasets_new_version_upserts_cities(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: новая версия обновляет существующие города, добавляет новые и заменяет запись журнала."""
+    """Новая версия обновляет существующие города, добавляет новые и заменяет запись журнала."""
     first = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW]).encode())
     second = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW.replace("Москва", "Москва-сити"), _MOSTAR]).encode())
     first_spec = make_dataset_spec(content=first, version="v1")
@@ -147,7 +141,7 @@ async def test_load_datasets_bad_row_rolls_back_whole_load(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: город без английского названия → ошибка, ни городов, ни записи в журнале."""
+    """Город без английского названия → ошибка; ни городов, ни записи в журнале."""
     content = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW, "GeoNames:7,,Город,RU,1,2,3"]).encode())
     spec = make_dataset_spec(content=content)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
@@ -166,7 +160,7 @@ async def test_load_datasets_inserts_places_with_country_arrays(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: места формата places — в geo_places со всеми странами массивом, загрузка в журнале."""
+    """Места формата places — в ``geo_places`` со всеми странами массивом, загрузка в журнале."""
     content = gzip.compress("\n".join([PLACE_CSV_HEADER, _TIAN_SHAN, _BELUKHA]).encode())
     spec = make_dataset_spec(content=content, name="test-places", format=DatasetFormatEnum.PLACES)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))
@@ -196,7 +190,7 @@ async def test_load_datasets_puts_each_format_into_its_own_table(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: города и места в одном прогоне — каждый датасет в свою таблицу, оба в журнале."""
+    """Города и места в одном прогоне — каждый датасет в свою таблицу, оба в журнале."""
     cities = gzip.compress("\n".join([CITY_CSV_HEADER, _MOSCOW]).encode())
     places = gzip.compress("\n".join([PLACE_CSV_HEADER, _BELUKHA]).encode())
     cities_spec = make_dataset_spec(content=cities)
@@ -230,7 +224,7 @@ async def test_load_datasets_new_version_upserts_places_without_deleting(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: новая версия мест обновляет страны и имя; место, которого в ней нет, остаётся в базе."""
+    """Новая версия мест обновляет страны и имя; место, которого в ней нет, остаётся в базе."""
     first = gzip.compress("\n".join([PLACE_CSV_HEADER, _TIAN_SHAN.replace("CN,KG,KZ,UZ", "KG,KZ"), _BELUKHA]).encode())
     second = gzip.compress("\n".join([PLACE_CSV_HEADER, _TIAN_SHAN.replace("Tian Shan", "Tianshan")]).encode())
     first_spec = make_dataset_spec(content=first, name="test-places", format=DatasetFormatEnum.PLACES, version="v1")
@@ -265,7 +259,7 @@ async def test_load_datasets_bad_place_rolls_back_whole_load(
     postgres_settings: PostgresSettings,
     tmp_path: Path,
 ) -> None:
-    """load_datasets: место с неизвестным типом → ошибка, ни мест, ни записи в журнале."""
+    """Место с неизвестным типом → ошибка; ни мест, ни записи в журнале."""
     content = gzip.compress("\n".join([PLACE_CSV_HEADER, _BELUKHA, "Wikidata:Q2,river,Volga,,RU,55,37,5"]).encode())
     spec = make_dataset_spec(content=content, name="test-places", format=DatasetFormatEnum.PLACES)
     transport = httpx.MockTransport(lambda request: httpx.Response(200, content=content))

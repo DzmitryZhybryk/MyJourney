@@ -1,10 +1,4 @@
-"""
-Фикстура-фабрика ``BaseHTTPClient`` для unit-тестов HTTP-клиента.
-
-Создаёт клиентов на общий тест-``base_url`` и гарантированно закрывает каждый
-(``aclose``) в teardown — раньше это делали вручную лишь 2 из ~11 тестов, остальные
-текли. Тест зовёт ``make_http_client()`` после ``install_mock_transport(handler)``.
-"""
+"""``make_http_client()`` зовётся после ``install_mock_transport(handler)``: тот подменяет конструктор клиента httpx."""
 
 from collections.abc import AsyncIterator, Callable
 

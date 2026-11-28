@@ -1,10 +1,3 @@
-"""
-Unit-тесты ``serialize_to_json`` — orjson-сериализации с поддержкой кириллицы.
-
-orjson пишет UTF-8 (кириллица не экранируется в ``\\uXXXX``) и нативно сериализует
-UUID/datetime — это используется как сериализатор JSON-логов.
-"""
-
 import datetime as dt
 import json
 from uuid import UUID

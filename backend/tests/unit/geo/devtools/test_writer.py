@@ -1,5 +1,3 @@
-"""Unit-тесты записи файла датасета."""
-
 import csv
 import gzip
 import hashlib
@@ -12,7 +10,7 @@ _ROWS = ({"external_id": "Wikidata:Q724367", "name_en": "Belukha", "name_ru": "�
 
 
 def test_write_dataset_file_writes_gzipped_csv_and_returns_its_sha256(tmp_path: Path) -> None:
-    """write_dataset_file: CSV с заголовком в gzip читается обратно; возвращён sha256 записанного файла."""
+    """CSV с заголовком в gzip читается обратно; возвращён sha256 записанного файла."""
     path = tmp_path / "places.csv.gz"
 
     sha256 = write_dataset_file(path=path, fieldnames=_FIELDNAMES, rows=_ROWS)
@@ -25,7 +23,7 @@ def test_write_dataset_file_writes_gzipped_csv_and_returns_its_sha256(tmp_path: 
 
 
 def test_write_dataset_file_bytes_do_not_depend_on_file_name_or_time(tmp_path: Path) -> None:
-    """write_dataset_file: те же строки под другим именем — те же байты; в gzip-заголовке нет ни имени, ни времени."""
+    """Те же строки под другим именем — те же байты; в gzip-заголовке нет ни имени, ни времени."""
     first = tmp_path / "first.csv.gz"
     second = tmp_path / "second.csv.gz"
 

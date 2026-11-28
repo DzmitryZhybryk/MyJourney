@@ -1,5 +1,3 @@
-"""Unit-тесты базовых исключений: признак серверного сбоя у категории и сообщение ``InvariantViolationError``."""
-
 import pytest
 
 from app.shared.exceptions import ErrorCategoryEnum, InvariantViolationError

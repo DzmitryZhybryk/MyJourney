@@ -1,19 +1,5 @@
-"""
-Unit-тесты ``BaseHTTPClient`` через ``httpx.MockTransport`` (без сети).
-
-Покрывают маппинг ответов внешнего API в ``ExternalAPI*Error``: успех проходит,
-таймаут, сетевая ошибка, любой 5xx, 408 и 429 → temporary (кандидат на retry), остальные
-4xx → persistent; набор временных 4xx переопределяется подклассом; уровень лога следует
-классу ошибки; срок повтора из ``Retry-After`` (и его источник переопределяется подклассом);
-плюс извлечение сообщения об ошибке из тела.
-
-Клиент создаётся фабрикой ``make_http_client`` (conftest) — она же закрывает его в
-teardown. ``install_mock_transport`` вызывается ДО создания клиента: он патчит
-``httpx.AsyncClient`` на mock-транспортный.
-"""
-
+import datetime as dt
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
 from email.utils import format_datetime
 from http import HTTPStatus
 
@@ -143,11 +129,11 @@ async def test_provider_subclass_overrides_temporary_client_error_statuses(
 @pytest.mark.parametrize(
     ("headers", "expected_retry_after"),
     [
-        ({"Retry-After": "120"}, timedelta(seconds=120)),
-        ({"Retry-After": " 60 "}, timedelta(seconds=60)),
-        ({"Retry-After": "0"}, timedelta(0)),
-        ({"Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT"}, timedelta(0)),
-        ({"Retry-After": "Wed, 21 Oct 2015 07:28:00 -0000"}, timedelta(0)),
+        ({"Retry-After": "120"}, dt.timedelta(seconds=120)),
+        ({"Retry-After": " 60 "}, dt.timedelta(seconds=60)),
+        ({"Retry-After": "0"}, dt.timedelta(0)),
+        ({"Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT"}, dt.timedelta(0)),
+        ({"Retry-After": "Wed, 21 Oct 2015 07:28:00 -0000"}, dt.timedelta(0)),
         ({"Retry-After": "soon"}, None),
         ({"Retry-After": "-5"}, None),
         ({"Retry-After": ""}, None),
@@ -161,7 +147,7 @@ async def test_temporary_error_carries_retry_after_from_header(
     install_mock_transport: _InstallTransport,
     make_http_client: _MakeClient,
     headers: dict[str, str] | dict[bytes, bytes],
-    expected_retry_after: timedelta | None,
+    expected_retry_after: dt.timedelta | None,
 ) -> None:
     """Срок из ``Retry-After``: секунды как есть, прошедшая дата — ноль, нечитаемое или отсутствующее — ``None``."""
     install_mock_transport(lambda request: httpx.Response(429, headers=headers))
@@ -178,7 +164,7 @@ async def test_temporary_error_retry_after_counts_down_to_http_date(
     make_http_client: _MakeClient,
 ) -> None:
     """``Retry-After`` датой в будущем → срок до неё от текущего момента."""
-    retry_at = datetime.now(tz=UTC) + timedelta(seconds=120)
+    retry_at = dt.datetime.now(tz=dt.UTC) + dt.timedelta(seconds=120)
     install_mock_transport(
         lambda request: httpx.Response(503, headers={"Retry-After": format_datetime(retry_at, usegmt=True)})
     )
@@ -189,7 +175,7 @@ async def test_temporary_error_retry_after_counts_down_to_http_date(
 
     retry_after = exc_info.value.retry_after
     assert retry_after is not None
-    assert timedelta(seconds=110) < retry_after <= timedelta(seconds=120)
+    assert dt.timedelta(seconds=110) < retry_after <= dt.timedelta(seconds=120)
 
 
 async def test_provider_subclass_overrides_retry_after_source(
@@ -199,8 +185,8 @@ async def test_provider_subclass_overrides_retry_after_source(
     """Подкласс провайдера берёт срок из своего места в ответе — здесь из тела."""
 
     class BodyRetryAfterClient(BaseHTTPClient):
-        def _retry_after(self, response: httpx.Response) -> timedelta | None:
-            return timedelta(seconds=response.json()["retry_in"])
+        def _retry_after(self, response: httpx.Response) -> dt.timedelta | None:
+            return dt.timedelta(seconds=response.json()["retry_in"])
 
     install_mock_transport(lambda request: httpx.Response(429, json={"retry_in": 30}))
     client = make_http_client(client_class=BodyRetryAfterClient)
@@ -208,7 +194,7 @@ async def test_provider_subclass_overrides_retry_after_source(
     with pytest.raises(ExternalAPITemporaryError) as exc_info:
         await client.get("/ping")
 
-    assert exc_info.value.retry_after == timedelta(seconds=30)
+    assert exc_info.value.retry_after == dt.timedelta(seconds=30)
 
 
 @pytest.mark.parametrize(("status", "expected_level"), [(503, "warning"), (400, "error")])

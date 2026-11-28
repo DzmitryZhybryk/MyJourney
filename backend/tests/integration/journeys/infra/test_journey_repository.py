@@ -1,15 +1,3 @@
-"""
-Интеграционные тесты ``JourneyRepository`` против реального Postgres.
-
-Покрывают то, что нельзя проверить на фейках: round-trip сущность→модель (денормализованный
-снапшот origin/destination, дата+точность, distance_km через REAL), вставку нескольких
-поездок одного пользователя (на ``user_id`` нет unique-констрейнта) и правила выборок для
-карт — они целиком живут в SQL: города и годы для карты и глобуса, маршруты и окно фильтров
-для карты перемещений, годы первой и последней поездки. Порядок ленты и курсор, фильтры,
-побайтное сравнение ключей (``COLLATE "C"``), частичный unique-индекс, advisory-блокировка
-области и запись правки/переноса/удаления.
-"""
-
 import asyncio
 import datetime as dt
 from uuid import UUID, uuid4
@@ -55,7 +43,7 @@ async def _insert(db_session: AsyncSession, *journey_entities: JourneyEntity) ->
 
 
 async def test_insert_journey_persists_snapshot(db_session: AsyncSession) -> None:
-    """insert_journey: сущность ложится в плоский снапшот — города/страны/координаты, год, distance_km."""
+    """Поездка ложится плоским снимком: города, страны, координаты, год, ``distance_km``."""
     user_id = uuid4()
     journey_entity = make_journey(
         user_id=user_id,
@@ -79,8 +67,8 @@ async def test_insert_journey_persists_snapshot(db_session: AsyncSession) -> Non
     assert journey_model.origin_latitude == pytest.approx(55.75, abs=0.01)
 
 
-async def test_insert_multiple_journeys_for_same_user(db_session: AsyncSession) -> None:
-    """insert_journey: несколько поездок одного пользователя сохраняются (на user_id нет unique)."""
+async def test_insert_journey_several_of_one_user_all_persist(db_session: AsyncSession) -> None:
+    """Несколько поездок одного пользователя сохраняются: unique на ``user_id`` нет."""
     user_id = uuid4()
     repository = JourneyRepository(db_session)
 
@@ -523,7 +511,7 @@ async def test_lock_sort_keys_serializes_concurrent_inserts_into_one_year(
 
 
 async def test_update_journey_by_id_persists_revise_and_move(db_session: AsyncSession) -> None:
-    """update_journey_by_id: новые города, транспорт, расстояние, год и ключ ложатся в строку."""
+    """Новые города, транспорт, расстояние, год и ключ ложатся в строку."""
     user_id = uuid4()
     journey_entity = make_journey(
         user_id=user_id, traveled_year=2020, sort_key="m", transport_type=TransportTypeEnum.AIR

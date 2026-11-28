@@ -147,7 +147,7 @@ def fake_challenge_repository() -> FakeChallengeRepository:
 
 
 @pytest.fixture
-def fake_uow(
+def fake_auth_uow(
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_refresh_token_repository: FakeRefreshTokenRepository,
     fake_challenge_repository: FakeChallengeRepository,

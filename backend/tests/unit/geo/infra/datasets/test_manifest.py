@@ -1,5 +1,3 @@
-"""Unit-тесты чтения манифеста датасетов."""
-
 from pathlib import Path
 
 import pytest
@@ -8,7 +6,7 @@ from app.geo.infra.datasets.manifest import DatasetFormatEnum, DatasetSpec, read
 
 
 def test_read_manifest_returns_datasets_in_declared_order(tmp_path: Path) -> None:
-    """read_manifest: каждая секция [[dataset]] → DatasetSpec, порядок как в файле."""
+    """Каждая секция ``[[dataset]]`` → ``DatasetSpec``, порядок как в файле."""
     manifest_path = tmp_path / "manifest.toml"
     manifest_path.write_text(
         """
@@ -59,7 +57,7 @@ def test_read_manifest_rejects_dataset_without_known_format(
     format_line: str,
     error: type[Exception],
 ) -> None:
-    """read_manifest: без format или с форматом не из DatasetFormatEnum манифест не читается."""
+    """Без ``format`` или с форматом не из ``DatasetFormatEnum`` манифест не читается."""
     manifest_path = tmp_path / "manifest.toml"
     manifest_path.write_text(
         f"""
@@ -78,7 +76,7 @@ sha256 = "aaa"
 
 
 def test_read_manifest_default_path_reads_shipped_manifest() -> None:
-    """read_manifest: манифест из репозитория читается и описывает хотя бы один датасет."""
+    """Манифест из репозитория читается и описывает хотя бы один датасет."""
     datasets = read_manifest()
 
     assert len(datasets) > 0

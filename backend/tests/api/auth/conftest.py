@@ -44,7 +44,7 @@ def router_prefix() -> str:
 
 @pytest.fixture
 def dependency_overrides(
-    fake_uow: FakeAuthUnitOfWork,
+    fake_auth_uow: FakeAuthUnitOfWork,
     fake_users_client: FakeUsersClient,
     fake_salted_hasher: FakeSaltedHasher,
     fake_task_bus: FakeTaskBus,
@@ -52,7 +52,7 @@ def dependency_overrides(
     email_verification_config: EmailVerificationConfig,
 ) -> dict[Callable[..., Any], Callable[..., Any]]:
     return {
-        auth_uow_dependency: lambda: fake_uow,
+        auth_uow_dependency: lambda: fake_auth_uow,
         users_client_dependency: lambda: fake_users_client,
         salted_hasher_dependency: lambda: fake_salted_hasher,
         task_bus_dependency: lambda: fake_task_bus,

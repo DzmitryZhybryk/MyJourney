@@ -1,12 +1,3 @@
-"""
-api-тесты роутов ``GET`` и ``PATCH /v1/users/me/`` на ASGI-приложении.
-
-Реальный ``UserService`` поверх фейк-UoW, реальный декод Bearer-токена (подписан
-settings-секретом через ``mint_access_token``). Пиннят camelCase-контракт ответа,
-401 без токена, 404 для неизвестного id, 410 для soft-deleted и разбор тела PATCH:
-отсутствующее поле не меняется, явный ``null`` и неверное имя — 422.
-"""
-
 import datetime as dt
 from collections.abc import Callable
 from typing import Any

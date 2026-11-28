@@ -1,12 +1,3 @@
-"""
-api-тесты роутов geo на ASGI-приложении: ``GET /v1/geo/cities/search/`` и
-``POST /v1/geo/cities/resolve/``.
-
-Реальная проводка ``city_service`` поверх фейк-репозитория, реальный декод Bearer-токена
-(подписан settings-секретом через ``mint_access_token``). Пиннят camelCase-контракт ответа,
-401 без токена и 422 на невалидный ввод.
-"""
-
 from collections.abc import Callable
 from uuid import UUID, uuid4
 

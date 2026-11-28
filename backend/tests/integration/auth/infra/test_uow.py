@@ -1,9 +1,6 @@
 """
-Интеграционные тесты сборки ``AuthUnitOfWork`` против реального Postgres.
-
-Транзакционная модель проверена в ``tests/integration/shared/infra/db/postgres/test_uow.py``;
-здесь — то, что репозитории UoW работают на его сессии, и порядок вставок по FK внутри одной
-транзакции.
+Транзакционную модель проверяет ``integration/shared/infra/db/postgres/test_uow.py``; здесь — проводка UoW
+и порядок вставок по FK: SQLAlchemy не упорядочивает INSERT разных мапперов внутри одного flush.
 """
 
 from uuid import uuid4
@@ -39,17 +36,7 @@ async def test_user_credentials_repository_write_is_persisted_by_uow_commit(
 async def test_transaction_flush_orders_credentials_before_dependent_refresh_token(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """
-    Явный ``flush()`` после родителя пускает зависимый ``refresh_token`` в ту же tx без FK-ошибки.
-
-    Регресс на ordering вставок: ``register`` кладёт обе записи в одну транзакцию, где
-    ``refresh_tokens.user_id`` → ``user_credentials.user_id`` (FK). Порядок INSERT'ов
-    между разными мапперами в одном flush SQLAlchemy не гарантирует — без вмешательства
-    ``INSERT refresh_tokens`` мог уйти первым и поймать ``ForeignKeyViolation``. Фикс —
-    явный ``uow.flush()`` после вставки родителя: его INSERT материализуется в БД до
-    зависимой строки. Воспроизводится только на реальном Postgres с FK-констрейнтом —
-    фейки и раздельный сид это не покрывают.
-    """
+    """Явный ``flush()`` после учётки пускает зависимый refresh-токен в ту же транзакцию без FK-ошибки."""
     user_id = uuid4()
     user_credentials_entity = make_user_credentials(
         user_id=user_id, email="uow-fk-order@example.com", username="uow_fk_order"

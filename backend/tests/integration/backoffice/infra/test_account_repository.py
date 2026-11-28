@@ -1,10 +1,3 @@
-"""
-Интеграционные тесты ``AccountRepository`` против реального Postgres.
-
-Условный upsert по версии части и выдача списка (фильтры, порядок с ``NULLS LAST``, страницы) живут в SQL,
-поэтому проверяются только на настоящей базе.
-"""
-
 import datetime as dt
 from uuid import UUID
 

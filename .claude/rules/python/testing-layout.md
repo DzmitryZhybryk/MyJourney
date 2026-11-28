@@ -21,9 +21,6 @@ Two orthogonal axes: **level** (speed and dependencies) and **domain** (mirror o
 
 Most of the value is in `unit/`; keep integration and api thin.
 
-Argon2 is deliberately slow (~50 ms/hash): service tests use `FakeSaltedHasher`; the real
-`Argon2SaltedHasher` is covered once in `unit/shared/infra/crypto/` (roundtrip + wrong secret fails).
-
 ## Layout
 
 Top level by level, then mirror `app/<domain>/<layer>`: `tests/<level>/<domain>/<layer>/test_*.py`.
@@ -31,14 +28,12 @@ Shared pieces: `tests/conftest.py`, `tests/fakes/`, `tests/builders.py`. Read th
 current domains instead of assuming.
 
 - **One unit under test per file, the file named after it**: the class (`JourneyService` →
-  `test_journey_service.py`, `UserRepository` → `test_user_repository.py`) or, for a module of
-  functions, the module (`rows.py` → `test_rows.py`).
+  `test_journey_service.py`) or, for a module of functions, the module (`rows.py` → `test_rows.py`).
 - A package that groups a layer **by kind** (`services/`, `entities/`, `value_objects/`,
   `repositories/`, `clients/`) is not mirrored — its tests sit in the layer folder. A **thematic**
   subpackage (`infra/datasets/`) is mirrored.
 - Code outside `app/` (`devtools/`) is tested under the domain it serves: `tests/<level>/<domain>/devtools/`.
-- Every domain UoW has one integration test that its repositories run on its session; the
-  transaction model itself is tested once, in `shared`.
+- Every domain UoW has one integration test of its wiring; the transaction model is tested once, in `shared`.
 
 ## Markers
 
@@ -58,21 +53,17 @@ in every run, CI logs included.
 
 ## Where a fixture lives
 
-pytest resolves fixtures only from `conftest.py` files above the test, and imports the root
-`conftest.py` first. Add to the existing conftests; do not invent new layers. Use the narrowest
-one that reaches every consumer:
+Add to the existing conftests; do not invent new layers. Use the narrowest one that reaches every
+consumer:
 
 - `tests/conftest.py` — suite-wide setup (env bootstrap, the marker hook) and fixtures reused
-  across **levels**. The env bootstrap runs before any `app` import, so child conftests may import
-  `app` at top level; the root itself keeps its app imports after the bootstrap (`# noqa: E402`).
+  across **levels**.
 - `tests/unit/conftest.py` — cross-domain, **unit-only** fixtures: stateless infra built with an
   explicit test config that bypasses `settings` (`jwt_service` with a literal secret).
   api and integration cannot reuse these, since the app decodes with `settings`.
 - `tests/unit/<domain>/conftest.py` — the domain's service-under-test wired on fakes.
-- `tests/api/<domain>/conftest.py` — the three data fixtures of the generic `app`: `router` (a
-  wrapper mounting the domain's routers under their production sub-prefixes), `router_prefix`
-  (`/v1`) and `dependency_overrides` — leaf dependencies only (UoW, clients, config), never a service,
-  so the real service wiring runs.
+- `tests/api/<domain>/conftest.py` — `router` (a wrapper with the production sub-prefixes),
+  `router_prefix` (`/v1`), `dependency_overrides` of leaf dependencies only, never a service.
 
 A fixture needed from another domain is **promoted up** to the right shared level, never copied.
 Fixtures always live in a `conftest.py`, never inline in a `test_*.py` — even one used by a single

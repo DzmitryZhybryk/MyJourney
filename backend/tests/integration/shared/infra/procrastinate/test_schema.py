@@ -1,12 +1,6 @@
 """
-Integration: ``ensure_procrastinate_schema`` идемпотентна против реального Postgres.
-
-``apply_schema_async()`` не идемпотентен (schema.sql — ``CREATE TABLE`` без
-``IF NOT EXISTS``), поэтому шаг миграции гейтит применение по наличию таблицы
-``procrastinate_jobs``. Проверяем обе ветки на живой БД: пусто → схема
-применяется; повтор на уже мигрированной БД → no-op (не падает на дублирующих
-CREATE). Строится тот же ``ProcrastinateApp``, что и в проде, на том же DSN
-(``postgres_libpq_dsn``), — покрываем ровно боевой путь.
+``apply_schema_async()`` не идемпотентен (``CREATE TABLE`` без ``IF NOT EXISTS``), поэтому шаг гейтит
+применение по наличию таблицы ``procrastinate_jobs``.
 """
 
 from procrastinate import PsycopgConnector

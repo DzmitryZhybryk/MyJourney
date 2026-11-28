@@ -1,13 +1,3 @@
-"""
-Unit-тесты ``JourneyService`` на фейк-UoW.
-
-``create_journey`` — снапшот городов, фиксация, отказ при неизвестных городах.
-``get_journeys_map`` / ``get_journeys_globe`` — сборка ответа из городов репозитория.
-``get_movements_map`` — маршруты и годы, передача фильтров, пустой ответ без поездок.
-``update_journey`` / ``delete_journey`` / ``move_journey`` — порядок внутри года, смена года,
-недоступные поездки и соседи. ``list_journeys`` / ``get_journey_years`` — лента и годы.
-"""
-
 import datetime as dt
 from uuid import UUID, uuid4
 
@@ -52,7 +42,7 @@ async def test_create_journey_snapshots_cities_and_commits(
     fake_journey_repository: FakeJourneyRepository,
     fake_cities_client: FakeCitiesClient,
 ) -> None:
-    """create_journey: страну и координаты городов берёт у geo, вставляет поездку с её годом и коммитит один раз."""
+    """Страна и координаты городов — из geo; поездка вставлена со своим годом, один коммит."""
     user_id = uuid4()
     command = CreateJourneyCommand(
         origin_city_id=MOSCOW_CITY_ID,
@@ -130,7 +120,7 @@ async def test_create_journey_matches_geo_cities_by_id_not_by_order(
 
 
 async def test_get_journeys_map_no_journeys_returns_empty(journey_service: JourneyService) -> None:
-    """get_journeys_map: у пользователя нет поездок → пустой агрегат без стран."""
+    """Поездок нет → пустой агрегат без стран."""
     result = await journey_service.get_journeys_map(uuid4())
 
     assert result == JourneysMapResult(())
@@ -141,7 +131,7 @@ async def test_get_journeys_map_groups_cities_by_country(
     fake_journey_repository: FakeJourneyRepository,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """get_journeys_map: города подряд по стране собираются в страны с городами и годами; чтение в транзакции."""
+    """Города подряд по стране собираются в страны с городами и годами; чтение в транзакции."""
     user_id = uuid4()
     paris_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
@@ -177,7 +167,7 @@ async def test_get_journeys_map_keeps_several_cities_of_one_country_together(
     journey_service: JourneyService,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """get_journeys_map: два города одной страны — одна страна с двумя городами в порядке репозитория."""
+    """Два города одной страны — одна страна с двумя городами в порядке репозитория."""
     user_id = uuid4()
     petersburg_id = uuid4()
     petersburg = make_geo_point(city_id=petersburg_id, country_code="RU", latitude=59.94, longitude=30.31)
@@ -197,7 +187,7 @@ async def test_get_journeys_globe_returns_cities_without_years(
     fake_journey_repository: FakeJourneyRepository,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """get_journeys_globe: те же города, что у карты, каждый по одному разу; чтение в транзакции."""
+    """Те же города, что у карты, каждый по одному разу; чтение в транзакции."""
     user_id = uuid4()
     fake_journey_repository.visited_cities_by_user_id[user_id] = [
         VisitedCity(city=LONDON_POINT, years=(2019, 2021)),
@@ -216,7 +206,7 @@ async def test_get_movements_map_returns_connections_and_year_bounds(
     fake_journey_repository: FakeJourneyRepository,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """get_movements_map: маршруты с годами и годы первой и последней поездки; транспорт доходит до запроса."""
+    """Маршруты с годами и годы первой и последней поездки; транспорт доходит до запроса."""
     user_id = uuid4()
     connection = MovementConnection(origin=MOSCOW_POINT, destination=LONDON_POINT, years=(2019, 2021))
     fake_journey_repository.journeys = [
@@ -241,7 +231,7 @@ async def test_get_movements_map_without_journeys_skips_connections_query(
     fake_journey_repository: FakeJourneyRepository,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """get_movements_map: поездок нет → пустой ответ без годов, маршруты не запрашиваются; чтение в транзакции."""
+    """Поездок нет → пустой ответ без годов, маршруты не запрашиваются; чтение в транзакции."""
     user_id = uuid4()
     command = GetMovementsMapCommand(None)
 
@@ -256,7 +246,7 @@ async def test_create_journey_goes_to_end_of_its_year(
     journey_service: JourneyService,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """create_journey: новая поездка — после неудалённых поездок своего года; другие годы и удалённые не мешают."""
+    """Новая поездка встаёт после неудалённых поездок своего года; другие годы и удалённые не мешают."""
     user_id = uuid4()
     fake_journey_repository.journeys = [
         make_journey(user_id=user_id, traveled_year=2020, sort_key="m"),
@@ -281,7 +271,7 @@ async def test_update_journey_same_year_replaces_fields_and_keeps_position(
     fake_journey_uow: FakeJourneyUnitOfWork,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """update_journey: тот же год — города, транспорт и пересчитанное расстояние новые, ключ прежний."""
+    """Тот же год: города, транспорт и пересчитанное расстояние новые, ключ прежний."""
     user_id = uuid4()
     journey_entity = make_journey(
         user_id=user_id,
@@ -319,7 +309,7 @@ async def test_update_journey_new_year_goes_to_end_of_that_year(
     journey_service: JourneyService,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """update_journey: смена года — поездка встаёт в конец нового года."""
+    """Смена года: поездка встаёт в конец нового года."""
     user_id = uuid4()
     journey_entity = make_journey(user_id=user_id, traveled_year=2020, sort_key="m")
     fake_journey_repository.journeys = [
@@ -350,7 +340,7 @@ async def test_update_journey_unavailable_journey_raises_not_found(
     fake_journey_repository: FakeJourneyRepository,
     case: str,
 ) -> None:
-    """update_journey: несуществующая, чужая или удалённая поездка → JourneyNotFoundError без коммита."""
+    """Несуществующая, чужая или удалённая поездка → ``JourneyNotFoundError`` без коммита."""
     user_id = uuid4()
     journey_entity = make_journey(
         user_id=uuid4() if case == "foreign" else user_id,
@@ -380,7 +370,7 @@ async def test_update_journey_unknown_cities_rejected_before_transaction(
     fake_journey_repository: FakeJourneyRepository,
     fake_cities_client: FakeCitiesClient,
 ) -> None:
-    """update_journey: города нет в geo → UnknownCityError с его id, транзакция не начиналась."""
+    """Города нет в geo → ``UnknownCityError`` с его id; транзакция не начиналась."""
     user_id = uuid4()
     journey_entity = make_journey(user_id=user_id)
     fake_journey_repository.journeys = [journey_entity]
@@ -407,7 +397,7 @@ async def test_delete_journey_soft_deletes_and_commits(
     fake_journey_uow: FakeJourneyUnitOfWork,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """delete_journey: поездка помечена удалённой и закоммичена."""
+    """Поездка помечена удалённой и закоммичена."""
     user_id = uuid4()
     journey_entity = make_journey(user_id=user_id)
     fake_journey_repository.journeys = [journey_entity]
@@ -425,7 +415,7 @@ async def test_delete_journey_unavailable_journey_raises_not_found(
     fake_journey_repository: FakeJourneyRepository,
     case: str,
 ) -> None:
-    """delete_journey: несуществующая, чужая или уже удалённая поездка → JourneyNotFoundError без коммита."""
+    """Несуществующая, чужая или уже удалённая поездка → ``JourneyNotFoundError`` без коммита."""
     user_id = uuid4()
     journey_entity = make_journey(
         user_id=uuid4() if case == "foreign" else user_id,
@@ -458,7 +448,7 @@ async def test_move_journey_places_key_between_neighbor_and_next_in_year(
     lower: str | None,
     upper: str | None,
 ) -> None:
-    """move_journey: ключ строго между соседом и следующей строкой года с его стороны; на краю года — у края."""
+    """Ключ строго между соседом и следующей строкой года с его стороны; на краю года — у края."""
     user_id = uuid4()
     year_entities = {key: make_journey(user_id=user_id, traveled_year=2020, sort_key=key) for key in ("c", "m", "t")}
     moved_entity = make_journey(user_id=user_id, traveled_year=2020, sort_key="x")
@@ -480,7 +470,7 @@ async def test_move_journey_into_another_year_takes_neighbor_year(
     journey_service: JourneyService,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """move_journey: сосед из другого года — поездка получает его год, ключ — после соседа."""
+    """Сосед из другого года: поездка получает его год, ключ — после соседа."""
     user_id = uuid4()
     neighbor_entity = make_journey(user_id=user_id, traveled_year=2018, sort_key="m")
     moved_entity = make_journey(user_id=user_id, traveled_year=2020, sort_key="m")
@@ -504,7 +494,7 @@ async def test_move_journey_invalid_neighbor_raises_invalid_move_target(
     fake_journey_repository: FakeJourneyRepository,
     case: str,
 ) -> None:
-    """move_journey: сосед несуществующий, чужой, удалённый или сама поездка → InvalidMoveTargetError без коммита."""
+    """Сосед несуществующий, чужой, удалённый или сама поездка → ``InvalidMoveTargetError`` без коммита."""
     user_id = uuid4()
     moved_entity = make_journey(user_id=user_id, sort_key="m")
     neighbor_entity = make_journey(
@@ -529,7 +519,7 @@ async def test_move_journey_neighbor_repositioned_while_waiting_for_lock_uses_it
     journey_service: JourneyService,
     fake_journey_repository: FakeJourneyRepository,
 ) -> None:
-    """move_journey: соседа переставили, пока ждали блокировку года, — поездка встаёт рядом с его новым местом."""
+    """Соседа переставили, пока ждали блокировку года, — поездка встаёт рядом с его новым местом."""
     user_id = uuid4()
     neighbor_entity = make_journey(user_id=user_id, traveled_year=2020, sort_key="c")
     other_entity = make_journey(user_id=user_id, traveled_year=2020, sort_key="m")
@@ -558,7 +548,7 @@ async def test_move_journey_neighbor_gone_while_waiting_for_lock_raises_invalid_
     fake_journey_repository: FakeJourneyRepository,
     case: str,
 ) -> None:
-    """move_journey: соседа унесли в другой год или удалили, пока ждали блокировку, → InvalidMoveTargetError."""
+    """Соседа унесли в другой год или удалили, пока ждали блокировку, → ``InvalidMoveTargetError``."""
     user_id = uuid4()
     neighbor_entity = make_journey(user_id=user_id, traveled_year=2020, sort_key="c")
     moved_entity = make_journey(user_id=user_id, traveled_year=2019, sort_key="m")
@@ -594,7 +584,7 @@ async def test_move_journey_unavailable_journey_raises_not_found(
     fake_journey_repository: FakeJourneyRepository,
     case: str,
 ) -> None:
-    """move_journey: переносимой поездки нет или она удалена → JourneyNotFoundError без коммита."""
+    """Переносимой поездки нет или она удалена → ``JourneyNotFoundError`` без коммита."""
     user_id = uuid4()
     neighbor_entity = make_journey(user_id=user_id)
     moved_entity = make_journey(user_id=user_id, deleted_at=_DELETED_AT)
@@ -617,7 +607,7 @@ async def test_list_journeys_maps_page_items_and_cursor(
     fake_journey_repository: FakeJourneyRepository,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """list_journeys: строки страницы — поля поездок в порядке ленты, курсор следующей передан; чтение в транзакции."""
+    """Строки страницы — поля поездок в порядке ленты, курсор следующей передан; чтение в транзакции."""
     user_id = uuid4()
     newer = make_journey(user_id=user_id, traveled_year=2021, sort_key="a", distance_km=10)
     older = make_journey(user_id=user_id, traveled_year=2019, sort_key="b", distance_km=20)
@@ -658,7 +648,7 @@ async def test_get_journey_years_returns_repository_years(
     fake_journey_repository: FakeJourneyRepository,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """get_journey_years: годы неудалённых поездок пользователя, по возрастанию; чтение в транзакции."""
+    """Годы неудалённых поездок пользователя по возрастанию; чтение в транзакции."""
     user_id = uuid4()
     fake_journey_repository.journeys = [
         make_journey(user_id=user_id, traveled_year=2021),
@@ -676,7 +666,7 @@ async def test_estimate_journey_distance_uses_geo_coordinates(
     journey_service: JourneyService,
     fake_journey_uow: FakeJourneyUnitOfWork,
 ) -> None:
-    """estimate_journey_distance: ~2500 км Москва → Лондон по координатам geo; своих данных нет — без транзакции."""
+    """Москва → Лондон ≈ 2500 км по координатам geo; своих данных нет — без транзакции."""
     result = await journey_service.estimate_journey_distance(
         EstimateJourneyDistanceCommand(origin_city_id=MOSCOW_CITY_ID, destination_city_id=LONDON_CITY_ID),
     )
@@ -685,11 +675,11 @@ async def test_estimate_journey_distance_uses_geo_coordinates(
     assert fake_journey_uow.transactions_started == 0
 
 
-async def test_estimate_journey_distance_unknown_city_raises(
+async def test_estimate_journey_distance_unknown_city_raises_unknown_city(
     journey_service: JourneyService,
     fake_cities_client: FakeCitiesClient,
 ) -> None:
-    """estimate_journey_distance: города нет в geo → UnknownCityError с его id."""
+    """Города нет в geo → ``UnknownCityError`` с его id."""
     del fake_cities_client.locations[LONDON_CITY_ID]
 
     with pytest.raises(UnknownCityError) as exc_info:

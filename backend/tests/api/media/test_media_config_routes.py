@@ -1,9 +1,4 @@
-"""
-api-тесты конфига media: публичные правила загрузки и админские чтение и правка.
-
-Токены выпускает настоящий ``TokenIssuer`` (``issue_access_token``): право администратора приходит из
-карты ролей, а не задаётся руками. Репозиторий — фейк за UoW.
-"""
+"""Токены выпускает настоящий ``TokenIssuer`` (``issue_access_token``): право приходит из карты ролей, а не руками."""
 
 from collections.abc import Callable
 
@@ -87,7 +82,7 @@ async def test_update_media_config_admin_token_writes_next_version_by_caller(
     assert stored.snapshot.journey_video.max_size_bytes == 3_000
 
 
-async def test_update_media_config_stale_version_returns_conflict(
+async def test_update_media_config_stale_version_returns_409(
     client: AsyncClient,
     fake_media_config_repository: FakeMediaConfigRepository,
     issue_access_token: Callable[[UserCredentialsEntity], str],
@@ -106,7 +101,7 @@ async def test_update_media_config_stale_version_returns_conflict(
     assert list(fake_media_config_repository.versions) == [1, 2]
 
 
-async def test_update_media_config_out_of_limits_returns_validation_error(
+async def test_update_media_config_out_of_limits_returns_422(
     client: AsyncClient,
     fake_media_config_repository: FakeMediaConfigRepository,
     issue_access_token: Callable[[UserCredentialsEntity], str],
@@ -124,7 +119,7 @@ async def test_update_media_config_out_of_limits_returns_validation_error(
     assert list(fake_media_config_repository.versions) == [1]
 
 
-async def test_admin_media_config_user_token_returns_permission_required(
+async def test_admin_media_config_user_token_returns_403(
     client: AsyncClient,
     fake_media_config_repository: FakeMediaConfigRepository,
     issue_access_token: Callable[[UserCredentialsEntity], str],
@@ -143,7 +138,7 @@ async def test_admin_media_config_user_token_returns_permission_required(
     assert list(fake_media_config_repository.versions) == [1]
 
 
-async def test_admin_media_config_without_token_returns_unauthenticated(client: AsyncClient) -> None:
+async def test_admin_media_config_without_token_returns_401(client: AsyncClient) -> None:
     """401 без Bearer — и на чтение, и на правку."""
     read = await client.get(_ADMIN_PATH)
     write = await client.put(_ADMIN_PATH, json=_EDIT_BODY)

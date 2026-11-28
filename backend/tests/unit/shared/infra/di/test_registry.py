@@ -1,10 +1,3 @@
-"""
-Unit-тесты ``ComponentRegistry`` — типобезопасного хранилища компонентов по ключу-классу.
-
-Покрывают set/get round-trip, перезапись, ``__contains__`` и ошибку незарегистрированного
-ключа (``ComponentNotRegisteredError`` — нарушенный инвариант композиционного корня).
-"""
-
 import pytest
 
 from app.shared.infra.di.exceptions import ComponentNotRegisteredError
@@ -16,7 +9,7 @@ class _ComponentA:
 
 
 def test_get_returns_registered_value() -> None:
-    """``get`` возвращает ровно тот инстанс, что положили под ключом-классом."""
+    """Отдаётся ровно тот инстанс, что положили под ключом-классом."""
     registry = ComponentRegistry()
     value = _ComponentA()
     registry.set(key=_ComponentA, value=value)
@@ -25,7 +18,7 @@ def test_get_returns_registered_value() -> None:
 
 
 def test_get_unregistered_key_raises_naming_registry_and_key() -> None:
-    """``get`` незарегистрированного ключа бросает ``ComponentNotRegisteredError`` с именем реестра и ключа."""
+    """Незарегистрированный ключ → ``ComponentNotRegisteredError`` с именем реестра и ключа."""
     registry = ComponentRegistry()
 
     with pytest.raises(ComponentNotRegisteredError, match=r"registry='ComponentRegistry'.*_ComponentA"):
@@ -44,7 +37,7 @@ def test_set_overwrites_existing_value() -> None:
 
 
 def test_contains_reflects_registration() -> None:
-    """``in`` отражает наличие ключа в registry."""
+    """Оператор ``in`` истинен тогда и только тогда, когда ключ положен в реестр."""
 
     class _ComponentB:
         """Второй ключ-тип компонента: в registry не кладётся."""

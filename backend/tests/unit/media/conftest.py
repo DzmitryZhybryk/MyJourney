@@ -1,10 +1,3 @@
-"""
-Фикстуры домена media (unit): сборка ``MediaConfigService`` на фейке UoW.
-
-Фейки I/O-границы (``fake_media_config_repository``, ``fake_media_uow``) живут в корневом
-``tests/conftest.py`` — их переиспользует и api-уровень.
-"""
-
 import pytest
 
 from app.media.application.services.media_config import MediaConfigService

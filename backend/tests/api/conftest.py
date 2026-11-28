@@ -1,35 +1,3 @@
-"""
-Generic-проводка **уровня api** (домен-агностично).
-
-Симметрично unit-уровню (``tests/unit/conftest.py`` — cross-доменные unit-фикстуры вроде
-``jwt_service``), здесь живёт всё, чьё **определение не знает про конкретный домен**:
-
-- ``api_app`` — ASGI-приложение **без компонентов**: ``create_default_app()`` поднимает
-  пустой ``ComponentRegistry`` (нет коннектов к PG/Resend/Procrastinate), плюс
-  ``register_exception_handlers`` — чтобы исключения AppError и 422/500 сворачивались в
-  тот же ``ErrorResponse``-envelope, что и в проде.
-- ``app`` — собранное приложение под тест: монтирует ``router`` под ``router_prefix`` и
-  применяет карту ``dependency_overrides``. Механизм один на все домены; сами данные
-  (роутер, префикс, override'ы) даёт доменный conftest своими data-фикстурами — поэтому
-  второй домен не копирует ``include_router`` + цикл override'ов, а лишь отдаёт три фикстуры.
-- ``make_async_client`` — фабрика ``httpx.AsyncClient`` поверх ``ASGITransport`` (без
-  реальной сети и без lifespan: ASGITransport его не шлёт, поэтому пустой список
-  компонентов даже не стартует). ``raise_app_exceptions=False`` обязателен: Starlette
-  после отправки 500-ответа из обработчика ``Exception`` **повторно поднимает** исходное
-  исключение для логов — с дефолтным ``True`` оно бы прострелило в тест вместо проверки
-  тела 500-ответа.
-- ``client`` — httpx-клиент поверх абстрактной фикстуры ``app``: тело домен-агностично,
-  конкретный ``app`` (роутер + override'ы) даёт доменный conftest (шаблонная фикстура).
-- ``find_set_cookie`` — извлечение «сырого» ``Set-Cookie``-заголовка по имени cookie.
-  Атрибуты (HttpOnly/Secure/SameSite/Max-Age) проверяем по этому заголовку, а не по
-  httpx-jar: jar не сохраняет ``Secure``-cookie поверх ``http://`` и скрыл бы их атрибуты.
-
-Фейки shared-инфраструктуры (``fake_salted_hasher``, ``fake_task_bus``, ``deterministic_hasher``)
-переехали в корневой ``tests/conftest.py`` — они переиспользуются и unit-уровнем. Здесь остаётся
-``mint_access_token`` (shared jwt, специфичен для api: подписывает реальным settings-секретом) и
-``past`` — фиксированная дата в прошлом для просроченных/отозванных сущностей в api-сценариях.
-"""
-
 import datetime as dt
 from collections.abc import AsyncIterator, Callable
 from typing import Any
@@ -93,6 +61,11 @@ def app(
 
 @pytest.fixture
 def make_async_client() -> Callable[[BFastAPI], AsyncClient]:
+    """
+    ``raise_app_exceptions=False``: Starlette после 500-ответа поднимает исходное исключение повторно, и тест
+    получил бы его вместо тела ответа.
+    """
+
     def _factory(app: BFastAPI) -> AsyncClient:
         transport = ASGITransport(app=app, raise_app_exceptions=False)
         return AsyncClient(transport=transport, base_url=_BASE_URL)
@@ -117,6 +90,8 @@ async def client(app: BFastAPI, make_async_client: Callable[[BFastAPI], AsyncCli
 
 @pytest.fixture
 def find_set_cookie() -> Callable[..., str | None]:
+    """Сырой ``Set-Cookie`` по имени: httpx-jar не хранит ``Secure``-cookie поверх ``http://`` и скрыл бы атрибуты."""
+
     def _find(*, response: Response, name: str) -> str | None:
         for header in response.headers.get_list("set-cookie"):
             if header.startswith(f"{name}="):

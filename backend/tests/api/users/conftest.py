@@ -1,6 +1,4 @@
 """
-Users-данные для generic api-проводки (``tests/api/conftest.py``).
-
 ``event_publisher_dependency`` обязателен в overrides: боевой читает ``request.app.registry``, а
 ``api_app`` поднят без компонентов.
 """

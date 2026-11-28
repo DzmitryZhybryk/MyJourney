@@ -1,14 +1,3 @@
-"""
-api-тесты роутов journeys (``POST``/``GET /v1/journeys/``, ``PUT``/``DELETE /{id}/``, ``/{id}/move/``,
-``/years/``, ``/distance/``, ``/map/``, ``/globe/``, ``/movements/``) на ASGI-приложении.
-
-Реальная проводка ``journey_service`` поверх фейк-UoW, реальный декод Bearer-токена
-(``mint_access_token`` подписывает settings-секретом; ``sub`` токена становится ``user_id``
-поездки). Пиннят 201-payload-on-create, 401 без токена, 400 неизвестного города, 422 запроса,
-сериализацию ответов карт (camelCase, без лишних полей) и то, что фильтры карты перемещений
-из query доходят до репозитория.
-"""
-
 import datetime as dt
 from collections.abc import Callable
 from typing import Any

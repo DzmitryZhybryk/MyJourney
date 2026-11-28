@@ -1,11 +1,4 @@
-"""
-Фикстуры logging-тестов.
-
-``restore_logging`` снимает и восстанавливает глобальное состояние логирования: root-logger, логгеры uvicorn,
-structlog-дефолты и контекст лога. ``configure_logging`` и ``bind_log_context`` меняют его на весь процесс — без
-restore это протекло бы в другие тесты. ``verification_job`` — задача письма с одноразовым кодом в аргументах.
-``json_log_lines`` читает из перехваченного stdout строки, которые написал настоящий обработчик.
-"""
+"""``configure_logging`` и ``bind_log_context`` меняют весь процесс — без ``restore_logging`` это протекло бы."""
 
 import json
 import logging

@@ -1,8 +1,4 @@
-"""
-Unit-тесты контекста строки лога: номер HTTP-запроса из текущего span'а и значения, привязанные к запросу.
-
-Span создаётся провайдером процесса (``get_tracer_provider``) — тем же, что даёт номера запросам API.
-"""
+"""Span создаётся провайдером процесса (``get_tracer_provider``) — тем же, что даёт номера запросам API."""
 
 import structlog
 from structlog.testing import capture_logs

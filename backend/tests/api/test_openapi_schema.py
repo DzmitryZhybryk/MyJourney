@@ -1,9 +1,4 @@
-"""
-Снапшот OpenAPI-схемы.
-
-``backend/openapi.json`` — вход кодогенерации фронтового SDK, поэтому он обязан совпадать с
-тем, что отдаёт приложение. Обновить снапшот: ``make openapi-dump``.
-"""
+"""``backend/openapi.json`` — вход кодогенерации фронтового SDK. Обновить снапшот: ``make openapi-dump``."""
 
 import json
 import os

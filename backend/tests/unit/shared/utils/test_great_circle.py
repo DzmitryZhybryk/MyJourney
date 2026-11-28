@@ -1,5 +1,3 @@
-"""Unit-тесты ``great_circle_km`` — расстояние по большой окружности между двумя точками."""
-
 import pytest
 
 from app.shared.utils.great_circle import great_circle_km

@@ -1,10 +1,4 @@
-"""
-Интеграционные тесты lifecycle PG-инфраструктуры против реального Postgres.
-
-Покрывают то, что api-тесты обходят (там сессия подменена фейком): сборку движка
-и регистрацию ``SessionMaker`` в ``SqlAlchemyComponent`` (startup/shutdown) и
-выдачу рабочей сессии зависимостью ``db_session_dependency``.
-"""
+"""Api-тесты подменяют сессию фейком, поэтому сборку движка и выдачу рабочей сессии проверяет только этот файл."""
 
 from types import SimpleNamespace
 from typing import Any
@@ -23,7 +17,7 @@ from app.shared.settings import PostgresSettings
 async def test_sqlalchemy_component_startup_registers_working_sessionmaker(
     postgres_settings: PostgresSettings,
 ) -> None:
-    """``startup`` регистрирует ``SessionMaker`` в registry, а его сессия реально ходит в БД."""
+    """Старт кладёт ``SessionMaker`` в реестр, и его сессия реально ходит в БД."""
     component = SqlAlchemyComponent(postgres_settings)
     registry = ComponentRegistry()
     try:
@@ -38,7 +32,7 @@ async def test_sqlalchemy_component_startup_registers_working_sessionmaker(
 
 
 async def test_db_session_dependency_yields_working_session(db_engine: AsyncEngine) -> None:
-    """``db_session_dependency`` достаёт ``SessionMaker`` из ``request.app.registry`` и отдаёт рабочую сессию."""
+    """``SessionMaker`` берётся из ``request.app.registry``, наружу уходит рабочая сессия."""
     registry = ComponentRegistry()
     registry.set(key=SessionMaker, value=SessionMaker(db_engine, expire_on_commit=False))
     scope: dict[str, Any] = {"type": "http", "app": SimpleNamespace(registry=registry)}

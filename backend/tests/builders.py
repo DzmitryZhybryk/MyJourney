@@ -1,11 +1,3 @@
-"""
-Тест-дата билдеры для доменных entity и value object'ов.
-
-Обычные функции с kwargs-дефолтами и именованными аргументами; явные timestamp'ы
-вместо заморозки времени (см. ``.claude/rules/python/testing.md``). Дефолты дают
-«валидную» сущность; тест переопределяет только то, что проверяет.
-"""
-
 import datetime as dt
 import hashlib
 from uuid import UUID, uuid4

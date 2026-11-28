@@ -1,5 +1,3 @@
-"""Unit-тесты ``generate_key_between`` — дробный ключ строго между соседями."""
-
 import random
 import re
 

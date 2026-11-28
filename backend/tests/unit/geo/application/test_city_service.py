@@ -1,4 +1,4 @@
-"""Unit-тесты ``CityService`` на фейк-UoW: поиск, названия городов по id, страна и координаты городов по id."""
+"""Сортировку поиска по населению и обрезку по limit делает SQL — их проверяет integration-тест ``CityRepository``."""
 
 from uuid import uuid4
 
@@ -17,11 +17,7 @@ async def test_search_cities_maps_candidate_fields(
     fake_city_repository: FakeCityRepository,
     fake_geo_uow: FakeGeoUnitOfWork,
 ) -> None:
-    """search_cities: поля кандидата (id, имя, страна, координаты, население) — в CitySearchItem; в транзакции.
-
-    Сортировку по населению и обрезку по limit делает SQL-репозиторий, не сервис — они покрыты
-    integration-тестом ``CityRepository`` против реального Postgres, поэтому в unit не дублируются.
-    """
+    """Поля кандидата (id, имя, страна, координаты, население) — в ``CitySearchItem``; чтение в транзакции."""
     moscow = make_city(en="Moscow", ru="Москва", country_code="RU", population=10_000_000)
     fake_city_repository.cities.append(moscow)
 
@@ -43,7 +39,7 @@ async def test_search_cities_resolves_names_under_language_and_flags_missing(
     city_service: CityService,
     fake_city_repository: FakeCityRepository,
 ) -> None:
-    """search_cities: имена под язык, без перевода — фоллбэк en; такие города — одной строкой лога в порядке выдачи."""
+    """Имена на языке запроса, без перевода — на en; такие города — одной строкой лога в порядке выдачи."""
     moscow = make_city(en="Moscow", ru="Москва", population=10_000_000)
     mosul = make_city(en="Mosul", ru=None, country_code="IQ", population=1_000_000)
     mostar = make_city(en="Mostar", ru=None, country_code="BA", population=100_000)
@@ -70,7 +66,7 @@ async def test_resolve_cities_returns_names_in_requested_language_with_en_fallba
     fake_city_repository: FakeCityRepository,
     fake_geo_uow: FakeGeoUnitOfWork,
 ) -> None:
-    """resolve_cities: названия на языке запроса, у города без перевода — английское; чтение в транзакции."""
+    """Названия на языке запроса, у города без перевода — английское; чтение в транзакции."""
     moscow = make_city(en="Moscow", ru="Москва")
     mostar = make_city(en="Mostar", ru=None, country_code="BA")
     fake_city_repository.cities.extend([moscow, mostar])
@@ -87,7 +83,7 @@ async def test_resolve_cities_omits_unknown_ids_and_warns(
     city_service: CityService,
     fake_city_repository: FakeCityRepository,
 ) -> None:
-    """resolve_cities: неизвестный id в ответ не попадает и пишется в лог предупреждением."""
+    """Неизвестный id в ответ не попадает и пишется в лог предупреждением."""
     moscow = make_city()
     fake_city_repository.cities.append(moscow)
     unknown_id = uuid4()
@@ -105,7 +101,7 @@ async def test_resolve_cities_omits_unknown_ids_and_warns(
 
 
 async def test_resolve_cities_many_unknown_logs_count_and_sample(city_service: CityService) -> None:
-    """resolve_cities: при множестве неизвестных id в лог идут их число и первые 10, а не весь список."""
+    """При множестве неизвестных id в лог идут их число и первые 10, а не весь список."""
     unknown_ids = [uuid4() for _ in range(25)]
 
     with capture_logs() as logs:
@@ -120,7 +116,7 @@ async def test_resolve_cities_all_known_does_not_warn(
     city_service: CityService,
     fake_city_repository: FakeCityRepository,
 ) -> None:
-    """resolve_cities: когда все города найдены, предупреждения нет."""
+    """Все города найдены — предупреждения нет."""
     moscow = make_city()
     fake_city_repository.cities.append(moscow)
 
@@ -135,7 +131,7 @@ async def test_get_cities_by_ids_returns_location_of_known_cities_only(
     fake_city_repository: FakeCityRepository,
     fake_geo_uow: FakeGeoUnitOfWork,
 ) -> None:
-    """get_cities_by_ids: страна и координаты найденных городов; неизвестного id в ответе нет; чтение в транзакции."""
+    """Страна и координаты найденных городов; неизвестного id в ответе нет; чтение в транзакции."""
     moscow = make_city()
     london = make_city(en="London", ru="Лондон", country_code="GB", latitude=51.5, longitude=-0.12)
     fake_city_repository.cities.extend([moscow, london])
@@ -153,7 +149,7 @@ async def test_get_cities_by_ids_returns_location_of_known_cities_only(
 
 
 async def test_get_cities_by_ids_nothing_known_returns_empty(city_service: CityService) -> None:
-    """get_cities_by_ids: ни одного известного id → пустой ответ, не ошибка."""
+    """Ни одного известного id → пустой ответ, не ошибка."""
     result = await city_service.get_cities_by_ids(GetCitiesByIdsCommand(frozenset({uuid4()})))
 
     assert result.items == frozenset()

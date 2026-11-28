@@ -1,8 +1,6 @@
 """
-api-тесты админского списка аккаунтов.
-
-Токены выпускает настоящий ``TokenIssuer``: право приходит из карты ролей. Хранилище — фейк за UoW: тест
-проверяет, во что ручка превращает query-параметры и как отдаёт страницу; сам SQL — в integration.
+Токены выпускает настоящий ``TokenIssuer``: право приходит из карты ролей. Здесь — во что ручка превращает
+query-параметры и как отдаёт страницу; сам SQL — в integration.
 """
 
 import datetime as dt
@@ -130,7 +128,7 @@ async def test_list_accounts_maps_every_query_param_into_the_query(
     ]
 
 
-async def test_list_accounts_user_token_returns_permission_required(
+async def test_list_accounts_user_token_returns_403(
     client: AsyncClient,
     issue_access_token: Callable[[UserCredentialsEntity], str],
 ) -> None:
@@ -142,7 +140,7 @@ async def test_list_accounts_user_token_returns_permission_required(
     assert (response.status_code, response.json()["code"]) == (403, "permission_required")
 
 
-async def test_list_accounts_without_token_returns_unauthenticated(client: AsyncClient) -> None:
+async def test_list_accounts_without_token_returns_401(client: AsyncClient) -> None:
     """401 без Bearer."""
     response = await client.get(_PATH)
 
@@ -162,7 +160,7 @@ async def test_list_accounts_without_token_returns_unauthenticated(client: Async
         pytest.param({"sortDirection": "sideways"}, id="unknown-direction"),
     ],
 )
-async def test_list_accounts_invalid_params_returns_validation_error(
+async def test_list_accounts_invalid_params_returns_422(
     client: AsyncClient,
     fake_account_repository: FakeAccountRepository,
     issue_access_token: Callable[[UserCredentialsEntity], str],

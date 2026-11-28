@@ -1,9 +1,4 @@
-"""
-Интеграционный тест сборки ``JourneyUnitOfWork`` против реального Postgres.
-
-Транзакционная модель проверена в ``tests/integration/shared/infra/db/postgres/test_uow.py``;
-здесь — только то, что репозиторий UoW работает на его сессии.
-"""
+"""Транзакционную модель проверяет ``integration/shared/infra/db/postgres/test_uow.py``; здесь — проводка UoW."""
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker

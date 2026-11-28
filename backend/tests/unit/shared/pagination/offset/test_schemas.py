@@ -1,5 +1,3 @@
-"""Unit-тесты общих полей запроса страницы с номерами: значения по умолчанию и границы ``page`` и ``limit``."""
-
 import pytest
 from pydantic import ValidationError
 

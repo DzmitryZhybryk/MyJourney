@@ -1,14 +1,7 @@
-"""
-Юнит-тесты страховочных веток exception-handler'ов.
+"""Боевой путь ошибки до тела ответа покрыт api-тестами; здесь — ветки, до которых через приложение не дойти."""
 
-Боевой путь (AppError → свой handler → envelope; исключение вне AppError → 500) и передача ошибки в строку лога
-запроса покрыты api-тестами. Здесь — две защитные ветки, до которых через приложение не дойти: handler вызван
-напрямую с «не тем» типом исключения. Нарушение инварианта: его данные не уходят клиенту. И тело ответа на
-серверный сбой: сообщение и детали экземпляра остаются в логе. И заголовок ``Retry-After`` временного сбоя.
-"""
-
+import datetime as dt
 import json
-from datetime import timedelta
 
 import pytest
 from starlette.requests import Request
@@ -48,7 +41,7 @@ def test_app_error_handler_server_fault_hides_instance_message_and_details(
 
 def test_app_error_handler_temporary_error_with_retry_after_sets_header(bare_request: Request) -> None:
     """Временный сбой со сроком зависимости → ``Retry-After`` в целых секундах, округлённых вверх."""
-    response = app_error_handler(bare_request, TemporaryError(retry_after=timedelta(seconds=59.2)))
+    response = app_error_handler(bare_request, TemporaryError(retry_after=dt.timedelta(seconds=59.2)))
 
     assert response.status_code == 503
     assert response.headers["Retry-After"] == "60"

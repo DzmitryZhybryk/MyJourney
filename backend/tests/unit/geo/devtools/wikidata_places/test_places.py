@@ -1,5 +1,3 @@
-"""Unit-тесты сборки мест из ответов SPARQL."""
-
 from collections import Counter
 
 import pytest
@@ -28,7 +26,7 @@ _BELUKHA: DictStrAny = {
 
 
 def test_collect_places_merges_rows_of_one_object() -> None:
-    """collect_places: строки одного объекта (по стране на строку) сводятся в одно место, страны — по алфавиту."""
+    """Строки одного объекта (по стране на строку) сводятся в одно место, страны — по алфавиту."""
     bindings = [_TIAN_SHAN, {**_TIAN_SHAN, "iso": {"value": "CN"}}, {**_TIAN_SHAN, "iso": {"value": "KG"}}]
 
     places, outcomes = collect_places([(PlaceKindEnum.MOUNTAIN_RANGE, bindings)])
@@ -49,7 +47,7 @@ def test_collect_places_merges_rows_of_one_object() -> None:
 
 
 def test_collect_places_object_keeps_kind_of_narrowest_class() -> None:
-    """collect_places: объект и в узком, и в широком классе → тип узкого, строки широкого класса не подмешиваются."""
+    """Объект и в узком, и в широком классе → тип узкого, строки широкого класса не подмешиваются."""
     class_bindings = [
         (PlaceKindEnum.MOUNTAIN, [_BELUKHA]),
         (PlaceKindEnum.MOUNTAIN_RANGE, [{**_BELUKHA, "iso": {"value": "KZ"}}]),
@@ -68,7 +66,7 @@ def test_collect_places_object_keeps_kind_of_narrowest_class() -> None:
     ids=["smallest-first", "smallest-last"],
 )
 def test_collect_places_picks_smallest_point_whatever_the_order(coordinates: tuple[str, str]) -> None:
-    """collect_places: из нескольких точек берётся наименьшая по (широта, долгота), порядок строк не важен."""
+    """Из нескольких точек берётся наименьшая по (широта, долгота), порядок строк не важен."""
     bindings = [{**_BELUKHA, "coord": {"value": coordinate}} for coordinate in coordinates]
 
     [place], _ = collect_places([(PlaceKindEnum.MOUNTAIN, bindings)])
@@ -91,7 +89,7 @@ def test_collect_places_picks_smallest_point_whatever_the_order(coordinates: tup
     ids=["moon", "no-country", "no-en", "en-only-qualifier", "en-too-long"],
 )
 def test_collect_places_drops_unusable_object(binding: DictStrAny, outcome: ExportOutcomeEnum) -> None:
-    """collect_places: объект без земной точки, страны или годного имени en в датасет не попадает, причина в итоге."""
+    """Объект без земной точки, страны или годного имени en в датасет не попадает, причина — в итоге."""
     places, outcomes = collect_places([(PlaceKindEnum.MOUNTAIN, [binding])])
 
     assert places == ()
@@ -109,14 +107,14 @@ def test_collect_places_drops_unusable_object(binding: DictStrAny, outcome: Expo
     ids=["qualifiers", "en-fits-column", "latin-ru", "no-ru"],
 )
 def test_collect_places_cleans_labels(binding: DictStrAny, names: tuple[str, str | None]) -> None:
-    """collect_places: уточнения в скобках срезаются; негодная или отсутствующая метка ru — место без русского имени."""
+    """Уточнения в скобках срезаются; негодная или отсутствующая метка ru — место без русского имени."""
     [place], _ = collect_places([(PlaceKindEnum.MOUNTAIN, [binding])])
 
     assert (place.name_en, place.name_ru) == names
 
 
 def test_collect_places_sorts_places_by_external_id() -> None:
-    """collect_places: места упорядочены по external_id, а не по порядку строк ответа."""
+    """Места упорядочены по ``external_id``, а не по порядку строк ответа."""
     bindings = [
         {**_BELUKHA, "item": {"value": "http://www.wikidata.org/entity/Q9"}},
         {**_BELUKHA, "item": {"value": "http://www.wikidata.org/entity/Q10"}},

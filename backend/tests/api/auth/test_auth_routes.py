@@ -1,11 +1,3 @@
-"""
-api-тесты auth-роутов (register/login/logout/refresh) через ASGI без реальной БД.
-
-Пиннят внешний HTTP-контракт: статус-коды, тело ``TokenResponse``, машинные ``code``
-доменных ошибок и атрибуты refresh-cookie. I/O-граница (UoW/репо, users-client, task-bus,
-argon2) — фейки; DI-граф, выпуск/декод JWT, куки и exception-handler'ы — настоящие.
-"""
-
 import datetime as dt
 from collections.abc import Callable
 from uuid import uuid4
@@ -130,7 +122,7 @@ async def test_register_normalizes_username_and_email(
     fake_user_credentials_repository: FakeUserCredentialsRepository,
     fake_users_client: FakeUsersClient,
 ) -> None:
-    """register: username хранится без пробелов по краям и в своём регистре (и в display_name), email — в нижнем."""
+    """Username хранится без пробелов по краям и в своём регистре (и в display_name), email — в нижнем."""
     response = await client.post(
         "/v1/auth/register/",
         json={
@@ -191,7 +183,7 @@ async def test_register_invalid_field_returns_422(client: AsyncClient, invalid_b
 
 @pytest.mark.parametrize("username", ["user\x00name", "user name", "юзер", "user@name", "user!"])
 async def test_register_username_with_disallowed_character_returns_422(client: AsyncClient, username: str) -> None:
-    """register: username вне набора латиница/цифры/«_.-» (NUL, пробел внутри, кириллица, @) → 422."""
+    """Username вне набора латиница/цифры/«_.-» (NUL, пробел внутри, кириллица, @) → 422."""
     response = await client.post(
         "/v1/auth/register/",
         json={
@@ -208,7 +200,7 @@ async def test_register_username_with_disallowed_character_returns_422(client: A
 
 
 async def test_register_username_with_allowed_punctuation_returns_201(client: AsyncClient) -> None:
-    """register: username с цифрами, «_», «.» и «-» проходит → 201."""
+    """Username с цифрами, «_», «.» и «-» проходит → 201."""
     response = await client.post(
         "/v1/auth/register/",
         json={
@@ -454,7 +446,7 @@ async def test_get_current_account_returns_camelcase_account(
     assert response.json() == {"email": "neo@example.com", "username": "neo", "emailVerified": True}
 
 
-async def test_get_current_account_without_bearer_returns_401(client: AsyncClient) -> None:
+async def test_get_current_account_without_token_returns_401(client: AsyncClient) -> None:
     """me без Authorization → 401 auth.invalid_access_token."""
     response = await client.get("/v1/auth/me/")
 

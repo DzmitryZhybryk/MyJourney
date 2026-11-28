@@ -1,5 +1,3 @@
-"""Unit-тесты обогащения датасета русскими именами из Wikidata."""
-
 import json
 from urllib.parse import parse_qs
 
@@ -16,7 +14,7 @@ from devtools.geo_datasets.wikidata.labels import (
 
 
 def test_enrich_rows_fills_missing_name_from_single_label() -> None:
-    """enrich_rows: у крупного города нет русского имени, в Wikidata одна метка → имя дописано."""
+    """У крупного города нет русского имени, в Wikidata одна метка → имя дописано."""
     rows = [{"external_id": "GeoNames:1", "name_en": "Kukshi", "name_ru": "", "population": "128000"}]
 
     enriched, report = enrich_rows(rows=rows, labels={"1": frozenset({"Кукши"})}, min_population=100_000)
@@ -26,7 +24,7 @@ def test_enrich_rows_fills_missing_name_from_single_label() -> None:
 
 
 def test_enrich_rows_keeps_existing_name() -> None:
-    """enrich_rows: русское имя уже есть → не меняется, даже если Wikidata пишет иначе."""
+    """Русское имя уже есть → не меняется, даже если Wikidata пишет иначе."""
     rows = [{"external_id": "GeoNames:1", "name_en": "Meerut", "name_ru": "Меерут", "population": "1300000"}]
 
     enriched, report = enrich_rows(rows=rows, labels={"1": frozenset({"Мератх"})}, min_population=100_000)
@@ -41,7 +39,7 @@ def test_enrich_rows_keeps_existing_name() -> None:
     ids=["at-threshold", "below-threshold", "no-population"],
 )
 def test_enrich_rows_respects_population_threshold(population: str, expected_name: str) -> None:
-    """enrich_rows: имя ищется от порога населения включительно; меньше или без населения — нет."""
+    """Имя ищется от порога населения включительно; меньше или без населения — нет."""
     rows = [{"external_id": "GeoNames:1", "name_en": "Town", "name_ru": "", "population": population}]
 
     enriched, _ = enrich_rows(rows=rows, labels={"1": frozenset({"Город"})}, min_population=100_000)
@@ -50,7 +48,7 @@ def test_enrich_rows_respects_population_threshold(population: str, expected_nam
 
 
 def test_enrich_rows_skips_cities_not_from_geonames() -> None:
-    """enrich_rows: ключ не GeoNames → искать имя не по чему, строка не трогается."""
+    """Ключ не GeoNames → искать имя не по чему, строка не трогается."""
     rows = [{"external_id": "OSM:1", "name_en": "Town", "name_ru": "", "population": "500000"}]
 
     enriched, report = enrich_rows(rows=rows, labels={"1": frozenset({"Город"})}, min_population=100_000)
@@ -60,7 +58,7 @@ def test_enrich_rows_skips_cities_not_from_geonames() -> None:
 
 
 def test_enrich_rows_counts_why_name_was_not_filled() -> None:
-    """enrich_rows: разные годные метки, только негодные метки, нет меток — имя пустое, причина в отчёте."""
+    """Разные годные метки, только негодные или ни одной — имя пустое, причина в отчёте."""
     rows = [
         {"external_id": "GeoNames:1", "name_en": "Sodermalm", "name_ru": "", "population": "130000"},
         {"external_id": "GeoNames:2", "name_en": "Telica", "name_ru": "", "population": "120000"},
@@ -74,8 +72,8 @@ def test_enrich_rows_counts_why_name_was_not_filled() -> None:
     assert report == EnrichmentReport(candidates=3, filled=0, not_found=1, ambiguous=1, rejected=1)
 
 
-def test_enrich_rows_fills_when_only_one_label_is_acceptable() -> None:
-    """enrich_rows: негодная метка рядом с годной не делает id неоднозначным — берётся годная."""
+def test_enrich_rows_one_acceptable_label_among_unusable_fills_name() -> None:
+    """Негодная метка рядом с годной не делает id неоднозначным — берётся годная."""
     rows = [{"external_id": "GeoNames:1", "name_en": "Frankston", "name_ru": "", "population": "140000"}]
     labels = {"1": frozenset({"Франкстон, Виктория", "Франкстон"})}
 
@@ -97,8 +95,8 @@ def test_enrich_rows_fills_when_only_one_label_is_acceptable() -> None:
     ],
     ids=["qualifier", "qualifier-with-comma", "same-after-strip", "different", "latin", "comma", "empty"],
 )
-def test_acceptable_ru_names(labels: set[str], expected: set[str]) -> None:
-    """acceptable_ru_names: скобки в конце срезаются; латиница и имена с запятой отбрасываются."""
+def test_acceptable_ru_names_strips_qualifiers_and_drops_unusable(labels: set[str], expected: set[str]) -> None:
+    """Скобки в конце срезаются; латиница и имена с запятой отбрасываются."""
     assert acceptable_ru_names(labels) == expected
 
 
@@ -115,13 +113,13 @@ def test_acceptable_ru_names(labels: set[str], expected: set[str]) -> None:
     ],
     ids=["qualifier", "whitespace", "fits-column", "too-long", "latin", "comma", "only-qualifier"],
 )
-def test_acceptable_ru_name(label: str, expected: str | None) -> None:
-    """acceptable_ru_name: уточнение и пробелы по краям срезаются; не влезающее в колонку имени отбрасывается."""
+def test_acceptable_ru_name_strips_qualifier_and_drops_too_long(label: str, expected: str | None) -> None:
+    """Уточнение и пробелы по краям срезаются; не влезающее в колонку имени отбрасывается."""
     assert acceptable_ru_name(label) == expected
 
 
 def test_fetch_ru_labels_batches_ids_and_groups_labels() -> None:
-    """fetch_ru_labels: id идут пачками по 400, метки собираются по id GeoNames."""
+    """Id идут пачками по 400, метки собираются по id GeoNames."""
     requested_batches: list[list[str]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:

@@ -1,5 +1,3 @@
-"""Фикстуры unit-тестов исключений приложения."""
-
 import importlib
 from collections.abc import Callable
 from pathlib import Path
