@@ -46,3 +46,10 @@ def test_openapi_operation_ids_are_unique(openapi_schema: DictStrAny) -> None:
     duplicates = sorted(operation_id for operation_id, count in Counter(operation_ids).items() if count > 1)
 
     assert not duplicates, f"Дублирующиеся operationId: {duplicates}"
+
+
+def test_openapi_component_names_are_not_module_paths(openapi_schema: DictStrAny) -> None:
+    """Имена схем — имена классов: одноимённые модели FastAPI молча переименовывает в путь модуля через ``__``."""
+    module_path_names = sorted(name for name in openapi_schema["components"]["schemas"] if "__" in name)
+
+    assert not module_path_names, f"Одноимённые модели в схеме, переименуй одну из них: {module_path_names}"

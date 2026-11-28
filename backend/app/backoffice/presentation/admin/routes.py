@@ -6,7 +6,7 @@ from app.backoffice.application.ports.account_repository import AccountFilters
 from app.backoffice.application.schemas.commands import ListAccountsCommand
 from app.backoffice.application.services.account import AccountService
 from app.backoffice.presentation.admin.responses import ACCOUNTS_LIST_RESPONSES
-from app.backoffice.presentation.admin.schemas import AccountsListRequest, AccountsListResponse
+from app.backoffice.presentation.admin.schemas import AdminAccountsListRequest, AdminAccountsListResponse
 from app.backoffice.presentation.dependencies import account_service_dependency
 from app.shared.infra.jwt import PermissionEnum
 from app.shared.infra.jwt.permission_checker import PermissionChecker
@@ -17,15 +17,15 @@ backoffice_admin_router = APIRouter()
 
 @backoffice_admin_router.get(
     "/accounts/",
-    response_model=AccountsListResponse,
+    response_model=AdminAccountsListResponse,
     responses=ACCOUNTS_LIST_RESPONSES,
     dependencies=[Depends(PermissionChecker(PermissionEnum.BACKOFFICE_ACCOUNTS_READ))],
 )
 async def list_accounts(
     *,
-    query: Annotated[AccountsListRequest, Query()],
+    query: Annotated[AdminAccountsListRequest, Query()],
     account_service: Annotated[AccountService, Depends(account_service_dependency)],
-) -> AccountsListResponse:
+) -> AdminAccountsListResponse:
     """Страница списка аккаунтов под фильтром и число всех аккаунтов под ним. Право `backoffice.accounts.read`."""
     result = await account_service.list_accounts(
         ListAccountsCommand(
@@ -40,4 +40,4 @@ async def list_accounts(
             sort_direction=query.sort_direction,
         ),
     )
-    return AccountsListResponse.model_validate(result, from_attributes=True)
+    return AdminAccountsListResponse.model_validate(result, from_attributes=True)

@@ -37,7 +37,7 @@ class MediaConfigSnapshot(CamelModel):
     journey_video: VideoKindRules
 
 
-class UpdateMediaConfigRequest(CamelModel):
+class AdminUpdateMediaConfigRequest(CamelModel):
     """Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409."""
 
     model_config = ConfigDict(extra="forbid")
@@ -75,7 +75,7 @@ class SavedMediaConfig(CamelModel):
     journey_video: SavedVideoKindRules
 
 
-class MediaConfigResponse(CamelModel):
+class AdminMediaConfigResponse(CamelModel):
     """Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя)."""
 
     model_config = ConfigDict(frozen=True)

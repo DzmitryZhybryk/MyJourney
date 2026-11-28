@@ -13,7 +13,11 @@ from pydantic import ValidationError
 
 from app.media.application.ports.media_config_repository import MediaConfigSnapshot as StoredSnapshot
 from app.media.application.schemas.results import MediaConfigResult
-from app.media.presentation.admin.schemas import MediaConfigResponse, MediaConfigSnapshot, UpdateMediaConfigRequest
+from app.media.presentation.admin.schemas import (
+    AdminMediaConfigResponse,
+    AdminUpdateMediaConfigRequest,
+    MediaConfigSnapshot,
+)
 from app.shared.types import DictStrAny
 from tests.builders import make_media_config_snapshot
 
@@ -29,7 +33,7 @@ def test_config_defaults_file_passes_admin_request_schema() -> None:
 
 def test_update_media_config_request_valid_body_accepted(update_media_config_body: DictStrAny) -> None:
     """Тело со всеми видами и разумными значениями проходит схему."""
-    request = UpdateMediaConfigRequest.model_validate(update_media_config_body)
+    request = AdminUpdateMediaConfigRequest.model_validate(update_media_config_body)
 
     assert request.snapshot.avatar.min_side == 512
 
@@ -62,7 +66,7 @@ def test_update_media_config_request_out_of_limits_rejected(
     update_media_config_body["snapshot"][kind][field] = value
 
     with pytest.raises(ValidationError):
-        UpdateMediaConfigRequest.model_validate(update_media_config_body)
+        AdminUpdateMediaConfigRequest.model_validate(update_media_config_body)
 
 
 @pytest.mark.parametrize(
@@ -80,7 +84,7 @@ def test_update_media_config_request_extra_key_rejected(
     target["typo"] = 1
 
     with pytest.raises(ValidationError):
-        UpdateMediaConfigRequest.model_validate(update_media_config_body)
+        AdminUpdateMediaConfigRequest.model_validate(update_media_config_body)
 
 
 def test_update_media_config_request_missing_kind_rejected(update_media_config_body: DictStrAny) -> None:
@@ -88,7 +92,7 @@ def test_update_media_config_request_missing_kind_rejected(update_media_config_b
     del update_media_config_body["snapshot"]["journeyVideo"]
 
     with pytest.raises(ValidationError):
-        UpdateMediaConfigRequest.model_validate(update_media_config_body)
+        AdminUpdateMediaConfigRequest.model_validate(update_media_config_body)
 
 
 def test_media_config_response_saved_value_below_edit_limits_rendered() -> None:
@@ -100,7 +104,7 @@ def test_media_config_response_saved_value_below_edit_limits_rendered() -> None:
         created_by=None,
     )
 
-    response = MediaConfigResponse.model_validate(result, from_attributes=True)
+    response = AdminMediaConfigResponse.model_validate(result, from_attributes=True)
 
     assert response.snapshot.avatar.min_side == 0
 

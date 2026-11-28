@@ -6,7 +6,7 @@ from app.media.application.ports.media_config_repository import ImageKindRules, 
 from app.media.application.schemas.commands import UpdateMediaConfigCommand
 from app.media.application.services.media_config import MediaConfigService
 from app.media.presentation.admin.responses import GET_MEDIA_CONFIG_RESPONSES, UPDATE_MEDIA_CONFIG_RESPONSES
-from app.media.presentation.admin.schemas import MediaConfigResponse, UpdateMediaConfigRequest
+from app.media.presentation.admin.schemas import AdminMediaConfigResponse, AdminUpdateMediaConfigRequest
 from app.media.presentation.dependencies import media_config_service_dependency
 from app.shared.infra.jwt import AccessTokenClaims, PermissionEnum
 from app.shared.infra.jwt.permission_checker import PermissionChecker
@@ -16,16 +16,16 @@ media_admin_router = APIRouter()
 
 @media_admin_router.get(
     "/config/",
-    response_model=MediaConfigResponse,
+    response_model=AdminMediaConfigResponse,
     responses=GET_MEDIA_CONFIG_RESPONSES,
     dependencies=[Depends(PermissionChecker(PermissionEnum.MEDIA_CONFIG_EDIT))],
 )
 async def get_media_config(
     media_config_service: Annotated[MediaConfigService, Depends(media_config_service_dependency)],
-) -> MediaConfigResponse:
+) -> AdminMediaConfigResponse:
     """Последняя версия конфига для правки. Нужно право `media.config.edit`."""
     result = await media_config_service.get_media_config()
-    return MediaConfigResponse.model_validate(result, from_attributes=True)
+    return AdminMediaConfigResponse.model_validate(result, from_attributes=True)
 
 
 @media_admin_router.put(
@@ -35,7 +35,7 @@ async def get_media_config(
 )
 async def update_media_config(
     *,
-    body: UpdateMediaConfigRequest,
+    body: AdminUpdateMediaConfigRequest,
     claims: Annotated[AccessTokenClaims, Depends(PermissionChecker(PermissionEnum.MEDIA_CONFIG_EDIT))],
     media_config_service: Annotated[MediaConfigService, Depends(media_config_service_dependency)],
 ) -> Response:

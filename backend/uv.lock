@@ -952,7 +952,7 @@ wheels = [
 
 [[package]]
 name = "myjourney"
-version = "7.8.0"
+version = "7.8.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiobotocore" },
