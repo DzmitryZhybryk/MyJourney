@@ -2074,7 +2074,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccountsResponse"
+                  "$ref": "#/components/schemas/AdminAccountsResponse"
                 }
               }
             }
@@ -2151,7 +2151,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccountOptionsResponse"
+                  "$ref": "#/components/schemas/AdminAccountOptionsResponse"
                 }
               }
             }
@@ -2343,7 +2343,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccountsListResponse"
+                  "$ref": "#/components/schemas/AdminAccountsListResponse"
                 }
               }
             }
@@ -2420,7 +2420,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MediaConfigResponse"
+                  "$ref": "#/components/schemas/AdminMediaConfigResponse"
                 }
               }
             }
@@ -2488,7 +2488,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateMediaConfigRequest"
+                "$ref": "#/components/schemas/AdminUpdateMediaConfigRequest"
               }
             }
           },
@@ -2742,7 +2742,7 @@
         "title": "AccountListEntry",
         "description": "Аккаунт в списке; пустое поле — данные учётной записи или профиля ещё не дошли до списка."
       },
-      "AccountOptionsResponse": {
+      "AdminAccountOptionsResponse": {
         "properties": {
           "roles": {
             "items": {
@@ -2764,10 +2764,10 @@
           "roles",
           "plans"
         ],
-        "title": "AccountOptionsResponse",
+        "title": "AdminAccountOptionsResponse",
         "description": "Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей."
       },
-      "AccountsListResponse": {
+      "AdminAccountsListResponse": {
         "properties": {
           "items": {
             "items": {
@@ -2786,10 +2786,10 @@
           "items",
           "total"
         ],
-        "title": "AccountsListResponse",
+        "title": "AdminAccountsListResponse",
         "description": "Страница списка аккаунтов и число всех аккаунтов под фильтром."
       },
-      "AccountsResponse": {
+      "AdminAccountsResponse": {
         "properties": {
           "accounts": {
             "items": {
@@ -2804,8 +2804,65 @@
         "required": [
           "accounts"
         ],
-        "title": "AccountsResponse",
+        "title": "AdminAccountsResponse",
         "description": "Найденные учётные записи; id без записи в ответе нет."
+      },
+      "AdminMediaConfigResponse": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SavedMediaConfig"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "createdBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdby"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "snapshot",
+          "createdAt",
+          "createdBy"
+        ],
+        "title": "AdminMediaConfigResponse",
+        "description": "Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя)."
+      },
+      "AdminUpdateMediaConfigRequest": {
+        "properties": {
+          "editedVersion": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Editedversion"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/MediaConfigSnapshot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "editedVersion",
+          "snapshot"
+        ],
+        "title": "AdminUpdateMediaConfigRequest",
+        "description": "Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409."
       },
       "CityName": {
         "properties": {
@@ -3366,43 +3423,6 @@
         "title": "MapPoint",
         "description": "Город на глобусе или карте перемещений: его ``cityId`` и координаты, без названия."
       },
-      "MediaConfigResponse": {
-        "properties": {
-          "version": {
-            "type": "integer",
-            "title": "Version"
-          },
-          "snapshot": {
-            "$ref": "#/components/schemas/SavedMediaConfig"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdat"
-          },
-          "createdBy": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Createdby"
-          }
-        },
-        "type": "object",
-        "required": [
-          "version",
-          "snapshot",
-          "createdAt",
-          "createdBy"
-        ],
-        "title": "MediaConfigResponse",
-        "description": "Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя)."
-      },
       "MediaConfigSnapshot": {
         "properties": {
           "avatar": {
@@ -3793,26 +3813,6 @@
         ],
         "title": "UpdateJourneyRequest",
         "description": "Тело запроса правки поездки: новые значения всех полей."
-      },
-      "UpdateMediaConfigRequest": {
-        "properties": {
-          "editedVersion": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Editedversion"
-          },
-          "snapshot": {
-            "$ref": "#/components/schemas/MediaConfigSnapshot"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "editedVersion",
-          "snapshot"
-        ],
-        "title": "UpdateMediaConfigRequest",
-        "description": "Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409."
       },
       "UploadRulesResponse": {
         "properties": {

@@ -75,11 +75,11 @@ export type AccountListEntry = {
 };
 
 /**
- * AccountOptionsResponse
+ * AdminAccountOptionsResponse
  *
  * Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей.
  */
-export type AccountOptionsResponse = {
+export type AdminAccountOptionsResponse = {
   /**
    * Roles
    */
@@ -91,11 +91,11 @@ export type AccountOptionsResponse = {
 };
 
 /**
- * AccountsListResponse
+ * AdminAccountsListResponse
  *
  * Страница списка аккаунтов и число всех аккаунтов под фильтром.
  */
-export type AccountsListResponse = {
+export type AdminAccountsListResponse = {
   /**
    * Items
    */
@@ -107,15 +107,49 @@ export type AccountsListResponse = {
 };
 
 /**
- * AccountsResponse
+ * AdminAccountsResponse
  *
  * Найденные учётные записи; id без записи в ответе нет.
  */
-export type AccountsResponse = {
+export type AdminAccountsResponse = {
   /**
    * Accounts
    */
   accounts: Array<AccountItem>;
+};
+
+/**
+ * AdminMediaConfigResponse
+ *
+ * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
+ */
+export type AdminMediaConfigResponse = {
+  /**
+   * Version
+   */
+  version: number;
+  snapshot: SavedMediaConfig;
+  /**
+   * Createdat
+   */
+  createdAt: string;
+  /**
+   * Createdby
+   */
+  createdBy: string | null;
+};
+
+/**
+ * AdminUpdateMediaConfigRequest
+ *
+ * Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409.
+ */
+export type AdminUpdateMediaConfigRequest = {
+  /**
+   * Editedversion
+   */
+  editedVersion: number;
+  snapshot: MediaConfigSnapshot;
 };
 
 /**
@@ -512,27 +546,6 @@ export type MapPoint = {
 };
 
 /**
- * MediaConfigResponse
- *
- * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
- */
-export type MediaConfigResponse = {
-  /**
-   * Version
-   */
-  version: number;
-  snapshot: SavedMediaConfig;
-  /**
-   * Createdat
-   */
-  createdAt: string;
-  /**
-   * Createdby
-   */
-  createdBy: string | null;
-};
-
-/**
  * MediaConfigSnapshot
  *
  * Весь изменяемый конфиг media: по полю на каждый вид файла.
@@ -786,19 +799,6 @@ export type UpdateJourneyRequest = {
    * Traveledyear
    */
   traveledYear: number;
-};
-
-/**
- * UpdateMediaConfigRequest
- *
- * Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409.
- */
-export type UpdateMediaConfigRequest = {
-  /**
-   * Editedversion
-   */
-  editedVersion: number;
-  snapshot: MediaConfigSnapshot;
 };
 
 /**
@@ -1791,7 +1791,7 @@ export type FindAccountsByIdsResponses = {
   /**
    * Successful Response
    */
-  200: AccountsResponse;
+  200: AdminAccountsResponse;
 };
 
 export type FindAccountsByIdsResponse = FindAccountsByIdsResponses[keyof FindAccountsByIdsResponses];
@@ -1824,7 +1824,7 @@ export type GetAccountOptionsResponses = {
   /**
    * Successful Response
    */
-  200: AccountOptionsResponse;
+  200: AdminAccountOptionsResponse;
 };
 
 export type GetAccountOptionsResponse = GetAccountOptionsResponses[keyof GetAccountOptionsResponses];
@@ -1891,7 +1891,7 @@ export type ListAccountsResponses = {
   /**
    * Successful Response
    */
-  200: AccountsListResponse;
+  200: AdminAccountsListResponse;
 };
 
 export type ListAccountsResponse = ListAccountsResponses[keyof ListAccountsResponses];
@@ -1924,13 +1924,13 @@ export type GetMediaConfigResponses = {
   /**
    * Successful Response
    */
-  200: MediaConfigResponse;
+  200: AdminMediaConfigResponse;
 };
 
 export type GetMediaConfigResponse = GetMediaConfigResponses[keyof GetMediaConfigResponses];
 
 export type UpdateMediaConfigData = {
-  body: UpdateMediaConfigRequest;
+  body: AdminUpdateMediaConfigRequest;
   path?: never;
   query?: never;
   url: '/v1/admin/media/config/';

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import type { AccountsListResponse } from "../../api/sdk";
+import type { AdminAccountsListResponse } from "../../api/sdk";
 import { server, TEST_ACCOUNTS_PAGE } from "../../test/handlers";
 import { makeAuthValue, renderWithProviders, screen, waitFor, within } from "../../test/render";
 import { AccountsPage } from "./AccountsPage";
@@ -16,7 +16,7 @@ function renderPage(route = "/admin/accounts") {
 }
 
 /** Serves `page` and records the query of every list request, in order. */
-function serveAccounts(page: AccountsListResponse = TEST_ACCOUNTS_PAGE): URLSearchParams[] {
+function serveAccounts(page: AdminAccountsListResponse = TEST_ACCOUNTS_PAGE): URLSearchParams[] {
   const queries: URLSearchParams[] = [];
   server.use(
     http.get(ACCOUNTS_PATH, ({ request }) => {

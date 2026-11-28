@@ -18,6 +18,16 @@
   shared schema leaks that to anonymous clients the day a field is added for the admin.
 - Source: #51, 2026-11-21
 
+## Only an admin route's own `*Request`/`*Response` carry the `Admin` prefix
+- Why: OpenAPI has no module, so an admin and a public schema of one name collide; FastAPI then renames
+  both to module paths (`app__…__schemas__X`), which land in the SDK. The prefix names the route's audience.
+- Rejected: no marker, telling them apart by module — invisible in the SDK.
+- Rejected: an `Admin` suffix — the suffix already names the role (`*Request`/`*Response`).
+- Rejected: the prefix on nested schemas, commands and results — they describe data another operator role
+  (an analyst, a moderator) may read too.
+- A collision of any two schema names fails `test_openapi_component_names_are_not_module_paths`.
+- Source: #69, 2026-11-28
+
 ## Admin routes behind `PermissionChecker` may read other users' rows
 - The owner-scoping invariants of `rules/python/authorization.md` bind user-facing routes; an admin
   route's guard is its permission (`find_user_credentials_by_user_ids` behind `auth.accounts.read`).

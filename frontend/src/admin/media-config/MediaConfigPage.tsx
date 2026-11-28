@@ -10,7 +10,7 @@ import {
   getUploadRulesOptions,
   getUploadRulesQueryKey,
   updateMediaConfigMutation,
-  type MediaConfigResponse,
+  type AdminMediaConfigResponse,
   type MediaConfigSnapshot,
   type SideAxisEnum,
   type UploadRulesResponse,
@@ -79,7 +79,7 @@ export function MediaConfigPage() {
 }
 
 interface MediaConfigEditorProps {
-  config: MediaConfigResponse;
+  config: AdminMediaConfigResponse;
   uploadRules: UploadRulesResponse | undefined;
   onNotice: (token: string | null) => void;
 }
@@ -182,7 +182,7 @@ function MediaConfigEditor({ config, uploadRules, onNotice }: MediaConfigEditorP
 }
 
 interface VersionFactsProps {
-  config: MediaConfigResponse;
+  config: AdminMediaConfigResponse;
 }
 
 function VersionFacts({ config }: VersionFactsProps) {

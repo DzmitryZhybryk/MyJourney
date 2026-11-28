@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { findAccountsByIdsQueryKey, type UpdateMediaConfigRequest } from "../../api/sdk";
+import { type AdminUpdateMediaConfigRequest, findAccountsByIdsQueryKey } from "../../api/sdk";
 import { server, TEST_ADMIN_ACCOUNT, TEST_MEDIA_CONFIG } from "../../test/handlers";
 import {
   createTestQueryClient,
@@ -41,10 +41,10 @@ describe("MediaConfigPage", () => {
   });
 
   it("правка числа сразу даёт кнопку сохранения, а сохранение шлёт весь конфиг в байтах с версией", async () => {
-    let sentBody: UpdateMediaConfigRequest | null = null;
+    let sentBody: AdminUpdateMediaConfigRequest | null = null;
     server.use(
       http.put("/v1/admin/media/config/", async ({ request }) => {
-        sentBody = (await request.json()) as UpdateMediaConfigRequest;
+        sentBody = (await request.json()) as AdminUpdateMediaConfigRequest;
         return new HttpResponse(null, { status: 204 });
       }),
     );

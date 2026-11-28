@@ -31,21 +31,21 @@ export const zAccountListEntry = z.object({
 });
 
 /**
- * AccountsListResponse
+ * AdminAccountsListResponse
  *
  * Страница списка аккаунтов и число всех аккаунтов под фильтром.
  */
-export const zAccountsListResponse = z.object({
+export const zAdminAccountsListResponse = z.object({
   items: z.array(zAccountListEntry),
   total: z.int()
 });
 
 /**
- * AccountsResponse
+ * AdminAccountsResponse
  *
  * Найденные учётные записи; id без записи в ответе нет.
  */
-export const zAccountsResponse = z.object({
+export const zAdminAccountsResponse = z.object({
   accounts: z.array(zAccountItem)
 });
 
@@ -459,11 +459,11 @@ export const zUserPlanEnum = z.enum(['free', 'premium']);
 export const zUserRoleEnum = z.enum(['user', 'admin']);
 
 /**
- * AccountOptionsResponse
+ * AdminAccountOptionsResponse
  *
  * Все роли и тарифы учётной записи в порядке объявления: варианты фильтра и ключи подписей.
  */
-export const zAccountOptionsResponse = z.object({
+export const zAdminAccountOptionsResponse = z.object({
   roles: z.array(zUserRoleEnum),
   plans: z.array(zUserPlanEnum)
 });
@@ -504,11 +504,11 @@ export const zSavedMediaConfig = z.object({
 });
 
 /**
- * MediaConfigResponse
+ * AdminMediaConfigResponse
  *
  * Последняя версия конфига: значения, номер версии, когда и кем записана (`createdBy` пуст у записи деплоя).
  */
-export const zMediaConfigResponse = z.object({
+export const zAdminMediaConfigResponse = z.object({
   version: z.int(),
   snapshot: zSavedMediaConfig,
   createdAt: z.iso.datetime(),
@@ -537,11 +537,11 @@ export const zMediaConfigSnapshot = z.strictObject({
 });
 
 /**
- * UpdateMediaConfigRequest
+ * AdminUpdateMediaConfigRequest
  *
  * Новый конфиг целиком и версия, с которой его правили: правка не последней версии — 409.
  */
-export const zUpdateMediaConfigRequest = z.strictObject({
+export const zAdminUpdateMediaConfigRequest = z.strictObject({
   editedVersion: z.int().check(z.gte(1)),
   snapshot: zMediaConfigSnapshot
 });
@@ -744,12 +744,12 @@ export const zFindAccountsByIdsQuery = z.object({
 /**
  * Successful Response
  */
-export const zFindAccountsByIdsResponse = zAccountsResponse;
+export const zFindAccountsByIdsResponse = zAdminAccountsResponse;
 
 /**
  * Successful Response
  */
-export const zGetAccountOptionsResponse = zAccountOptionsResponse;
+export const zGetAccountOptionsResponse = zAdminAccountOptionsResponse;
 
 export const zListAccountsQuery = z.object({
   page: z._default(z.optional(z.int().check(z.gte(1), z.lte(10000))), 1),
@@ -765,14 +765,14 @@ export const zListAccountsQuery = z.object({
 /**
  * Successful Response
  */
-export const zListAccountsResponse = zAccountsListResponse;
+export const zListAccountsResponse = zAdminAccountsListResponse;
 
 /**
  * Successful Response
  */
-export const zGetMediaConfigResponse = zMediaConfigResponse;
+export const zGetMediaConfigResponse = zAdminMediaConfigResponse;
 
-export const zUpdateMediaConfigBody = zUpdateMediaConfigRequest;
+export const zUpdateMediaConfigBody = zAdminUpdateMediaConfigRequest;
 
 /**
  * Successful Response

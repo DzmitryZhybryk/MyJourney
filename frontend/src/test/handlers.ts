@@ -14,12 +14,12 @@ import { setupServer } from "msw/node";
 
 import type {
   AccountItem,
-  AccountsListResponse,
+  AdminAccountsListResponse,
+  AdminMediaConfigResponse,
   CitySearchItem,
   CurrentAccountResponse,
   CurrentUserResponse,
   JourneyFeedEntry,
-  MediaConfigResponse,
   MovementsMapResponse,
   UploadRulesResponse,
 } from "../api/sdk";
@@ -27,7 +27,7 @@ import type {
 const MEGABYTE = 1024 * 1024;
 
 /** Media config version 1, as the deploy seed writes it (no author). */
-export const TEST_MEDIA_CONFIG: MediaConfigResponse = {
+export const TEST_MEDIA_CONFIG: AdminMediaConfigResponse = {
   version: 1,
   createdAt: "2026-11-19T11:00:00Z",
   createdBy: null,
@@ -49,7 +49,7 @@ export const TEST_ADMIN_ACCOUNT: AccountItem = {
  * One page of the admin account list: a full row, and a deleted row whose profile has not reached the
  * read model yet (profile fields null).
  */
-export const TEST_ACCOUNTS_PAGE: AccountsListResponse = {
+export const TEST_ACCOUNTS_PAGE: AdminAccountsListResponse = {
   items: [
     {
       userId: "33333333-3333-4333-8333-333333333333",

@@ -9,7 +9,7 @@ from app.shared.pagination.offset.schemas import OffsetPageFields, OffsetPaginat
 from app.shared.schemas.base import CamelModel
 
 
-class AccountsListRequest(OffsetPaginationFields):
+class AdminAccountsListRequest(OffsetPaginationFields):
     """
     Страница списка аккаунтов, её фильтр и направление сортировки (query-параметры).
 
@@ -44,5 +44,5 @@ class AccountListEntry(CamelModel):
     terms_accepted_at: dt.datetime | None
 
 
-class AccountsListResponse(OffsetPageFields[AccountListEntry]):
+class AdminAccountsListResponse(OffsetPageFields[AccountListEntry]):
     """Страница списка аккаунтов и число всех аккаунтов под фильтром."""
