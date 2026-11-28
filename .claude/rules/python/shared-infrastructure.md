@@ -35,9 +35,6 @@ it — `imports.md`.
   `dict[str, Any]`.
 - An entity's `updated_at` is touched through `TimestampedEntityMixin._mark_updated()`, not by
   hand-written `touch_*` / `mark_modified` methods.
-- tach sees `app.shared` as one module, so the contract/implementation split of `imports.md` is
-  guarded by `tests/unit/shared/test_import_hygiene.py` (each `application`/`domain` module and the
-  worker in a clean interpreter).
 
 ## Exceptions
 
@@ -55,6 +52,9 @@ maps it to text:
 
 - All DB work is async on psycopg3 (not asyncpg: procrastinate's atomic defer shares the SA
   connection).
+- User text in a `LIKE`: `startswith`/`contains`/`icontains(..., autoescape=True)`, never escaped
+  by hand. Over a `lower(col)` `text_pattern_ops` index: `func.lower(col).startswith(...)`, not
+  `istartswith` (its `ILIKE` skips it).
 - Dependency chain in `presentation/dependencies.py`: session → UnitOfWork → Service, in every
   domain, read-only ones included.
 - A domain router mounts at `/v1/{domain}` in `create_app()` (`app/main.py`); operational
