@@ -1,8 +1,7 @@
 /*
- * Позиционирование auth-формы поверх персистентного глобуса. Форма прижата к краю,
- * противоположному тому, куда
- * `persistent-globe.css` увёл сферу: на signup глобус уезжает вправо — форма слева,
- * на login наоборот.
+ * Positioning of the auth form over the persistent globe. The form is pinned to the edge opposite
+ * to where `persistent-globe.css` moved the sphere: on signup the globe moves right, so the form
+ * is on the left; on login the reverse.
  */
 
 .auth-layout {
@@ -11,7 +10,7 @@
   min-height: 100vh;
   display: flex;
   align-items: center;
-  /* Верхний отступ — под шапку публичной зоны (`.public-header`, absolute). */
+  /* Top padding clears the public zone header (`.public-header`, absolute). */
   padding: 96px clamp(20px, 5vw, 64px) 72px;
 }
 
@@ -23,7 +22,7 @@
   width: min(400px, 100%);
 }
 
-/* Узкие экраны: сфера уходит за спину (см. persistent-globe.css), форма — по центру. */
+/* Narrow screens: the sphere goes behind (see persistent-globe.css), the form is centered. */
 @media (max-width: 720px) {
   .auth-layout,
   .auth-layout[data-side="right"] {

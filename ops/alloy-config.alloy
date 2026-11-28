@@ -1,0 +1,71 @@
+logging {
+	level  = "warn"
+	format = "logfmt"
+}
+
+discovery.docker "myjourney" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "5s"
+
+	filter {
+		name   = "name"
+		values = ["myjourney"]
+	}
+}
+
+discovery.relabel "myjourney" {
+	targets = []
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_log_stream"]
+		target_label  = "stream"
+	}
+
+	rule {
+		target_label = "app"
+		replacement  = "myjourney"
+	}
+}
+
+loki.source.docker "myjourney" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.myjourney.targets
+	relabel_rules = discovery.relabel.myjourney.rules
+	forward_to    = [loki.process.json_fields.receiver]
+}
+
+loki.process "json_fields" {
+	forward_to = [loki.write.loki.receiver]
+
+	stage.json {
+		expressions = {
+			level     = "level",
+			logger    = "logger",
+			timestamp = "timestamp",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level  = null,
+			logger = null,
+		}
+	}
+
+	stage.timestamp {
+		source = "timestamp"
+		format = "RFC3339Nano"
+	}
+}
+
+loki.write "loki" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}

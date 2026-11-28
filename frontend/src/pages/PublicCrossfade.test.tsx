@@ -5,9 +5,9 @@ import { renderWithProviders, screen, waitFor } from "../test/render";
 import { PublicCrossfade } from "./PublicCrossfade";
 
 /**
- * Публичная зона в миниатюре: лейаут с кросс-фейдом и экраны-заглушки. Ссылки живут
- * ВНУТРИ экранов — навигация идёт роутером, как в приложении (`MemoryRouter` не видит
- * `window.history`, поэтому дёргать её напрямую бессмысленно).
+ * The public zone in miniature: a layout with a cross-fade and stub screens. Links live INSIDE
+ * the screens: navigation goes through the router as in the app (`MemoryRouter` does not see
+ * `window.history`, so poking it directly is pointless).
  */
 function renderZone(initialPath: string) {
   return renderWithProviders(
@@ -29,7 +29,7 @@ function renderZone(initialPath: string) {
   );
 }
 
-/** Уходящий экран помечен собственным классом — по нему и опознаём. */
+/** The leaving screen has its own class, which is how it is recognized. */
 function leavingScreen(): HTMLElement | null {
   return document.querySelector(".public-crossfade__screen--leaving");
 }
@@ -47,7 +47,7 @@ describe("PublicCrossfade", () => {
 
     await user.click(screen.getByText("to-signup"));
 
-    // Смысл компонента: старый экран НЕ снимается в том же кадре, а доживает фейд.
+    // The point of the component: the old screen is NOT removed in the same frame but lives out the fade.
     expect(await screen.findByText("screen-signup")).toBeInTheDocument();
     await waitFor(() => expect(leavingScreen()).not.toBeNull());
     expect(screen.getByText("screen-login")).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("PublicCrossfade", () => {
     await user.click(screen.getByText("to-signup"));
 
     await waitFor(() => expect(leavingScreen()).not.toBeNull());
-    // Без inert ссылка внутри гаснущего экрана осталась бы в Tab-обходе.
+    // Without inert a link inside the fading screen would stay in the Tab order.
     expect(leavingScreen()?.hasAttribute("inert")).toBe(true);
   });
 
@@ -69,7 +69,7 @@ describe("PublicCrossfade", () => {
     await user.click(screen.getByText("to-signup"));
     await waitFor(() => expect(leavingScreen()).not.toBeNull());
 
-    // Таймер живёт в компоненте (задержка + длительность); ждём реального снятия.
+    // The timer lives in the component (delay + duration); wait for the real removal.
     await waitFor(() => expect(leavingScreen()).toBeNull(), { timeout: 3000 });
     expect(screen.queryByText("screen-login")).not.toBeInTheDocument();
   });

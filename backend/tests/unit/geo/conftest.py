@@ -1,17 +1,17 @@
 """
-Фикстуры домена geo (unit): сборка ``PlaceService`` на фейке репозитория.
+Фикстуры домена geo (unit): сборка ``CityService`` на фейке UoW.
 
-Фейк I/O-границы (``fake_place_repository``) живёт в корневом ``tests/conftest.py`` — он
-переиспользуется и api-уровнем. Здесь остаётся только доменно-специфичная проводка
-сервиса-под-тестом, чтобы тесты не повторяли её.
+Фейки I/O-границы (``fake_city_repository``, ``fake_geo_uow``) живут в корневом
+``tests/conftest.py`` — они переиспользуются и api-уровнем. Здесь остаётся только
+доменно-специфичная проводка сервиса-под-тестом, чтобы тесты не повторяли её.
 """
 
 import pytest
 
-from app.geo.application.services import PlaceService
-from tests.fakes import FakePlaceRepository
+from app.geo.application.services.city import CityService
+from tests.fakes import FakeGeoUnitOfWork
 
 
 @pytest.fixture
-def place_service(fake_place_repository: FakePlaceRepository) -> PlaceService:
-    return PlaceService(repository=fake_place_repository)
+def city_service(fake_geo_uow: FakeGeoUnitOfWork) -> CityService:
+    return CityService(uow=fake_geo_uow)

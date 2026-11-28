@@ -28,6 +28,10 @@ class TimestampedEntityMixin:
     def deleted_at(self) -> dt.datetime | None:
         return self._deleted_at
 
+    @property
+    def is_deleted(self) -> bool:
+        return self._deleted_at is not None
+
     def _mark_updated(self) -> None:
         """
         Помечает сущность как изменённую, обновляя ``updated_at`` текущим временем.
@@ -35,5 +39,45 @@ class TimestampedEntityMixin:
         Вызывается изнутри мутирующих методов наследников. Внешний код
         в норме не зовёт его напрямую — изменение состояния должно идти
         через явные доменные операции, которые сами вызывают ``_mark_updated``.
+
+        Scenarios:
+            - любая доменная операция, меняющая сущность с отметками времени
         """
         self._updated_at = dt.datetime.now(tz=dt.UTC)
+
+    def _mark_deleted(self) -> None:
+        """
+        Помечает сущность удалённой (soft-delete): ``deleted_at`` и ``updated_at`` — один момент.
+
+        Как и ``_mark_updated``, вызывается изнутри доменной операции удаления наследника.
+
+        Scenarios:
+            - удаление сущности с soft-delete
+        """
+        now = dt.datetime.now(tz=dt.UTC)
+        self._deleted_at = now
+        self._updated_at = now
+
+
+class VersionedEntityMixin:
+    """Mixin версии строки: каждое изменение сущности поднимает версию на единицу."""
+
+    def __init__(self, *, version: int) -> None:
+        """Инициализация смеси."""
+        self._version = version
+
+    @property
+    def version(self) -> int:
+        return self._version
+
+    def _bump_version(self) -> None:
+        """
+        Увеличивает версию сущности на единицу.
+
+        Вызывается изнутри мутирующих методов наследников рядом с ``_mark_updated``. Хранилище
+        записывает сущность, только если строка всё ещё на предыдущей версии.
+
+        Scenarios:
+            - любая доменная операция, меняющая сущность с версией
+        """
+        self._version += 1

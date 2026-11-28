@@ -4,7 +4,12 @@ from app.shared.settings import settings
 
 
 def run_application() -> None:
-    """Run FastAPI application with settings from config."""
+    """
+    Запускает API под uvicorn с хостом, портом и reload из настроек.
+
+    Scenarios:
+        - локальный запуск API без Docker
+    """
     uvicorn.run(
         "app.main:create_app",
         host=settings.HOST,

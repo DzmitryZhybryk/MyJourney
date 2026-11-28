@@ -1,13 +1,13 @@
 from fastapi import Request, Response
 
-from app.auth.application.schemas import TokenPairResult
+from app.auth.application.schemas.results import TokenPairResult
 
 _REFRESH_COOKIE_NAME = "refresh_token"
 _COOKIE_PATH = "/"
 _COOKIE_SAMESITE = "lax"
 
 
-def set_refresh_token_cookie(response: Response, token_pair: TokenPairResult) -> None:
+def set_refresh_token_cookie(*, response: Response, token_pair: TokenPairResult) -> None:
     """
     Устанавливает refresh-токен в HttpOnly Secure cookie.
 
@@ -15,6 +15,11 @@ def set_refresh_token_cookie(response: Response, token_pair: TokenPairResult) ->
     передаёт cookie только по HTTPS, SameSite=lax ограничивает отправку
     при cross-site запросах. Значение — plaintext-секрет; в БД лежит
     только его детерминированный hash.
+
+    Scenarios:
+        - регистрация
+        - вход
+        - обновление сессии
 
     Args:
         response: HTTP-ответ FastAPI, в который добавляется cookie
@@ -35,6 +40,10 @@ def read_refresh_token_cookie(request: Request) -> str | None:
     """
     Возвращает plaintext-значение refresh-cookie или ``None``, если cookie нет.
 
+    Scenarios:
+        - выход из аккаунта
+        - обновление сессии
+
     Args:
         request: HTTP-запрос FastAPI
 
@@ -51,6 +60,9 @@ def clear_refresh_token_cookie(response: Response) -> None:
     Атрибуты ``path``/``samesite`` дублируют параметры ``set_refresh_token_cookie``:
     браузер удаляет cookie только при совпадающем (name, path, domain), а
     SameSite/Secure не должны конфликтовать с ранее установленным значением.
+
+    Scenarios:
+        - выход из аккаунта
 
     Args:
         response: HTTP-ответ FastAPI, в который добавляется ``Set-Cookie: ...; Max-Age=0``

@@ -8,8 +8,8 @@ EmailTransportPort (доменный код зависит только от Pro
 
 from app.shared.infra.di.base import BaseComponent
 from app.shared.infra.di.registry import ComponentRegistry
+from app.shared.infra.email.ports import EmailTransportPort
 from app.shared.infra.email.resend_client import ResendClient
-from app.shared.infra.email.transport import EmailTransportPort
 from app.shared.infra.http.config import HTTPClientConfig
 from app.shared.settings import ResendSettings
 
@@ -29,7 +29,7 @@ class ResendComponent(BaseComponent):
         )
 
     async def startup(self, registry: ComponentRegistry) -> None:
-        registry.set(EmailTransportPort, self._client)
+        registry.set(key=EmailTransportPort, value=self._client)
 
     async def shutdown(self) -> None:
         await self._client.aclose()

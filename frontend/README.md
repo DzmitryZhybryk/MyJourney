@@ -1,7 +1,8 @@
 # MyJourney — frontend
 
-SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо MindTrace; оркестрация
-всего стека — из корня (`make run`), см. корневой `CLAUDE.md`.
+SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо MyJourney; оркестрация
+бэкенда — из корня (`make run`), сам фронт в деве запускается на хосте (`make fe-dev`),
+см. корневой `CLAUDE.md`.
 
 ## Требования
 
@@ -15,7 +16,8 @@ SPA на Vite + React 19 + TypeScript 7 + Mantine 9. Часть монорепо
 
 ```bash
 npm ci                # установка строго по lock-файлу (не npm install)
-npm run dev           # Vite dev-сервер на :5173, /v1 проксируется на backend
+make dev              # Vite dev-сервер на :5173 (из корня — make fe-dev); /v1 → backend
+                      # дев-стека на 127.0.0.1:8050, поэтому сначала `make run` из корня
 
 make lint             # oxlint. ESLint в проекте НЕТ — мигрировали, конфига нет
 make lint-fix         # oxlint --fix. Форматтера/prettier тоже нет
@@ -24,7 +26,8 @@ make test             # vitest: unit + component, один прогон
 make test-unit        # только *.test.ts   — чистая логика
 make test-component   # только *.test.tsx  — рендер React
 make coverage         # то же + покрытие; порог 90%
-make check            # lint + typecheck + audit + test — ровно то, что гоняет CI
+make mantine-styles   # src/mantineStyles.ts = ровно те стили Mantine, что нужны используемым компонентам
+make check            # lint + typecheck + mantine-styles + audit + test — ровно то, что гоняет CI
 ```
 
 E2E — единственное, что запускается **из корня**, а не отсюда:
@@ -68,4 +71,9 @@ e2e/                # Playwright-спеки по флоу
   должен блокировать первую отрисовку. Проверять по графу СТАТИЧЕСКИХ импортов собранных
   чанков: динамический `import()` попадает в манифест предзагрузки и легко читается как
   статическая зависимость.
-- Порог покрытия 90% форсится pre-push хуком (`make hooks` из корня, разово), а не CI.
+- Порог покрытия 90% форсится pre-commit хуком (`make hooks` из корня, разово), а не CI.
+- **Зависимости дев-сервера.** `make dev` сам делает `npm ci`, если `package-lock.json` новее
+  установленного дерева; после правки `package.json` достаточно перезапустить `make dev`. Тот же
+  перезапуск лечит «Что-то пошло не так» после `PARSE_ERROR` посреди правок — Vite продолжает
+  отдавать сломанный модуль, и перезагрузка вкладки не помогает.
+- **`Cannot find module` из `node_modules/.bin/*`** — несвежая установка, лечится `npm ci`.

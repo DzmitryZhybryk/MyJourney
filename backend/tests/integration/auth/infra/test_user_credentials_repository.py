@@ -1,20 +1,24 @@
 """
 Интеграционные тесты ``UserCredentialsRepository`` против реального Postgres.
 
-Покрывают round-trip entity↔БД, OR-выборку по email/username и реальные
-unique-констрейнты (``email`` и ``username``), которые на фейках не проверить.
+Покрывают round-trip entity↔БД, поиск по email/username без учёта регистра, реальные
+unique-индексы по ``lower(email)`` / ``lower(username)`` и уровень row-лока, которые на фейках не проверить.
 """
 
 import datetime as dt
+from collections.abc import Awaitable, Callable
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.exc import IntegrityError
+import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.auth.domain.enums import UserRole
-from app.auth.infra.repositories import UserCredentialsRepository
-from tests.builders import make_user_credentials
+from app.auth.domain.enums import ChallengeTypeEnum, UserPlanEnum, UserRoleEnum
+from app.auth.infra.models import UserCredentials
+from app.auth.infra.repositories import ChallengeRepository, UserCredentialsRepository
+from app.shared.infra.db.postgres.exceptions import StaleRowVersionError
+from tests.builders import make_challenge, make_user_credentials
 
 _VERIFIED_AT = dt.datetime(2026, 6, 1, tzinfo=dt.UTC)
 
@@ -25,89 +29,154 @@ async def test_insert_then_find_by_user_id_roundtrip(
     """insert + commit → ``find_user_credentials_by_user_id`` возвращает ту же сущность."""
     user_id = uuid4()
     user_credentials_entity = make_user_credentials(
-        user_id=user_id, email="uc-roundtrip@example.com", username="uc_roundtrip"
+        user_id=user_id,
+        email="uc-roundtrip@example.com",
+        username="uc_roundtrip",
+        role=UserRoleEnum.ADMIN,
+        plan=UserPlanEnum.PREMIUM,
     )
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(
-            user_credentials_entity=user_credentials_entity
-        )
+        await UserCredentialsRepository(writer).insert_user_credentials(user_credentials_entity)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
 
     assert found is not None
     assert found.user_id == user_id
     assert found.email == "uc-roundtrip@example.com"
     assert found.username == "uc_roundtrip"
     assert found.password.hash == user_credentials_entity.password.hash
-    assert found.role is UserRole.FREE
+    assert found.role is UserRoleEnum.ADMIN
+    assert found.plan is UserPlanEnum.PREMIUM
     assert found.email_verified_at is None
 
 
-async def test_find_by_email_or_username_returns_matching_rows(
+@pytest.mark.parametrize("lookup_email", ["first@example.com", "FIRST@EXAMPLE.COM", "First@Example.com"])
+async def test_find_by_email_ignores_case(
     session_factory: async_sessionmaker[AsyncSession],
+    lookup_email: str,
 ) -> None:
-    """OR-выборка ловит конфликт и по email, и по username одним запросом (0..2 строки)."""
-    user_one = uuid4()
-    user_two = uuid4()
-    credentials_one = make_user_credentials(user_id=user_one, email="first@example.com", username="first_user")
-    credentials_two = make_user_credentials(user_id=user_two, email="second@example.com", username="second_user")
+    """``find_user_credentials_by_email`` находит запись в любом регистре и не задевает соседей."""
+    user_id = uuid4()
     async with session_factory() as writer:
-        repository = UserCredentialsRepository(session=writer)
-        await repository.insert_user_credentials(user_credentials_entity=credentials_one)
-        await repository.insert_user_credentials(user_credentials_entity=credentials_two)
+        repository = UserCredentialsRepository(writer)
+        await repository.insert_user_credentials(
+            make_user_credentials(user_id=user_id, email="first@example.com", username="first")
+        )
+        await repository.insert_user_credentials(make_user_credentials(email="second@example.com", username="second"))
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_email_or_username(
-            email="first@example.com",
-            username="second_user",
-        )
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_email(lookup_email)
 
-    assert {item.user_id for item in found} == {user_one, user_two}
+    assert found is not None
+    assert found.user_id == user_id
 
 
-async def test_find_by_email_or_username_no_match_returns_empty(
-    db_session: AsyncSession,
-) -> None:
-    """OR-выборка без совпадений возвращает пустой список, а не падает."""
-    found = await UserCredentialsRepository(session=db_session).find_user_credentials_by_email_or_username(
-        email="nobody@example.com",
-        username="nobody",
-    )
-
-    assert found == []
-
-
-async def test_insert_duplicate_email_raises_integrity_error(
+@pytest.mark.parametrize("lookup_username", ["Neo", "neo", "NEO"])
+async def test_find_by_username_ignores_case(
     session_factory: async_sessionmaker[AsyncSession],
+    lookup_username: str,
 ) -> None:
-    """Повторный email нарушает unique-констрейнт — ``IntegrityError`` на commit."""
-    existing = make_user_credentials(email="dup@example.com", username="original_user")
+    """``find_user_credentials_by_username`` находит запись в любом регистре и не задевает соседей."""
+    user_id = uuid4()
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=existing)
+        repository = UserCredentialsRepository(writer)
+        await repository.insert_user_credentials(
+            make_user_credentials(user_id=user_id, email="neo@example.com", username="Neo")
+        )
+        await repository.insert_user_credentials(make_user_credentials(email="trinity@example.com", username="Trinity"))
         await writer.commit()
 
-    duplicate = make_user_credentials(email="dup@example.com", username="another_user")
+    async with session_factory() as reader:
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_username(lookup_username)
+
+    assert found is not None
+    assert found.user_id == user_id
+
+
+@pytest.mark.parametrize("login", ["neo@example.com", "NEO@Example.com", "neo", "NEO"])
+async def test_find_by_login_matches_email_or_username_ignoring_case(
+    session_factory: async_sessionmaker[AsyncSession],
+    login: str,
+) -> None:
+    """``find_user_credentials_by_login`` находит учётку и по email, и по username в любом регистре."""
+    user_id = uuid4()
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=duplicate)
+        repository = UserCredentialsRepository(writer)
+        await repository.insert_user_credentials(
+            make_user_credentials(user_id=user_id, email="neo@example.com", username="Neo")
+        )
+        await repository.insert_user_credentials(make_user_credentials(email="trinity@example.com", username="Trinity"))
+        await writer.commit()
+
+    async with session_factory() as reader:
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_login(login)
+
+    assert found is not None
+    assert found.user_id == user_id
+
+
+async def test_find_by_login_prefers_email_owner_over_matching_username(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Логин — чей-то email и одновременно чужой username → возвращается владелец email."""
+    email_owner_id = uuid4()
+    async with session_factory() as writer:
+        repository = UserCredentialsRepository(writer)
+        await repository.insert_user_credentials(
+            make_user_credentials(user_id=email_owner_id, email="bob@example.com", username="bob")
+        )
+        await repository.insert_user_credentials(
+            make_user_credentials(email="other@example.com", username="bob@example.com")
+        )
+        await writer.commit()
+
+    async with session_factory() as reader:
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_login("BOB@example.com")
+
+    assert found is not None
+    assert found.user_id == email_owner_id
+
+
+async def test_find_by_email_username_and_login_no_match_returns_none(db_session: AsyncSession) -> None:
+    """Поиск без совпадений возвращает ``None``, а не падает."""
+    repository = UserCredentialsRepository(db_session)
+
+    assert await repository.find_user_credentials_by_email("nobody@example.com") is None
+    assert await repository.find_user_credentials_by_username("nobody") is None
+    assert await repository.find_user_credentials_by_login("nobody") is None
+
+
+async def test_insert_email_differing_only_by_case_raises_integrity_error(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Email, отличающийся только регистром, нарушает unique-индекс по lower(email) — ``IntegrityError``."""
+    existing = make_user_credentials(email="dup@example.com", username="original_user")
+    async with session_factory() as writer:
+        await UserCredentialsRepository(writer).insert_user_credentials(existing)
+        await writer.commit()
+
+    duplicate = make_user_credentials(email="DUP@Example.com", username="another_user")
+    async with session_factory() as writer:
+        await UserCredentialsRepository(writer).insert_user_credentials(duplicate)
         with pytest.raises(IntegrityError):
             await writer.commit()
 
 
-async def test_insert_duplicate_username_raises_integrity_error(
+async def test_insert_username_differing_only_by_case_raises_integrity_error(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Повторный username нарушает unique-констрейнт — ``IntegrityError`` на commit."""
+    """Username, отличающийся только регистром, нарушает unique-индекс по lower(username) — ``IntegrityError``."""
     existing = make_user_credentials(email="original@example.com", username="dup_user")
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=existing)
+        await UserCredentialsRepository(writer).insert_user_credentials(existing)
         await writer.commit()
 
-    duplicate = make_user_credentials(email="another@example.com", username="dup_user")
+    duplicate = make_user_credentials(email="another@example.com", username="DUP_User")
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(user_credentials_entity=duplicate)
+        await UserCredentialsRepository(writer).insert_user_credentials(duplicate)
         with pytest.raises(IntegrityError):
             await writer.commit()
 
@@ -121,9 +190,7 @@ async def test_update_persists_email_verified_at(
         user_id=user_id, email="uc-update@example.com", username="uc_update"
     )
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).insert_user_credentials(
-            user_credentials_entity=user_credentials_entity
-        )
+        await UserCredentialsRepository(writer).insert_user_credentials(user_credentials_entity)
         await writer.commit()
 
     verified = make_user_credentials(
@@ -131,15 +198,118 @@ async def test_update_persists_email_verified_at(
         email="uc-update@example.com",
         username="uc_update",
         email_verified_at=_VERIFIED_AT,
+        version=2,
     )
     async with session_factory() as writer:
-        await UserCredentialsRepository(session=writer).update_user_credentials_by_user_id(
-            user_credentials_entity=verified
-        )
+        await UserCredentialsRepository(writer).update_user_credentials_by_user_id(verified)
         await writer.commit()
 
     async with session_factory() as reader:
-        found = await UserCredentialsRepository(session=reader).find_user_credentials_by_user_id(user_id=user_id)
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
 
     assert found is not None
     assert found.email_verified_at == _VERIFIED_AT
+
+
+@pytest.mark.parametrize("stale_version", [1, 3], ids=["same-as-stored", "skips-a-version"])
+async def test_update_with_version_not_next_to_stored_raises_stale_and_keeps_row(
+    session_factory: async_sessionmaker[AsyncSession],
+    stale_version: int,
+) -> None:
+    """Версия сущности не на единицу выше записанной → ``StaleRowVersionError``, строка прежняя."""
+    user_id = uuid4()
+    async with session_factory() as writer:
+        await UserCredentialsRepository(writer).insert_user_credentials(
+            make_user_credentials(user_id=user_id, email="uc-stale@example.com", username="uc_stale"),
+        )
+        await writer.commit()
+
+    stale = make_user_credentials(
+        user_id=user_id,
+        email="uc-stale@example.com",
+        username="uc_stale",
+        email_verified_at=_VERIFIED_AT,
+        version=stale_version,
+    )
+    async with session_factory() as writer:
+        with pytest.raises(StaleRowVersionError):
+            await UserCredentialsRepository(writer).update_user_credentials_by_user_id(stale)
+
+    async with session_factory() as reader:
+        found = await UserCredentialsRepository(reader).find_user_credentials_by_user_id(user_id)
+
+    assert found is not None
+    assert found.email_verified_at is None
+    assert found.version == 1
+
+
+async def test_find_by_user_ids_returns_matching_rows_incl_deleted_and_skips_unknown(
+    db_session: AsyncSession,
+) -> None:
+    """``find_user_credentials_by_user_ids`` отдаёт строки по набору id, удалённые тоже; неизвестный id пропускает."""
+    repository = UserCredentialsRepository(db_session)
+    active_entity = make_user_credentials(email="uc-ids-active@example.com", username="uc_ids_active")
+    deleted_entity = make_user_credentials(
+        email="uc-ids-deleted@example.com",
+        username="uc_ids_deleted",
+        deleted_at=_VERIFIED_AT,
+    )
+    other_entity = make_user_credentials(email="uc-ids-other@example.com", username="uc_ids_other")
+    for user_credentials_entity in (active_entity, deleted_entity, other_entity):
+        await repository.insert_user_credentials(user_credentials_entity)
+
+    found = await repository.find_user_credentials_by_user_ids(
+        frozenset({active_entity.user_id, deleted_entity.user_id, uuid4()}),
+    )
+
+    assert {(entity.user_id, entity.is_deleted) for entity in found} == {
+        (active_entity.user_id, False),
+        (deleted_entity.user_id, True),
+    }
+
+
+async def test_find_by_user_id_for_update_locks_row_against_second_locker(
+    session_factory: async_sessionmaker[AsyncSession],
+    seed_user_credentials: Callable[..., Awaitable[None]],
+) -> None:
+    """``find_user_credentials_by_user_id_for_update`` берёт row-лок: второй такой же под ``NOWAIT`` падает."""
+    user_id = uuid4()
+    await seed_user_credentials(user_id=user_id, email="uc-lock@example.com", username="uc_lock")
+
+    async with session_factory() as holder, session_factory() as contender:
+        locked = await UserCredentialsRepository(holder).find_user_credentials_by_user_id_for_update(user_id)
+        assert locked is not None
+
+        nowait_query = (
+            sa.select(UserCredentials)
+            .where(UserCredentials.user_id == user_id)
+            .with_for_update(key_share=True, nowait=True)
+        )
+        with pytest.raises(OperationalError):
+            await contender.execute(nowait_query)
+
+
+async def test_find_by_user_id_for_update_lets_referencing_row_insert(
+    session_factory: async_sessionmaker[AsyncSession],
+    seed_user_credentials: Callable[..., Awaitable[None]],
+) -> None:
+    """Row-лок учётки не блокирует вставку строки, ссылающейся на неё по FK (проверка FK берёт ``FOR KEY SHARE``)."""
+    user_id = uuid4()
+    await seed_user_credentials(user_id=user_id, email="uc-fk@example.com", username="uc_fk")
+
+    async with session_factory() as holder, session_factory() as contender:
+        locked = await UserCredentialsRepository(holder).find_user_credentials_by_user_id_for_update(user_id)
+        assert locked is not None
+
+        await contender.execute(sa.text("SET LOCAL lock_timeout = '2s'"))
+        await ChallengeRepository(contender).insert_challenge(make_challenge(user_id=user_id))
+        await contender.flush()
+        await contender.commit()
+
+    async with session_factory() as reader:
+        found = await ChallengeRepository(reader).find_active_challenge_for_update(
+            user_id=user_id,
+            challenge_type=ChallengeTypeEnum.EMAIL_VERIFICATION,
+        )
+
+    assert found is not None

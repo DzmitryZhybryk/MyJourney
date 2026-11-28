@@ -1,0 +1,94 @@
+/*
+ * Admin shell: a narrow section menu beside the content card. On a narrow screen the menu becomes a
+ * row of links above the card.
+ */
+
+.admin-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 640px);
+  justify-content: center;
+  align-items: start;
+  gap: 28px;
+  padding: var(--content-offset-top) var(--header-inset) 48px;
+}
+
+.admin-layout--wide {
+  grid-template-columns: 13rem minmax(0, 1180px);
+}
+
+.admin-nav {
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 10px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  background: var(--surface-card);
+  backdrop-filter: blur(var(--card-blur));
+}
+
+.admin-nav__title {
+  padding: 0 10px 10px;
+  font: 600 var(--fs-17) / 1.3 var(--font-display);
+  color: var(--text);
+}
+
+.admin-nav__link {
+  padding: 8px 10px;
+  border-radius: var(--radius-action);
+  font-size: var(--fs-14);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.admin-nav__link:hover {
+  color: var(--text);
+  background: rgb(var(--ink-on-dark-rgb) / 0.06);
+}
+
+.admin-nav__link--active {
+  color: var(--text);
+  background: rgb(var(--ink-on-dark-rgb) / 0.1);
+}
+
+.admin-nav__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.admin-content {
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .admin-layout {
+    grid-template-columns: minmax(0, 640px);
+    gap: 16px;
+  }
+
+  .admin-layout--wide {
+    grid-template-columns: minmax(0, 1180px);
+  }
+
+  .admin-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 8px;
+  }
+
+  .admin-nav__title {
+    padding: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-nav__link {
+    transition: none;
+  }
+}

@@ -4,8 +4,7 @@ import uuid
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.models import BaseDBModel
-from app.shared.models.base_model import DateTimeMixin
+from app.shared.infra.db.postgres.models import BaseDBModel, DateTimeMixin
 
 
 class Challenge(DateTimeMixin, BaseDBModel):
@@ -27,7 +26,8 @@ class Challenge(DateTimeMixin, BaseDBModel):
         ForeignKey("user_credentials.user_id", ondelete="CASCADE"),
     )
     challenge_type: Mapped[str] = mapped_column(String(32))
-    code_hash: Mapped[str] = mapped_column(Text())
+    code_ciphertext: Mapped[str] = mapped_column(Text())
     expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    last_sent_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
     attempts: Mapped[int] = mapped_column(default=0)
     used_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)

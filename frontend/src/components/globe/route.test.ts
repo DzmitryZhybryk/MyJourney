@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PlaceSuggestion } from "../../api/journeys";
+import type { CitySearchItem } from "../../api/sdk";
 import {
   altitudeForSeparation,
   apexScale,
@@ -10,13 +10,15 @@ import {
   CAMERA_MIN_ALTITUDE,
   clamp,
   greatCirclePoint,
-  isRealPlace,
+  isRealCity,
+  routeCameraPov,
+  type GlobeRoute,
 } from "./route";
 
-// Минск как «реальное» место из автокомплита; координаты переопределяются под кейс.
-function makePlace(overrides: Partial<PlaceSuggestion> = {}): PlaceSuggestion {
+// Minsk as a "real" city from autocomplete; coordinates are overridden per case.
+function makeCity(overrides: Partial<CitySearchItem> = {}): CitySearchItem {
   return {
-    placeId: "1",
+    cityId: "1",
     name: "Minsk",
     countryCode: "BY",
     latitude: 53.9,
@@ -40,7 +42,7 @@ describe("greatCirclePoint", () => {
   });
 
   it("при t=0.5 попадает в середину дуги экватора", () => {
-    // Большой круг (0,0)→(0,90) по экватору: середина — (0, 45).
+    // The great circle (0,0)->(0,90) along the equator: the midpoint is (0, 45).
     const point = greatCirclePoint(0, 0, 0, 90, 0.5);
     expect(point.lat).toBeCloseTo(0);
     expect(point.lng).toBeCloseTo(45);
@@ -134,27 +136,89 @@ describe("buildTrail", () => {
   });
 
   it("обрезает след по прогрессу — голова на середине, не на финише", () => {
-    // progress=0.5 по экватору (0,0)→(0,90): голова в (0, 45).
+    // progress=0.5 along the equator (0,0)->(0,90): the head is at (0, 45).
     const trail = buildTrail(0, 0, 0, 90, 0.14, 0.5);
     const last = trail[trail.length - 1];
     expect(last.lng).toBeCloseTo(45);
   });
 });
 
-describe("isRealPlace", () => {
+describe("isRealCity", () => {
   it("false для null", () => {
-    expect(isRealPlace(null)).toBe(false);
+    expect(isRealCity(null)).toBe(false);
   });
 
-  it("false для места с нулевыми координатами", () => {
-    expect(isRealPlace(makePlace({ latitude: 0, longitude: 0 }))).toBe(false);
+  it("false для города с нулевыми координатами", () => {
+    expect(isRealCity(makeCity({ latitude: 0, longitude: 0 }))).toBe(false);
   });
 
-  it("true для места с реальными координатами", () => {
-    expect(isRealPlace(makePlace({ latitude: 53.9, longitude: 27.56 }))).toBe(true);
+  it("true для города с реальными координатами", () => {
+    expect(isRealCity(makeCity({ latitude: 53.9, longitude: 27.56 }))).toBe(true);
   });
 
   it("true если хотя бы одна координата ненулевая", () => {
-    expect(isRealPlace(makePlace({ latitude: 0, longitude: 27.56 }))).toBe(true);
+    expect(isRealCity(makeCity({ latitude: 0, longitude: 27.56 }))).toBe(true);
+  });
+});
+
+describe("routeCameraPov", () => {
+  const MINSK = makeCity();
+  const VILNIUS = makeCity({ cityId: "2", name: "Vilnius", countryCode: "LT", latitude: 54.69, longitude: 25.28 });
+  const TOKYO = makeCity({ cityId: "3", name: "Tokyo", countryCode: "JP", latitude: 35.68, longitude: 139.69 });
+
+  function makeRoute(origin: CitySearchItem | null, destination: CitySearchItem | null): GlobeRoute {
+    return { origin, destination, transportType: "air", originLabel: "", destinationLabel: "" };
+  }
+
+  it("без формы — нейтральный вид на дальнем зуме, центр подтянут к экватору", () => {
+    // The neutral latitude 20° at far zoom gives 40% to the equator: 20 x 0.6.
+    expect(routeCameraPov(null)).toEqual({ lat: 12, lng: 0, altitude: CAMERA_MAX_ALTITUDE });
+  });
+
+  it("пустая форма смотрит туда же, куда и отсутствие формы", () => {
+    expect(routeCameraPov(makeRoute(null, null))).toEqual(routeCameraPov(null));
+  });
+
+  it("выбран только город отправления — камера на нём, на дальнем зуме", () => {
+    const pov = routeCameraPov(makeRoute(MINSK, null));
+
+    expect(pov.lng).toBeCloseTo(MINSK.longitude);
+    expect(pov.lat).toBeCloseTo(MINSK.latitude * 0.6);
+    expect(pov.altitude).toBe(CAMERA_MAX_ALTITUDE);
+  });
+
+  it("выбран только город назначения — камера на нём", () => {
+    const pov = routeCameraPov(makeRoute(null, TOKYO));
+
+    expect(pov.lng).toBeCloseTo(TOKYO.longitude);
+    expect(pov.lat).toBeCloseTo(TOKYO.latitude * 0.6);
+  });
+
+  it("город без координат не считается выбранным — камера идёт на реальный конец", () => {
+    const pov = routeCameraPov(makeRoute(makeCity({ latitude: 0, longitude: 0 }), TOKYO));
+
+    expect(pov.lng).toBeCloseTo(TOKYO.longitude);
+  });
+
+  it("два города — камера на середине пути", () => {
+    const pov = routeCameraPov(makeRoute(MINSK, VILNIUS));
+
+    expect(pov.lng).toBeGreaterThan(VILNIUS.longitude);
+    expect(pov.lng).toBeLessThan(MINSK.longitude);
+  });
+
+  it("ближе города — ближе камера, но не ближе нижнего предела", () => {
+    const near = routeCameraPov(makeRoute(MINSK, VILNIUS));
+    const far = routeCameraPov(makeRoute(MINSK, TOKYO));
+
+    expect(near.altitude).toBeLessThan(far.altitude);
+    expect(near.altitude).toBeGreaterThanOrEqual(CAMERA_MIN_ALTITUDE);
+  });
+
+  it("на ближнем зуме центр почти не тянется к экватору — города остаются в кадре", () => {
+    const pov = routeCameraPov(makeRoute(MINSK, VILNIUS));
+    const middleLat = greatCirclePoint(MINSK.latitude, MINSK.longitude, VILNIUS.latitude, VILNIUS.longitude, 0.5).lat;
+
+    expect(pov.lat / middleLat).toBeGreaterThan(0.9);
   });
 });

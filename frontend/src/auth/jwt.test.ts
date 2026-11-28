@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { decodeAccessTokenClaims } from "./jwt";
 
-/** Кодирует строку в base64url (как payload-сегмент JWT: `+/` → `-_`, без паддинга). */
+/** Encodes a string as base64url (like a JWT payload segment: `+/` -> `-_`, no padding). */
 function base64Url(value: string): string {
   return btoa(value)
     .replace(/\+/gu, "-")
@@ -10,20 +10,27 @@ function base64Url(value: string): string {
     .replace(/=+$/u, "");
 }
 
-/** Собирает «токен» `header.<payload>.signature` с произвольным payload (подпись не проверяется). */
+/** Builds a "token" `header.<payload>.signature` with an arbitrary payload (the signature is not checked). */
 function makeToken(payload: Record<string, unknown>): string {
   return `header.${base64Url(JSON.stringify(payload))}.signature`;
 }
 
 describe("decodeAccessTokenClaims", () => {
-  it("декодирует валидный access-токен в claims", () => {
+  it("декодирует валидный access-токен в claims, без роли — обычный пользователь", () => {
     const token = makeToken({ sub: "user-1", email_verified: true, exp: 1_700_000_000 });
 
     expect(decodeAccessTokenClaims(token)).toEqual({
       sub: "user-1",
       email_verified: true,
       exp: 1_700_000_000,
+      role: "user",
     });
+  });
+
+  it("читает роль из токена", () => {
+    const token = makeToken({ sub: "admin-1", email_verified: true, exp: 1_700_000_000, role: "admin" });
+
+    expect(decodeAccessTokenClaims(token)?.role).toBe("admin");
   });
 
   it("возвращает null для токена не из трёх частей", () => {

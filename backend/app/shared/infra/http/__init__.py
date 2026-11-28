@@ -1,4 +1,3 @@
-from app.shared.infra.http.client import BaseHTTPClient
 from app.shared.infra.http.config import HTTPClientConfig
 from app.shared.infra.http.exceptions import (
     ExternalAPIError,
@@ -7,7 +6,6 @@ from app.shared.infra.http.exceptions import (
 )
 
 __all__ = [
-    "BaseHTTPClient",
     "ExternalAPIError",
     "ExternalAPIPersistentError",
     "ExternalAPITemporaryError",

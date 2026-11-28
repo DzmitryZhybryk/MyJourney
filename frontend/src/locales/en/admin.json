@@ -1,0 +1,95 @@
+{
+  "title": "Admin",
+  "sections": {
+    "mediaConfig": "Upload rules",
+    "accounts": "Accounts"
+  },
+  "accounts": {
+    "loadError": "Couldn't load the accounts. Reload the page.",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "pagination": "Account list pages",
+    "filters": {
+      "region": "Account filters",
+      "email": "Email",
+      "emailPlaceholder": "Part of the address",
+      "name": "Name",
+      "namePlaceholder": "Part of the name",
+      "role": "Role",
+      "anyRole": "All roles",
+      "consent": "Marketing emails",
+      "consentAny": "All",
+      "consentYes": "Yes",
+      "consentNo": "No",
+      "includeDeleted": "Show deleted",
+      "reset": "Reset filters"
+    },
+    "columns": {
+      "account": "Email and username",
+      "name": "Name",
+      "role": "Role",
+      "plan": "Plan",
+      "emailVerified": "Email verified",
+      "consent": "Marketing emails",
+      "terms": "Terms accepted",
+      "registered": "Registered"
+    },
+    "sort": {
+      "desc": "Newest first",
+      "asc": "Oldest first"
+    },
+    "deleted": "deleted {{date}}",
+    "consent": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "roles": {
+      "user": "User",
+      "admin": "Administrator"
+    },
+    "plans": {
+      "free": "Free",
+      "premium": "Premium"
+    },
+    "empty": "No accounts match the filters.",
+    "emptyAll": "No accounts yet.",
+    "pageEmpty": "There are no accounts on this page.",
+    "toFirstPage": "Go to the first page"
+  },
+  "loadError": "Couldn't load the upload rules. Reload the page.",
+  "version": {
+    "number": "Version",
+    "savedAt": "Saved",
+    "savedBy": "By",
+    "initial": "Initial value"
+  },
+  "account": {
+    "missing": "Deleted account",
+    "deleted": "{{email}} (deleted)"
+  },
+  "kinds": {
+    "avatar": "Avatar",
+    "journeyPhoto": "Journey photos",
+    "journeyVideo": "Journey videos"
+  },
+  "rules": {
+    "maxSize": "Size up to",
+    "formats": "Formats",
+    "minSide": {
+      "short": "Short side from",
+      "long": "Long side from",
+      "any": "Side from"
+    },
+    "positiveNumber": "Enter a number greater than zero"
+  },
+  "units": {
+    "megabytes": "MB",
+    "pixels": "px"
+  },
+  "save": {
+    "region": "Unsaved changes",
+    "pending_one": "{{count}} change not saved",
+    "pending_other": "{{count}} changes not saved",
+    "discard": "Discard",
+    "submit": "Save"
+  }
+}

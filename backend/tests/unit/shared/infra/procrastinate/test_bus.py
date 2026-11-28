@@ -20,10 +20,10 @@ async def test_defer_enqueues_job_with_name_lock_and_args() -> None:
     app = ProcrastinateApp(connector=connector)
 
     @app.task(name="send_email")
-    async def _send_email(*, to: str) -> None: ...
+    async def _send_email(to: str) -> None: ...
 
     async with app.open_async():
-        await ProcrastinateTaskBus(app=app).defer(task_name="send_email", lock="user-1", to="user@example.com")
+        await ProcrastinateTaskBus(app).defer(task_name="send_email", lock="user-1", to="user@example.com")
 
     jobs = connector.jobs
     assert len(jobs) == 1
@@ -36,6 +36,6 @@ def test_bind_to_returns_session_bound_bus() -> None:
     """``bind_to`` возвращает сессионно-привязанный view (``ProcrastinateSessionBoundTaskBus``)."""
     app = ProcrastinateApp(connector=InMemoryConnector())
 
-    bound = ProcrastinateTaskBus(app=app).bind_to(session=AsyncSession())
+    bound = ProcrastinateTaskBus(app).bind_to(AsyncSession())
 
     assert isinstance(bound, ProcrastinateSessionBoundTaskBus)

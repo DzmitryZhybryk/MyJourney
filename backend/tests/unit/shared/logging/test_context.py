@@ -1,90 +1,41 @@
 """
-Unit-тесты сборки контекста логирования (``app.shared.logging.context``).
+Unit-тесты контекста строки лога: номер HTTP-запроса из текущего span'а и значения, привязанные к запросу.
 
-Чистые функции над ``Request``: извлечение клиентского контекста, сборка контекста
-запроса (с явным контекстом и с фоллбэком на извлечённый) и контекста ошибки
-(доменная ошибка без traceback'а vs неожиданная — с traceback'ом).
+Span создаётся провайдером процесса (``get_tracer_provider``) — тем же, что даёт номера запросам API.
 """
 
-from collections.abc import Callable
+import structlog
+from structlog.testing import capture_logs
 
-from starlette.requests import Request
-
-from app.shared.exceptions import NotFoundError
-from app.shared.logging.context import (
-    build_error_log_context,
-    build_log_context,
-    extract_request_context,
-)
+from app.shared.infra.telemetry import get_tracer_provider
+from app.shared.logging.context import add_trace_context, bind_log_context
 
 
-def test_extract_request_context_collects_all_present_fields(make_request: Callable[..., Request]) -> None:
-    """Контекст собирает client_ip, query_params и user_id/request_id из request.state."""
-    request = make_request(
-        client=("203.0.113.5", 54321),
-        query=b"a=1&b=2",
-        state={"user_id": "user-1", "request_id": "req-1"},
-    )
+def test_add_trace_context_inside_span_adds_trace_and_span_ids() -> None:
+    """Внутри span'а строка получает его trace_id (32 hex) и span_id (16 hex); остальные поля не меняются."""
+    tracer = get_tracer_provider().get_tracer("test")
+    with tracer.start_as_current_span("request") as span:
+        event_dict = add_trace_context(None, "info", {"event": "test.event"})
 
-    context = extract_request_context(request)
-
-    assert context == {
-        "client_ip": "203.0.113.5",
-        "query_params": "a=1&b=2",
-        "user_id": "user-1",
-        "request_id": "req-1",
+    span_context = span.get_span_context()
+    assert event_dict == {
+        "event": "test.event",
+        "trace_id": format(span_context.trace_id, "032x"),
+        "span_id": format(span_context.span_id, "016x"),
     }
 
 
-def test_extract_request_context_empty_when_nothing_present(make_request: Callable[..., Request]) -> None:
-    """Без client/query/state контекст пустой (опциональные поля не выдумываются)."""
-    context = extract_request_context(make_request())
-
-    assert context == {}
+def test_add_trace_context_outside_span_leaves_line_unchanged() -> None:
+    """Вне span'а (старт, воркер, CLI) строка остаётся как есть."""
+    assert add_trace_context(None, "info", {"event": "test.event"}) == {"event": "test.event"}
 
 
-def test_build_log_context_uses_explicit_context_when_given(make_request: Callable[..., Request]) -> None:
-    """При переданном ``context`` он подмешивается как есть (без извлечения из request)."""
-    log_context = build_log_context(make_request(), status_code=200, process_time=0.12345, context={"trace": "abc"})
+def test_bind_log_context_adds_values_to_every_following_line(restore_logging: None) -> None:
+    """Привязанное значение попадает в каждую следующую строку лога."""
+    bind_log_context(user_id="user-1")
 
-    assert log_context["method"] == "GET"
-    assert log_context["path"] == "/v1/ping"
-    assert log_context["status_code"] == 200
-    assert log_context["process_time"] == 0.1235
-    assert log_context["trace"] == "abc"
+    with capture_logs(processors=[structlog.contextvars.merge_contextvars]) as logs:
+        structlog.get_logger("test").info("test.first")
+        structlog.get_logger("test").info("test.second")
 
-
-def test_build_log_context_falls_back_to_extracted_context(make_request: Callable[..., Request]) -> None:
-    """Без явного ``context`` подмешивается извлечённый из request (client_ip и т.п.)."""
-    request = make_request(client=("203.0.113.5", 54321))
-
-    log_context = build_log_context(request, status_code=200, process_time=0.1)
-
-    assert log_context["client_ip"] == "203.0.113.5"
-
-
-def test_build_error_log_context_for_domain_error_omits_traceback(make_request: Callable[..., Request]) -> None:
-    """Доменная ошибка: пишутся error_code/error_message, traceback не нужен, статус из категории."""
-    log_context, status_code, include_traceback = build_error_log_context(
-        make_request(),
-        exc=NotFoundError(),
-        process_time=0.1,
-    )
-
-    assert status_code == 404
-    assert log_context["error_code"] == "not_found"
-    assert log_context["error_type"] == "NotFoundError"
-    assert include_traceback is False
-
-
-def test_build_error_log_context_for_unexpected_error_includes_traceback(make_request: Callable[..., Request]) -> None:
-    """Неожиданная ошибка: error_message из str(exc), traceback включается."""
-    log_context, status_code, include_traceback = build_error_log_context(
-        make_request(),
-        exc=ValueError("boom"),
-        process_time=0.1,
-    )
-
-    assert status_code == 500
-    assert log_context["error_message"] == "boom"
-    assert include_traceback is True
+    assert [entry["user_id"] for entry in logs] == ["user-1", "user-1"]

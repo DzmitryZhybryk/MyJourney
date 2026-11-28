@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.journeys.application.ports import JourneyRepositoryPort, JourneyUnitOfWorkPort
+from app.journeys.application.ports.journey_repository import JourneyRepositoryPort
+from app.journeys.application.ports.unit_of_work import JourneyUnitOfWorkPort
 from app.journeys.infra.repositories import JourneyRepository
-from app.shared.infra.postgres.uow import BaseUnitOfWork
+from app.shared.infra.db.postgres.uow import BaseUnitOfWork
 
 
 class JourneyUnitOfWork(BaseUnitOfWork, JourneyUnitOfWorkPort):
@@ -10,4 +11,4 @@ class JourneyUnitOfWork(BaseUnitOfWork, JourneyUnitOfWorkPort):
 
     def __init__(self, session: AsyncSession):
         super().__init__(session=session)
-        self.journey_repository = JourneyRepository(session=session)
+        self.journey_repository = JourneyRepository(session)

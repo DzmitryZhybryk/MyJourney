@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.shared.infra.crypto import Argon2SaltedHasher
+from app.shared.infra.crypto.argon2 import Argon2SaltedHasher
 
 
 @pytest.fixture

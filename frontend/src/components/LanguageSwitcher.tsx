@@ -5,17 +5,17 @@ import { SUPPORTED_LANGUAGES } from "../i18n";
 
 interface LanguageSwitcherProps {
   /**
-   * Доп. класс на кнопку. Нужен, чтобы стилизовать переключатель под тёмный фон
-   * (напр. на лендинге через переопределение Mantine `--button-*` переменных) —
-   * дефолтный `subtle`/`gray` рассчитан на светлые шапки и на тёмном не читается.
+   * Extra class on the button, to style the switcher for a dark background (e.g. on the landing
+   * by overriding Mantine `--button-*` variables): the default `subtle`/`gray` assumes a light
+   * header and is unreadable on dark.
    */
   className?: string;
 }
 
 /**
- * Переключатель языка. Список опций строится из `SUPPORTED_LANGUAGES`, поэтому
- * добавление нового языка в реестр автоматически появляется здесь — править
- * компонент не нужно. Выбор сохраняется в localStorage детектором i18next.
+ * Language switcher. Options come from `SUPPORTED_LANGUAGES`, so a language added to the
+ * registry appears here without touching the component. The i18next detector persists the choice
+ * in localStorage.
  */
 export function LanguageSwitcher({ className }: LanguageSwitcherProps = {}) {
   const { i18n, t } = useTranslation("common");

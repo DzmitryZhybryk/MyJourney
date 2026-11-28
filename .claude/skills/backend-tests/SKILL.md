@@ -1,6 +1,6 @@
 ---
 name: backend-tests
-description: Write or extend backend unit tests for the MindTrace FastAPI service (DDD, pytest, async). Use when the user asks to write/add/cover backend tests, test a domain/service/entity, or scaffold the test suite. Follows the conventions in .claude/rules/python/testing.md (structure, hand-written fakes, thin repository Protocols, determinism). Backend integration/api tests are separate later phases.
+description: Write or extend backend unit tests for the MyJourney FastAPI service (DDD, pytest, async). Use when the user asks to write/add/cover backend tests, test a domain/service/entity, or scaffold the test suite. Conventions are in .claude/rules/python/testing.md and testing-layout.md. Unit tests by default; integration and api only on explicit request.
 ---
 
 # Backend tests
@@ -10,10 +10,10 @@ from `backend/` (self-contained uv project).
 
 ## Source of truth
 
-**Conventions live in `.claude/rules/python/testing.md`** — it is `@`-included in `CLAUDE.md`, so
-it's always in context. Do **not** restate or fork those rules here; this skill is only the
-*procedure*. Re-read that file before writing if anything is unclear (pyramid, layout, fakes,
-Protocols, determinism, coverage, anti-patterns).
+Conventions live in `.claude/rules/python/testing.md` (style, fakes, determinism) and
+`.claude/rules/python/testing-layout.md` (levels, layout, markers, fixture placement, targets).
+They load when Claude reads anything under `backend/tests/`; read both explicitly before the first
+test of a session. Do **not** restate or fork them here — this skill is only the *procedure*.
 
 ## Scope
 
@@ -31,20 +31,15 @@ Protocols, determinism, coverage, anti-patterns).
    `backend/tests/` rather than assuming. **Never hand-tag markers:** the
    `pytest_collection_modifyitems` hook in `tests/conftest.py` applies level and domain markers
    from the file path.
-3. **Prepare fakes (boundary only).**
-   - Reuse / add an in-memory fake in `backend/tests/fakes/` (repositories, clients, `TaskBusPort`,
-     hashers). Back repositories with a `dict`; `FakeSaltedHasher` avoids real argon2.
-   - When writing the **first** fake for a repository, add a thin `typing.Protocol` in the
-     **application layer** (`app/<domain>/application/ports.py`, only the methods used) and type both
-     the real repo and the fake. By DIP the contract belongs to application; `infra` imports the port
-     and implements it (never the reverse). The port module depends only on `domain`.
-   - Fake UoW = simple object with the fake repos + `commit = AsyncMock()`.
-   - Keep **real** stateless infra (`JWTService`, `TokenIssuer`).
-4. **Add builders** for entities/VO in `backend/tests/builders.py` (plain kwargs functions, named
-   args, explicit timestamps — no `factory-boy`).
-5. **Write the test.** `async def test_<unit>_<condition>_<expected>` (no decorator —
-   `asyncio_mode=auto`). State-based assertions; `pytest.raises(Err, match=...)`; parametrize
-   variants; named arguments everywhere; assert invariants for random/time values.
+3. **Prepare fakes (boundary only).** Reuse or add an in-memory fake in `backend/tests/fakes/`,
+   shaped per `testing.md` → "Fakes over mocks". When writing the **first** fake for a
+   repository, add its port (a thin `Protocol`, only the methods used) and type both the real
+   repo and the fake with it — placement and imports per `layers.md` → "Outbound ports", the
+   name per `naming.md`.
+4. **Add builders** in `backend/tests/builders.py` only when the same construction repeats across
+   files (`testing.md` → "Test data builders", "Reuse before create").
+5. **Write the test** to the conventions of `testing.md`: naming, state-based assertions,
+   parametrized variants, determinism.
 6. **Verify green:**
    ```bash
    cd backend
@@ -53,14 +48,11 @@ Protocols, determinism, coverage, anti-patterns).
    make typecheck                   # ty — catches fake/Protocol drift
    ```
 7. **Coverage.** `make coverage`. The 90% threshold is already enforced (`--cov-fail-under=90`
-   in the Makefile, forced by the pre-push hook) — below it the code does not merge, so check
-   before pushing rather than after.
-8. **Review (optional).** For non-trivial additions, ask the user to run `/code-review` — it
-   reviews the diff in a fresh subagent. It is user-invoked; you cannot launch it yourself.
+   in the Makefile, forced by the pre-commit hook) — below it the code does not merge, so check
+   before committing rather than after.
+8. **Review (optional).** For non-trivial additions, offer to run `/code-review` on the diff.
 
 ## Notes
 
-- Never mock `AsyncSession`/SQLAlchemy or unit-test repositories — that's the integration phase.
+- Repositories are not unit-tested — that's the integration phase.
 - Don't assert private internals (`service._uow`) — ruff `SLF001` will flag it.
-- Design fakes as full port replacements: they're reused in the api phase via
-  `app.dependency_overrides` and a fake `TaskBusPort` via `app.registry`.

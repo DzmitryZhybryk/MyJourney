@@ -1,12 +1,12 @@
 """
 api-тесты единого контракта ошибок (через auth-роуты).
 
-Пиннят форму ``ErrorResponse``-envelope, общую для всех ошибок: доменные несут
+Пиннят форму ``ErrorResponse``-envelope, общую для всех ошибок: ``AppError`` несут
 ``{code, message, details, timestamp}``; field-bound кладут ``details.field``; 422 от
-FastAPI заворачивается в ``code="validation_error"`` с ``details.fields[]``; не-доменное
-исключение даёт ``{code: "internal"}`` без утечки внутренних деталей.
+FastAPI заворачивается в ``code="validation_error"`` с ``details.fields[]``; исключение
+вне ``AppError`` даёт ``{code: "internal"}`` без утечки внутренних деталей.
 
-Категории, недостижимые auth-роутами (403 PERMISSION_DENIED, доменный 422 UNPROCESSABLE),
+Категории, недостижимые auth-роутами (403 PERMISSION_DENIED, 422 UNPROCESSABLE от ``AppError``),
 покрыты юнит-тестом ``resolve_http_status`` (``tests/unit/shared/exceptions/test_mappings.py``).
 """
 
@@ -17,8 +17,8 @@ from httpx import AsyncClient
 from tests.fakes import FakeAuthUnitOfWork
 
 
-async def test_domain_error_envelope_has_all_fields(client: AsyncClient) -> None:
-    """Доменная ошибка отдаёт полный envelope {code, message, details, timestamp}."""
+async def test_app_error_envelope_has_all_fields(client: AsyncClient) -> None:
+    """AppError отдаёт полный envelope {code, message, details, timestamp}."""
     response = await client.post("/v1/auth/login/", json={"login": "ghost@example.com", "password": "whatever123"})
 
     assert response.status_code == 401
@@ -30,7 +30,7 @@ async def test_domain_error_envelope_has_all_fields(client: AsyncClient) -> None
 
 
 async def test_field_bound_error_carries_details_field(client: AsyncClient) -> None:
-    """Field-bound доменная ошибка несёт details.field с именем поля формы."""
+    """Field-bound AppError несёт details.field с именем поля формы."""
     response = await client.post(
         "/v1/auth/register/",
         json={
@@ -63,11 +63,11 @@ async def test_validation_error_envelope_lists_fields(client: AsyncClient) -> No
         assert isinstance(field_error["reason"], str)
 
 
-async def test_non_domain_exception_returns_internal_without_leak(
+async def test_non_app_error_returns_internal_without_leak(
     client: AsyncClient,
     fake_uow: FakeAuthUnitOfWork,
 ) -> None:
-    """Не-доменное исключение → 500 {code: internal} без утечки сообщения/трейсбека."""
+    """Исключение вне AppError → 500 {code: internal} без утечки сообщения/трейсбека."""
     fake_uow.commit_mock.side_effect = RuntimeError("secret internal boom")
 
     response = await client.post(

@@ -2,16 +2,16 @@ import { expect, test } from "../fixtures";
 import { getRefreshCookie, WEBKIT_SECURE_COOKIE_REASON } from "../helpers/session";
 
 /**
- * E2E: logout по флоу C.
+ * E2E: logout (flow C).
  *
- * Real-stack: реальный `POST /v1/auth/logout/` (204) чистит и серверную HttpOnly-cookie,
- * и локальный токен. Наличие пункта меню (C1) косвенно проверяется тем, что мы по нему кликаем.
+ * Real stack: a real `POST /v1/auth/logout/` (204) clears both the server HttpOnly cookie and the
+ * local token. The menu item's presence (C1) is checked indirectly by clicking it.
  */
 test.describe("Logout", () => {
   test("logout из меню профиля ведёт на /login и чистит сессию", async ({ authedPage, context, browserName }) => {
     test.skip(browserName === "webkit", WEBKIT_SECURE_COOKIE_REASON);
 
-    // refresh-cookie выставлена при логине — фиксируем «до», чтобы ассерт «после» был осмысленным.
+    // The refresh cookie is set at login; record "before" so the "after" assertion is meaningful.
     expect(await getRefreshCookie(context)).toBeDefined();
 
     await authedPage.getByRole("button", { name: "Open profile menu" }).click();
@@ -25,8 +25,8 @@ test.describe("Logout", () => {
   });
 
   test("logout идемпотентен офлайн — локально чистит сессию и ведёт на /login", async ({ authedPage, context }) => {
-    // Сеть отключена: серверный logout не дойдёт, но catch на фронте всё равно
-    // чистит токен локально и навигирует на /login (идемпотентность).
+    // The network is off: the server logout will not arrive, but the frontend catch still clears the
+    // token locally and navigates to /login (idempotency).
     await context.setOffline(true);
 
     await authedPage.getByRole("button", { name: "Open profile menu" }).click();

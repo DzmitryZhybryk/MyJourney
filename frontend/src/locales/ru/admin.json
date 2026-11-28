@@ -1,0 +1,97 @@
+{
+  "title": "Админка",
+  "sections": {
+    "mediaConfig": "Правила загрузки",
+    "accounts": "Аккаунты"
+  },
+  "accounts": {
+    "loadError": "Не удалось загрузить аккаунты. Обновите страницу.",
+    "range": "{{from}}–{{to}} из {{total}}",
+    "pagination": "Страницы списка аккаунтов",
+    "filters": {
+      "region": "Фильтры аккаунтов",
+      "email": "Email",
+      "emailPlaceholder": "Часть адреса",
+      "name": "Имя",
+      "namePlaceholder": "Часть имени",
+      "role": "Роль",
+      "anyRole": "Все роли",
+      "consent": "Рассылки",
+      "consentAny": "Все",
+      "consentYes": "Да",
+      "consentNo": "Нет",
+      "includeDeleted": "Показывать удалённые",
+      "reset": "Сбросить фильтры"
+    },
+    "columns": {
+      "account": "Email и username",
+      "name": "Имя",
+      "role": "Роль",
+      "plan": "Тариф",
+      "emailVerified": "Почта подтверждена",
+      "consent": "Рассылки",
+      "terms": "Условия приняты",
+      "registered": "Регистрация"
+    },
+    "sort": {
+      "desc": "Сначала новые",
+      "asc": "Сначала старые"
+    },
+    "deleted": "удалён {{date}}",
+    "consent": {
+      "yes": "Да",
+      "no": "Нет"
+    },
+    "roles": {
+      "user": "Пользователь",
+      "admin": "Администратор"
+    },
+    "plans": {
+      "free": "Бесплатный",
+      "premium": "Премиум"
+    },
+    "empty": "Ни один аккаунт не подходит под фильтры.",
+    "emptyAll": "Аккаунтов пока нет.",
+    "pageEmpty": "На этой странице аккаунтов нет.",
+    "toFirstPage": "К первой странице"
+  },
+  "loadError": "Не удалось загрузить правила. Обновите страницу.",
+  "version": {
+    "number": "Версия",
+    "savedAt": "Сохранена",
+    "savedBy": "Кем",
+    "initial": "Начальное значение"
+  },
+  "account": {
+    "missing": "Удалённый аккаунт",
+    "deleted": "{{email}} (удалён)"
+  },
+  "kinds": {
+    "avatar": "Аватар",
+    "journeyPhoto": "Фото поездок",
+    "journeyVideo": "Видео поездок"
+  },
+  "rules": {
+    "maxSize": "Размер до",
+    "formats": "Форматы",
+    "minSide": {
+      "short": "Короткая сторона от",
+      "long": "Длинная сторона от",
+      "any": "Сторона от"
+    },
+    "positiveNumber": "Введите число больше нуля"
+  },
+  "units": {
+    "megabytes": "МБ",
+    "pixels": "px"
+  },
+  "save": {
+    "region": "Несохранённые изменения",
+    "pending_one": "{{count}} изменение не сохранено",
+    "pending_few": "{{count}} изменения не сохранены",
+    "pending_many": "{{count}} изменений не сохранено",
+    "pending_other": "{{count}} изменения не сохранены",
+    "discard": "Отменить",
+    "submit": "Сохранить"
+  }
+}

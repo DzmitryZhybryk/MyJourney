@@ -4,12 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!--
-      Предзагрузка ОДНОГО субсета Lora — латиница обычного начертания. Им набраны все
-      заголовки, включая LCP-элемент hero; без preload они успевают отрисоваться
-      запасной гарнитурой и потом прыгают. Остальные семь субсетов (курсив, кириллица)
-      не преднагружаем намеренно: они нужны фрагментами, а preload качает безусловно и
-      отобрал бы полосу у критического.
-      crossorigin обязателен даже для своего домена — иначе браузер скачает файл дважды.
+      Preload of ONE Lora subset: regular-style Latin. All headings, including the hero LCP element,
+      use it; without preload they render in the fallback face first and then jump. The other seven
+      subsets (italic, Cyrillic) are deliberately not preloaded: they are needed in fragments, and
+      preload downloads unconditionally and would take bandwidth from critical resources.
+      crossorigin is required even for the same origin, otherwise the browser downloads the file twice.
     -->
     <link
       rel="preload"
@@ -19,9 +18,8 @@
       crossorigin
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Цвет UI браузера на мобильных. Должен совпадать с поверхностью продукта (`--ink`):
-         кремовый #faf6ef остался от светлой темы до редизайна и давал светлую шапку
-         браузера над тёмным приложением. -->
+    <!-- Browser UI colour on mobile. Must match the product surface (`--ink`), otherwise the browser
+         chrome would be light over a dark app. -->
     <meta name="theme-color" content="#0b1020" />
     <meta
       name="description"
@@ -30,14 +28,13 @@
     <title>MyJourney — the world, the way you traveled it</title>
 
     <!--
-      Картинка превью НЕ задана намеренно. Раньше здесь стоял `/favicon.svg`, и это не
-      работало по двум причинам сразу: og:image требует АБСОЛЮТНЫЙ URL (относительный путь
-      краулер не резолвит), а SVG как формат превью не поддерживает ни один крупный
-      агрегатор — нужен растр (PNG/JPG), рекомендованно 1200×630.
-      Ссылка на несуществующее превью хуже отсутствия: платформа показывает битую карточку
-      вместо того, чтобы собрать её из title и description. Вернуть og:image и
-      twitter:card=summary_large_image вместе с реальным файлом og-cover.png и известным
-      доменом (сейчас прод живёт по IP — канонический URL ещё не зафиксирован).
+      The preview image is deliberately NOT set. `/favicon.svg` would not work for two reasons at
+      once: og:image requires an ABSOLUTE URL (a crawler does not resolve a relative path), and no
+      major aggregator supports SVG as a preview format; a raster (PNG/JPG) is needed, 1200x630
+      recommended.
+      A link to a nonexistent preview is worse than none: the platform shows a broken card instead
+      of building one from title and description. Restore og:image and twitter:card=summary_large_image
+      together with a real og-cover.png file and a known domain (the canonical URL is not fixed yet).
     -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="MyJourney — the world, the way you traveled it" />

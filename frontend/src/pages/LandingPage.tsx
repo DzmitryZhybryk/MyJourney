@@ -3,14 +3,14 @@ import { Link } from "react-router";
 
 import "./landing.css";
 
-/** Копирайт-элемент секции «фичи» (из i18n `landing:features.items`). */
+/** Copy item of the features section (from i18n `landing:features.items`). */
 interface FeatureItem {
   stamp: string;
   title: string;
   body: string;
 }
 
-/** Шаг итинерария (из i18n `landing:steps.items`). */
+/** Itinerary step (from i18n `landing:steps.items`). */
 interface StepItem {
   no: string;
   title: string;
@@ -18,7 +18,7 @@ interface StepItem {
   stamp: string;
 }
 
-/** Ячейка статистики примера-атласа (из i18n `landing:atlas.stats`). */
+/** Stat cell of the sample atlas (from i18n `landing:atlas.stats`). */
 interface AtlasStat {
   value: string;
   label: string;
@@ -27,29 +27,27 @@ interface AtlasStat {
 const BRAND = "MyJourney";
 
 /**
- * Массив объектов из i18n или пустой массив.
+ * Array of objects from i18n, or an empty array.
  *
- * `t(key, { returnObjects: true })` типизирован как `string`, поэтому раньше здесь стоял
- * тройной каст `as unknown as T[]`. Каст молчит и в том случае, когда ключа нет: i18next
- * возвращает саму строку-ключ, `.map` по строке падает — и лендинг, единственная страница
- * для анонима, уходит в белый экран из-за опечатки в JSON. Проверяем форму на границе.
+ * `t(key, { returnObjects: true })` is typed as `string`, and a cast stays silent when the key is
+ * missing: i18next returns the key string itself, `.map` on a string throws, and the landing (the
+ * only page for anonymous users) goes blank over a JSON typo. Check the shape at the boundary.
  */
-function itemsFromTranslation<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
+function itemsFromTranslation<T>(value: unknown): readonly T[] {
+  return Array.isArray(value) ? (value as readonly T[]) : [];
 }
 
 /**
- * Публичный лендинг MyJourney. Hero прозрачен — сквозь него виден персистентный глобус из
- * `PublicLayout`; ниже контент (фичи → как работает → пример-атлас) лежит на непрозрачной
- * ночи, закрывающей планету, и завершается футером-CTA.
+ * Public MyJourney landing. The hero is transparent: the persistent globe from `PublicLayout`
+ * shows through it; below, the content (features -> how it works -> sample atlas) sits on an
+ * opaque night that covers the planet and ends with a CTA footer.
  *
- * Ритм страницы держится ВЫСОТОЙ поверхности, а не инверсией яркости: полоса «как это
- * работает» приподнята, карточки обведены волосяной линией, журнальная вырезка утоплена
- * глубже фона. (Ранняя версия разводила секции светлой «ивори»-обёрткой — от неё отказались,
- * когда поверхность продукта стала единой ночью на обоих берегах логина.)
+ * The page rhythm comes from surface ELEVATION, not brightness inversion: the "how it works"
+ * band is raised, cards have a hairline outline, the journal clipping is sunk deeper than the
+ * background.
  *
- * Весь копирайт — из i18n-namespace `landing` (EN/RU). Собственного глобуса нет: фон приходит
- * из лейаута, поэтому один WebGL-инстанс переживает переход в auth-зону.
+ * All copy comes from the i18n namespace `landing` (EN/RU). There is no globe of its own: the
+ * background comes from the layout, so one WebGL instance survives the move into the auth zone.
  */
 export function LandingPage() {
   const { t } = useTranslation("landing");
@@ -60,9 +58,9 @@ export function LandingPage() {
 
   return (
     <div className="lp">
-      {/* Шапка — общая для публичной зоны, живёт в `PublicLayout` (переживает навигацию). */}
+      {/* The header is shared by the public zone and lives in `PublicLayout` (survives navigation). */}
 
-      {/* --- Hero (прозрачный — за ним фиксированный глобус) --- */}
+      {/* --- Hero (transparent: the fixed globe is behind it) --- */}
       <section className="lp-hero">
         <div className="lp-hero__scrim" />
 
@@ -102,9 +100,9 @@ export function LandingPage() {
         </span>
       </section>
 
-      {/* --- Контент (непрозрачная ивори-обёртка поверх глобуса) --- */}
+      {/* --- Content (opaque wrapper over the globe) --- */}
       <div className="lp-content">
-        {/* Фичи */}
+        {/* Features */}
         <section className="lp-section lp-features">
           <div className="lp-section__head">
             <p className="lp-eyebrow">{t("features.eyebrow")}</p>
@@ -125,7 +123,7 @@ export function LandingPage() {
 
         <div className="lp-rule" />
 
-        {/* Как это работает */}
+        {/* How it works */}
         <section className="lp-section lp-steps">
           <div className="lp-steps__wrap">
             <div className="lp-section__head">
@@ -148,7 +146,7 @@ export function LandingPage() {
 
         <div className="lp-rule" />
 
-        {/* Пример-атлас + журнальная запись */}
+        {/* Sample atlas + journal entry */}
         <section className="lp-section lp-atlas">
           <div className="lp-section__head">
             <p className="lp-eyebrow">{t("atlas.eyebrow")}</p>
@@ -167,9 +165,9 @@ export function LandingPage() {
 
             <figure className="lp-journal">
               <figcaption className="lp-journal__date">{t("atlas.journalDate")}</figcaption>
-              {/* Кавычки — часть строки перевода, а не разметки: в русском «ёлочки»,
-                  в английском “лапки”, и захардкоженная пара давала английские кавычки
-                  вокруг русского текста. */}
+              {/* Quotes are part of the translation string, not markup: Russian uses «guillemets»,
+                  English uses “curly quotes”, and a hardcoded pair put English quotes around
+                  Russian text. */}
               <blockquote className="lp-journal__quote">{t("atlas.journalQuote")}</blockquote>
               <div className="lp-journal__from">— {t("atlas.journalFrom")}</div>
             </figure>
@@ -177,7 +175,7 @@ export function LandingPage() {
         </section>
       </div>
 
-      {/* --- Футер-CTA --- */}
+      {/* --- CTA footer --- */}
       <footer className="lp-foot">
         <div className="lp-foot__inner">
           <p className="lp-eyebrow">{BRAND}</p>

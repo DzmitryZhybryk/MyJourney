@@ -1,10 +1,11 @@
 """
 Глобальные обработчики исключений для приложения.
 
-Преобразуют доменные исключения в HTTP ответы, не привязываясь к конкретному
+Преобразуют исключения приложения в HTTP ответы, не привязываясь к конкретному
 presentation фреймворку (FastAPI, gRPC и т.д.).
 """
 
+import math
 from collections.abc import Callable
 from typing import Any
 
@@ -12,37 +13,59 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.shared.exceptions import BaseDomainError
+from app.shared.exceptions import AppError, TemporaryError
 from app.shared.exceptions.mappings import resolve_http_status
 from app.shared.exceptions.schemas import ErrorResponse
-from app.shared.logging import get_logger
-
-logger = get_logger(__name__)
+from app.shared.logging.middleware import remember_handled_error
 
 type ExceptionHandlerT = Callable[[Request, Any], JSONResponse]
 
-# Ответ на не-доменное / необработанное исключение: наружу не утекают детали внутренней ошибки.
+# Ответ на исключение вне AppError / необработанное исключение: наружу не утекают детали внутренней ошибки.
 _INTERNAL_ERROR_CONTENT = {"code": "internal", "message": "Внутренняя ошибка сервера"}
+_VALIDATION_ERROR_CODE = "validation_error"
 
 
-def _create_error_response(exc: BaseDomainError) -> JSONResponse:
-    """Создает HTTP ответ для доменного исключения используя типизированную схему."""
-    error_response = ErrorResponse(code=exc.code, message=exc.message, details=exc.details)
+def _create_error_response(exc: AppError) -> JSONResponse:
+    """
+    Создает HTTP ответ для исключения приложения используя типизированную схему.
+
+    Серверный сбой отдаёт только `code` и сообщение своего класса: детали и сообщение экземпляра
+    описывают наше устройство и остаются в логе. Временный сбой, у которого зависимость назвала срок,
+    передаёт его в заголовке `Retry-After` (целые секунды).
+
+    Scenarios:
+        - любой запрос, завершившийся ошибкой приложения
+    """
+    if exc.category.is_server_fault:
+        error_response = ErrorResponse(code=exc.code, message=type(exc).message)
+    else:
+        error_response = ErrorResponse(code=exc.code, message=exc.message, details=exc.details)
+
+    headers = None
+    if isinstance(exc, TemporaryError) and exc.retry_after is not None:
+        headers = {"Retry-After": str(math.ceil(exc.retry_after.total_seconds()))}
+
     return JSONResponse(
         status_code=resolve_http_status(exc),
         content=error_response.model_dump(mode="json"),
+        headers=headers,
     )
 
 
-def domain_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Обрабатывает доменные исключения, преобразуя их в HTTP ответы."""
-    # Логирование выполняется в HTTPLoggingMiddleware. Handler зарегистрирован на
-    # BaseDomainError, поэтому exc гарантированно доменный; HTTP-статус и тело берём
+def app_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Обрабатывает исключения приложения, преобразуя их в HTTP ответы.
+
+    Scenarios:
+        - любой запрос, завершившийся ошибкой приложения
+    """
+    # Handler зарегистрирован на AppError, поэтому exc гарантированно AppError; HTTP-статус и тело берём
     # прямо из исключения через единый resolve_http_status.
-    if isinstance(exc, BaseDomainError):
+    if isinstance(exc, AppError):
+        remember_handled_error(request=request, exc=exc, code=exc.code)
         return _create_error_response(exc)
 
-    # Страховка на случай прямого вызова с не-доменным исключением.
+    # Страховка на случай прямого вызова с исключением вне AppError.
     return JSONResponse(status_code=500, content=_INTERNAL_ERROR_CONTENT)
 
 
@@ -52,12 +75,15 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
 
     По умолчанию FastAPI отдаёт 422 в формате ``{"detail": [...]}`` без поля
     ``code``, что ломает контракт ошибки на клиенте. Здесь 422 заворачивается в
-    тот же envelope, что и доменные ошибки: ``code="validation_error"`` плюс
+    тот же envelope, что и ошибки приложения: ``code="validation_error"`` плюс
     ``details`` со списком проблемных полей (берём из ``loc``/``msg`` только
     строки, чтобы тело гарантированно сериализовалось в JSON).
 
+    Scenarios:
+        - любой запрос, не прошедший валидацию тела или параметров
+
     Args:
-        request: HTTP-запрос (не используется, требуется сигнатурой handler'а)
+        request: HTTP-запрос, на который отвечаем
         exc: Исключение валидации pydantic с детализацией по полям
 
     Returns:
@@ -72,10 +98,11 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
     ]
 
     error_response = ErrorResponse(
-        code="validation_error",
+        code=_VALIDATION_ERROR_CODE,
         message="Переданы некорректные данные",
         details={"fields": fields},
     )
+    remember_handled_error(request=request, exc=exc, code=_VALIDATION_ERROR_CODE)
 
     return JSONResponse(
         status_code=422,
@@ -84,21 +111,26 @@ def validation_exception_handler(request: Request, exc: RequestValidationError) 
 
 
 def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Обрабатывает необработанные исключения (не-доменные → 500)."""
-    # Страховка на случай прямого вызова с доменным исключением: через приложение
-    # BaseDomainError уходит в свой domain_exception_handler и сюда не доходит.
-    if isinstance(exc, BaseDomainError):
-        return domain_exception_handler(request, exc)
+    """
+    Обрабатывает необработанные исключения (вне AppError → 500).
 
-    # Логирование выполняется в HTTPLoggingMiddleware.
+    Scenarios:
+        - любой запрос, упавший с необработанным исключением
+    """
+    # Страховка на случай прямого вызова с AppError: через приложение
+    # AppError уходит в свой app_error_handler и сюда не доходит.
+    if isinstance(exc, AppError):
+        return app_error_handler(request, exc)
+
+    # Лог здесь не пишем: исключение проходит сквозь middleware логирования, и строку с трейсбеком пишет оно.
     return JSONResponse(status_code=500, content=_INTERNAL_ERROR_CONTENT)
 
 
 BASE_EXCEPTION_HANDLERS: dict[type[Exception], ExceptionHandlerT] = {
-    # BaseDomainError регистрируем явно, чтобы Starlette положил handler в ExceptionMiddleware
-    # (внутренний слой). Иначе он попадёт в ServerErrorMiddleware (внешний) и не вызовется
-    # корректно из-за известной проблемы BaseHTTPMiddleware с пробрасыванием исключений.
-    BaseDomainError: domain_exception_handler,
+    # AppError регистрируем явно, чтобы Starlette положил handler в ExceptionMiddleware (внутренний слой).
+    # Иначе ошибку приложения поймает handler на Exception во внешнем ServerErrorMiddleware, а тот после ответа
+    # поднимает исключение дальше, до сервера.
+    AppError: app_error_handler,
     # RequestValidationError перехватываем явно, иначе FastAPI вернёт дефолтный
     # 422 {"detail": [...]} без поля code — в обход нашего ErrorResponse-контракта.
     RequestValidationError: validation_exception_handler,
@@ -109,6 +141,9 @@ BASE_EXCEPTION_HANDLERS: dict[type[Exception], ExceptionHandlerT] = {
 def register_exception_handlers(app: FastAPI) -> None:
     """
     Регистрирует обработчики исключений для FastAPI приложения.
+
+    Scenarios:
+        - запуск API-приложения
 
     Args:
         app: Экземпляр FastAPI приложения

@@ -29,7 +29,7 @@ class ResendClient(BaseHTTPClient):
         super().__init__(config=config)
         self._default_from = default_from
 
-    async def send(self, *, message: EmailMessage) -> None:
+    async def send(self, message: EmailMessage) -> None:
         """
         Отправляет письмо через Resend.
 
@@ -37,8 +37,8 @@ class ResendClient(BaseHTTPClient):
             message: Готовое сообщение с отрендеренным телом.
 
         Raises:
-            ExternalAPITemporaryError: 502/503/504, таймаут, сетевая ошибка — кандидат на retry.
-            ExternalAPIPersistentError: 4xx/500 — без retry.
+            ExternalAPITemporaryError: временный сбой Resend — кандидат на retry.
+            ExternalAPIPersistentError: постоянный сбой — без retry.
         """
         await self.post(
             endpoint="/emails",

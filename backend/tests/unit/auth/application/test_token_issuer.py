@@ -1,10 +1,14 @@
 import datetime as dt
 from uuid import uuid4
 
-from app.auth.application.schemas import ClientMetadata
-from app.auth.application.token_issuer import TokenIssuer
-from app.shared.infra.crypto import Sha256DeterministicHasher
-from app.shared.infra.jwt import JWTService
+import pytest
+
+from app.auth.application.schemas.metadata import ClientMetadata
+from app.auth.application.services.token_issuer import TokenIssuer
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
+from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
+from app.shared.infra.jwt import PermissionEnum
+from app.shared.infra.jwt.service import JWTService
 from tests.builders import make_user_credentials
 
 
@@ -15,11 +19,11 @@ def test_hash_refresh_secret_is_deterministic(
     """`hash_refresh_secret` детерминирован и равен digest'у используемого hasher'а."""
     secret = "refresh-secret"
 
-    first = token_issuer.hash_refresh_secret(refresh_secret=secret)
-    second = token_issuer.hash_refresh_secret(refresh_secret=secret)
+    first = token_issuer.hash_refresh_secret(secret)
+    second = token_issuer.hash_refresh_secret(secret)
 
     assert first == second
-    assert first == deterministic_hasher.digest(secret=secret)
+    assert first == deterministic_hasher.digest(secret)
 
 
 def test_issue_refresh_token_stores_digest_and_propagates_metadata(
@@ -32,7 +36,7 @@ def test_issue_refresh_token_stores_digest_and_propagates_metadata(
 
     plaintext, refresh_token_entity = token_issuer.issue_refresh_token(user_id=user_id, client_metadata=metadata)
 
-    assert refresh_token_entity.token_hash == deterministic_hasher.digest(secret=plaintext)
+    assert refresh_token_entity.token_hash == deterministic_hasher.digest(plaintext)
     assert refresh_token_entity.user_id == user_id
     assert refresh_token_entity.ip_address == "10.0.0.1"
     assert refresh_token_entity.user_agent == "UA/1.0"
@@ -64,6 +68,51 @@ def test_build_token_pair_access_token_decodes_back_to_user(
         refresh_token_entity=refresh_token_entity,
     )
 
-    assert jwt_service.decode_access_token(pair.access_token.get_secret_value()) == user_credentials_entity.user_id
+    claims = jwt_service.decode_access_token(pair.access_token.get_secret_value())
+    assert claims.user_id == user_credentials_entity.user_id
     assert pair.refresh_token.secret.get_secret_value() == refresh_secret
     assert pair.refresh_token.expires_at == refresh_token_entity.expires_at
+
+
+@pytest.mark.parametrize(
+    ("role", "plan", "expected_permissions"),
+    [
+        (UserRoleEnum.USER, UserPlanEnum.FREE, frozenset()),
+        (
+            UserRoleEnum.ADMIN,
+            UserPlanEnum.PREMIUM,
+            frozenset(
+                {
+                    PermissionEnum.MEDIA_CONFIG_EDIT,
+                    PermissionEnum.AUTH_ACCOUNTS_READ,
+                    PermissionEnum.BACKOFFICE_ACCOUNTS_READ,
+                },
+            ),
+        ),
+    ],
+)
+def test_build_token_pair_access_token_carries_role_plan_and_expanded_permissions(
+    token_issuer: TokenIssuer,
+    jwt_service: JWTService,
+    role: UserRoleEnum,
+    plan: UserPlanEnum,
+    expected_permissions: frozenset[str],
+) -> None:
+    """В access-токене роль, тариф, признак подтверждения email и права, раскрытые из роли и тарифа."""
+    user_credentials_entity = make_user_credentials(role=role, plan=plan, email_verified_at=dt.datetime.now(tz=dt.UTC))
+    refresh_secret, refresh_token_entity = token_issuer.issue_refresh_token(
+        user_id=user_credentials_entity.user_id,
+        client_metadata=ClientMetadata(),
+    )
+
+    pair = token_issuer.build_token_pair(
+        user_credentials_entity=user_credentials_entity,
+        refresh_secret=refresh_secret,
+        refresh_token_entity=refresh_token_entity,
+    )
+
+    claims = jwt_service.decode_access_token(pair.access_token.get_secret_value())
+    assert claims.role == role.value
+    assert claims.plan == plan.value
+    assert claims.permissions == expected_permissions
+    assert claims.email_verified is True

@@ -3,12 +3,12 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.application.ports import UserCredentialsRepositoryPort
+from app.auth.application.ports.user_credentials_repository import UserCredentialsRepositoryPort
 from app.auth.domain.entities import UserCredentialsEntity
-from app.auth.domain.enums import UserRole
+from app.auth.domain.enums import UserPlanEnum, UserRoleEnum
 from app.auth.domain.value_objects import Password
 from app.auth.infra.models import UserCredentials
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 from app.shared.types import DictStrAny
 
 
@@ -27,32 +27,43 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         Добавляет учётные данные пользователя в сессию без коммита.
 
         Запись становится видимой другим транзакциям только после ``commit()``
-        в UnitOfWork. Уникальные индексы по ``email`` и ``username`` могут
-        выбросить ``IntegrityError`` на flush, если конфликт не был отловлен
+        в UnitOfWork. Уникальные индексы по ``lower(email)`` и ``lower(username)``
+        могут выбросить ``IntegrityError`` на flush, если конфликт не был отловлен
         предварительной проверкой.
 
         Args:
             user_credentials_entity: Доменная сущность учётных данных
         """
-        await self.insert(data=UserCredentials(**self._to_columns(user_credentials_entity=user_credentials_entity)))
+        await self.insert(UserCredentials(**self._to_columns(user_credentials_entity)))
 
     async def update_user_credentials_by_user_id(self, user_credentials_entity: UserCredentialsEntity) -> None:
         """
-        Персистит изменённое состояние учётных данных через atomic UPDATE по PK.
+        Персистит изменённое состояние учётных данных через atomic UPDATE по PK и предыдущей версии.
 
-        Все non-PK-поля переписываются текущим состоянием credentials.
+        Все non-PK-поля переписываются текущим состоянием credentials. Строка пишется, только если в базе
+        всё ещё версия, с которой сущность была прочитана.
 
         Args:
             user_credentials_entity: Доменная сущность с уже обновлённым состоянием
         """
-        values = self._to_columns(user_credentials_entity=user_credentials_entity)
+        values = self._to_columns(user_credentials_entity)
         del values["user_id"]  # PK не входит в SET
         query = (
             sa.update(UserCredentials)
-            .where(UserCredentials.user_id == user_credentials_entity.user_id)
+            .where(
+                UserCredentials.user_id == user_credentials_entity.user_id,
+                UserCredentials.version == user_credentials_entity.version - 1,
+            )
             .values(**values)
         )
-        await self._session.execute(query)
+        await self._execute_versioned_update(query)
+
+    async def find_user_credentials_by_user_id_for_update(self, user_id: UUID) -> UserCredentialsEntity | None:
+        # FOR NO KEY UPDATE, не FOR UPDATE: вставка строки, ссылающейся сюда по FK, берёт FOR KEY SHARE, и
+        # FOR UPDATE её блокирует — ввод кода и его повторная отправка ждали бы друг друга (deadlock).
+        query = sa.select(UserCredentials).where(UserCredentials.user_id == user_id).with_for_update(key_share=True)
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     async def find_user_credentials_by_user_id(self, user_id: UUID) -> UserCredentialsEntity | None:
         """
@@ -65,35 +76,69 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             Доменная сущность учётных данных либо ``None``, если запись не найдена
         """
         query = sa.select(UserCredentials).where(UserCredentials.user_id == user_id)
-        user_credentials_model = await self._fetch_one(query=query)
-        return self._to_entity(user_credentials_model=user_credentials_model) if user_credentials_model else None
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
-    async def find_user_credentials_by_email_or_username(
+    async def find_user_credentials_by_user_ids(
         self,
-        email: str,
-        username: str,
-    ) -> list[UserCredentialsEntity]:
-        """
-        Загружает все записи, у которых совпадает email или username.
+        user_ids: frozenset[UUID],
+    ) -> frozenset[UserCredentialsEntity]:
+        query = sa.select(UserCredentials).where(UserCredentials.user_id.in_(user_ids))
+        result = await self._session.execute(query)
+        return frozenset(self._to_entity(user_credentials_model) for user_credentials_model in result.scalars())
 
-        Используется при регистрации, чтобы одним запросом обнаружить конфликт
-        по обоим полям. PostgreSQL планирует это как ``BitmapOr`` из двух
-        independent index scan'ов по уникальным индексам ``email`` и
-        ``username``, поэтому возвращается максимум 2 строки.
+    async def find_user_credentials_by_email(self, email: str) -> UserCredentialsEntity | None:
+        """
+        Загружает учётные данные по email без учёта регистра.
 
         Args:
-            email: Email из запроса регистрации
-            username: Username из запроса регистрации
+            email: Email в любом регистре
 
         Returns:
-            Список найденных доменных сущностей (0..2 элементов)
+            Доменная сущность учётных данных либо ``None``, если запись не найдена
         """
-        query = sa.select(UserCredentials).where(
-            (UserCredentials.email == email) | (UserCredentials.username == username),
+        query = sa.select(UserCredentials).where(sa.func.lower(UserCredentials.email) == sa.func.lower(email))
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
+
+    async def find_user_credentials_by_username(self, username: str) -> UserCredentialsEntity | None:
+        """
+        Загружает учётные данные по username без учёта регистра.
+
+        Args:
+            username: Username в любом регистре
+
+        Returns:
+            Доменная сущность учётных данных либо ``None``, если запись не найдена
+        """
+        query = sa.select(UserCredentials).where(sa.func.lower(UserCredentials.username) == sa.func.lower(username))
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
+
+    async def find_user_credentials_by_login(self, login: str) -> UserCredentialsEntity | None:
+        """
+        Загружает учётные данные по логину — email или username, без учёта регистра.
+
+        Один запрос при любом исходе, чтобы время ответа login не выдавало, нашёлся ли
+        аккаунт и по какому полю. Если строка — чей-то email и одновременно чужой username,
+        возвращается владелец email.
+
+        Args:
+            login: Email или username в любом регистре
+
+        Returns:
+            Доменная сущность учётных данных либо ``None``, если запись не найдена
+        """
+        login_lower = sa.func.lower(login)
+        email_matches = sa.func.lower(UserCredentials.email) == login_lower
+        query = (
+            sa.select(UserCredentials)
+            .where(email_matches | (sa.func.lower(UserCredentials.username) == login_lower))
+            .order_by(email_matches.desc())
+            .limit(1)
         )
-        result = await self._session.execute(query)
-        models = result.scalars().all()
-        return [self._to_entity(user_credentials_model=user_credentials_model) for user_credentials_model in models]
+        user_credentials_model = await self._fetch_one(query)
+        return self._to_entity(user_credentials_model) if user_credentials_model else None
 
     def _to_columns(self, user_credentials_entity: UserCredentialsEntity) -> DictStrAny:
         """
@@ -102,6 +147,10 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
         Источник истины для обоих путей записи: INSERT (``UserCredentials(**columns)``)
         и UPDATE (те же колонки минус PK). Новое поле добавляется здесь один раз —
         и попадает и в INSERT, и в UPDATE, рассинхрон между ними невозможен.
+
+        Scenarios:
+            - регистрация
+            - верный код в диалоге «Подтвердите email»
 
         Args:
             user_credentials_entity: Доменная сущность учётных данных
@@ -115,7 +164,9 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             "username": user_credentials_entity.username,
             "password_hash": user_credentials_entity.password.hash,
             "role": user_credentials_entity.role.value,
+            "plan": user_credentials_entity.plan.value,
             "email_verified_at": user_credentials_entity.email_verified_at,
+            "version": user_credentials_entity.version,
             "created_at": user_credentials_entity.created_at,
             "updated_at": user_credentials_entity.updated_at,
             "deleted_at": user_credentials_entity.deleted_at,
@@ -124,6 +175,13 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
     def _to_entity(self, user_credentials_model: UserCredentials) -> UserCredentialsEntity:
         """
         Конвертирует ORM-модель в доменную сущность учётных данных.
+
+        Scenarios:
+            - регистрация: проверка, что email и username свободны
+            - вход и обновление сессии
+            - отправка и ввод кода в диалоге «Подтвердите email»
+            - данные входа текущего пользователя
+            - подпись аккаунта по его id в админке
 
         Args:
             user_credentials_model: ORM-модель из БД
@@ -135,9 +193,11 @@ class UserCredentialsRepository(BaseDBRepository[UserCredentials], UserCredentia
             user_id=user_credentials_model.user_id,
             email=user_credentials_model.email,
             username=user_credentials_model.username,
-            password=Password(hash=user_credentials_model.password_hash),
-            role=UserRole(user_credentials_model.role),
+            password=Password(user_credentials_model.password_hash),
+            role=UserRoleEnum(user_credentials_model.role),
+            plan=UserPlanEnum(user_credentials_model.plan),
             email_verified_at=user_credentials_model.email_verified_at,
+            version=user_credentials_model.version,
             created_at=user_credentials_model.created_at,
             updated_at=user_credentials_model.updated_at,
             deleted_at=user_credentials_model.deleted_at,

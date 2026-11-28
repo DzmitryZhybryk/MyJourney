@@ -17,11 +17,7 @@ Before ANY commit:
 - Validate that required secrets are present at startup
 - Rotate any secrets that may have been exposed
 
-## Security Response Protocol
+## When you find a security issue
 
-If security issue found:
-1. STOP immediately
-2. Apply checks from this file + `rules/python/security.md`
-3. Fix CRITICAL issues before continuing
-4. Rotate any exposed secrets
-5. Review entire codebase for similar issues
+Say so before continuing the current task, and fix a critical one first. An exposed secret is
+rotated, not only removed from the code. Check whether the same pattern occurs elsewhere.

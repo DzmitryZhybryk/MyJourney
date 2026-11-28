@@ -8,7 +8,7 @@ describe("centralAngleRad", () => {
   });
 
   it("возвращает π для антиподов по экватору", () => {
-    // (0,0) и (0,180) — противоположные точки экватора, центральный угол = π.
+    // (0,0) and (0,180) are opposite points of the equator, central angle = pi.
     expect(centralAngleRad(0, 0, 0, 180)).toBeCloseTo(Math.PI);
   });
 

@@ -6,7 +6,7 @@ Generic-проводка **уровня api** (домен-агностично).
 
 - ``api_app`` — ASGI-приложение **без компонентов**: ``create_default_app()`` поднимает
   пустой ``ComponentRegistry`` (нет коннектов к PG/Resend/Procrastinate), плюс
-  ``register_exception_handlers`` — чтобы доменные исключения и 422/500 сворачивались в
+  ``register_exception_handlers`` — чтобы исключения AppError и 422/500 сворачивались в
   тот же ``ErrorResponse``-envelope, что и в проде.
 - ``app`` — собранное приложение под тест: монтирует ``router`` под ``router_prefix`` и
   применяет карту ``dependency_overrides``. Механизм один на все домены; сами данные
@@ -39,10 +39,15 @@ import pytest
 from fastapi import APIRouter
 from httpx import ASGITransport, AsyncClient, Response
 
-from app.main import create_default_app
-from app.shared.exceptions import register_exception_handlers
-from app.shared.infra.jwt import get_jwt_service
+from app.auth.application.services.token_issuer import TokenIssuer
+from app.auth.domain.entities import UserCredentialsEntity
+from app.main import create_app, create_default_app
+from app.shared.exceptions.handlers import register_exception_handlers
+from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
+from app.shared.infra.jwt import AccessTokenClaims, get_jwt_service
 from app.shared.schemas.base import BFastAPI
+from app.shared.types import DictStrAny
+from tests.builders import make_refresh_token
 
 _BASE_URL = "http://testserver"
 
@@ -52,6 +57,18 @@ def api_app() -> BFastAPI:
     app = create_default_app()
     register_exception_handlers(app)
     return app
+
+
+@pytest.fixture
+def production_app() -> BFastAPI:
+    """Боевое приложение из ``create_app`` — со всеми роутерами, middleware и телеметрией; компоненты не стартуют."""
+    return create_app()
+
+
+@pytest.fixture
+def openapi_schema(production_app: BFastAPI) -> DictStrAny:
+    """Схема боевого приложения — со всеми роутерами, тегами и версией (в отличие от ``api_app``)."""
+    return production_app.openapi()
 
 
 @pytest.fixture
@@ -99,8 +116,8 @@ async def client(app: BFastAPI, make_async_client: Callable[[BFastAPI], AsyncCli
 
 
 @pytest.fixture
-def find_set_cookie() -> Callable[[Response, str], str | None]:
-    def _find(response: Response, name: str) -> str | None:
+def find_set_cookie() -> Callable[..., str | None]:
+    def _find(*, response: Response, name: str) -> str | None:
         for header in response.headers.get_list("set-cookie"):
             if header.startswith(f"{name}="):
                 return header
@@ -126,7 +143,47 @@ def mint_access_token() -> Callable[..., str]:
     """
     jwt_service = get_jwt_service()
 
-    def _mint(user_id: UUID, *, role: str = "free", email_verified: bool = False) -> str:
-        return jwt_service.create_access_token(user_id=user_id, role=role, email_verified=email_verified)
+    def _mint(
+        *,
+        user_id: UUID,
+        role: str = "user",
+        plan: str = "free",
+        permissions: frozenset[str] = frozenset(),
+        email_verified: bool = False,
+    ) -> str:
+        return jwt_service.create_access_token(
+            AccessTokenClaims(
+                user_id=user_id,
+                role=role,
+                plan=plan,
+                permissions=permissions,
+                email_verified=email_verified,
+            ),
+        )
 
     return _mint
+
+
+@pytest.fixture
+def issue_access_token(deterministic_hasher: Sha256DeterministicHasher) -> Callable[[UserCredentialsEntity], str]:
+    """
+    Access-токен, выпущенный настоящим ``TokenIssuer``: права раскрываются из роли и тарифа, как при входе.
+
+    В отличие от ``mint_access_token`` права здесь не задаются руками, поэтому тест маршрута, закрытого
+    правом, ловит расхождение имени права в маршруте и в карте ролей.
+    """
+    token_issuer = TokenIssuer(
+        deterministic_hasher=deterministic_hasher,
+        access_token_issuer=get_jwt_service(),
+        refresh_token_ttl_days=30,
+    )
+
+    def _issue(user_credentials_entity: UserCredentialsEntity) -> str:
+        token_pair = token_issuer.build_token_pair(
+            user_credentials_entity=user_credentials_entity,
+            refresh_secret="refresh-secret",
+            refresh_token_entity=make_refresh_token(user_id=user_credentials_entity.user_id),
+        )
+        return token_pair.access_token.get_secret_value()
+
+    return _issue

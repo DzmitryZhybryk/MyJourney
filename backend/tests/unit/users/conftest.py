@@ -1,26 +1,16 @@
 """
-Фикстуры домена users: фейк I/O-границы + собранный на нём ``UserService``.
+Фикстуры домена users: ``UserService``, собранный на фейках.
 
-Репозиторий выставлен отдельной фикстурой (тот же инстанс попадает и в
-``FakeUserUnitOfWork``, и в тест) — так тест проверяет состояние хранилища напрямую.
+Фейки I/O-границы (``fake_user_repository``/``fake_user_uow``) живут в корневом
+``tests/conftest.py`` — их переиспользует и api-уровень (``tests/api/users``).
 """
 
 import pytest
 
-from app.users.application.services import UserService
-from tests.fakes import FakeUserRepository, FakeUserUnitOfWork
+from app.users.application.services.user import UserService
+from tests.fakes import FakeEventPublisher, FakeUserUnitOfWork
 
 
 @pytest.fixture
-def fake_user_repository() -> FakeUserRepository:
-    return FakeUserRepository()
-
-
-@pytest.fixture
-def fake_user_uow(fake_user_repository: FakeUserRepository) -> FakeUserUnitOfWork:
-    return FakeUserUnitOfWork(user_repository=fake_user_repository)
-
-
-@pytest.fixture
-def user_service(fake_user_uow: FakeUserUnitOfWork) -> UserService:
-    return UserService(uow=fake_user_uow)
+def user_service(fake_user_uow: FakeUserUnitOfWork, fake_event_publisher: FakeEventPublisher) -> UserService:
+    return UserService(uow=fake_user_uow, event_publisher=fake_event_publisher)

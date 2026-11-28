@@ -1,8 +1,7 @@
 /*
- * Бейдж «Soon» — маркер ещё не реализованного (отключённого) пункта навигации
- * или действия. Нейтральная пилюля: акцент даём формой и капителью, а не цветом,
- * чтобы не спорить с закатным акцентом активных действий. Моно — тот же штемпель,
- * которым по всему продукту набраны служебные подписи.
+ * "Soon" badge: a marker of a not yet implemented (disabled) navigation item or action. A neutral
+ * pill: emphasis comes from shape and small caps, not colour, so it does not fight the sunset
+ * accent of active actions. Mono is the same stamp used for auxiliary labels across the product.
  */
 .soon-badge {
   display: inline-flex;

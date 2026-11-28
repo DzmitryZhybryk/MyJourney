@@ -3,7 +3,7 @@
 
 **Схема** создаётся из ``BaseDBModel.metadata`` (источник истины; миграция
 ``e00067cc5c0e`` отражает её 1:1 — проверено: партиальный unique-индекс
-challenges, FK-цепочка и unique-констрейнты живут в моделях) **синхронным**
+challenges, FK-цепочка и unique-индексы по ``lower()`` живут в моделях) **синхронным**
 движком на старте сессии — без event loop, чтобы не упираться в loop-scope
 ``pytest-asyncio`` (главная боль session-scoped async-фикстур: psycopg3-async
 соединение привязано к loop'у, в котором создано).
@@ -22,6 +22,7 @@ from uuid import UUID
 
 import pytest
 import sqlalchemy as sa
+from pydantic import SecretStr
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -35,9 +36,11 @@ from testcontainers.community.postgres import PostgresContainer
 # Импорт моделей регистрирует таблицы в ``BaseDBModel.metadata`` (нужно для create_all).
 from app.auth.infra import models as _auth_models  # noqa: F401
 from app.auth.infra.repositories import UserCredentialsRepository
+from app.backoffice.infra import models as _backoffice_models  # noqa: F401
 from app.geo.infra import models as _geo_models  # noqa: F401
 from app.journeys.infra import models as _journey_models  # noqa: F401
-from app.shared.models import BaseDBModel
+from app.media.infra import models as _media_models  # noqa: F401
+from app.shared.infra.db.postgres.models import BaseDBModel
 from app.shared.settings import PostgresSettings
 from app.users.domain.entities import UserEntity  # noqa: F401 — гарантирует регистрацию users-модели
 from app.users.infra import models as _users_models  # noqa: F401
@@ -45,7 +48,18 @@ from tests.builders import make_user_credentials
 
 _POSTGRES_IMAGE = "postgres:17-alpine"
 # Порядок не важен: ``TRUNCATE ... CASCADE`` снимает FK-зависимости разом.
-_ALL_TABLES = ("users", "user_credentials", "refresh_tokens", "challenges", "geo_places", "journeys")
+_ALL_TABLES = (
+    "users",
+    "user_credentials",
+    "refresh_tokens",
+    "challenges",
+    "geo_cities",
+    "geo_places",
+    "geo_dataset_loads",
+    "journeys",
+    "media_config",
+    "backoffice.accounts",
+)
 
 
 @pytest.fixture(scope="session")
@@ -54,6 +68,13 @@ def _postgres_container() -> Iterator[PostgresContainer]:
     with PostgresContainer(_POSTGRES_IMAGE, driver="psycopg") as container:
         sync_engine = create_engine(container.get_connection_url())
         try:
+            # create_all не создаёт ни расширения, ни схемы: миграция делает и то и другое до своих таблиц.
+            model_schemas = {table.schema for table in BaseDBModel.metadata.tables.values() if table.schema}
+            with sync_engine.begin() as conn:
+                conn.execute(sa.text("CREATE EXTENSION pg_trgm"))
+                for schema in sorted(model_schemas):
+                    conn.execute(sa.text(f"CREATE SCHEMA {schema}"))
+
             BaseDBModel.metadata.create_all(sync_engine)
         finally:
             sync_engine.dispose()
@@ -84,7 +105,7 @@ def postgres_settings(_postgres_container: PostgresContainer) -> PostgresSetting
     """``PostgresSettings`` на параметры контейнера — для тестов lifecycle (``SqlAlchemyComponent``)."""
     return PostgresSettings(
         POSTGRES_USER=_postgres_container.username,
-        POSTGRES_PASSWORD=_postgres_container.password,
+        POSTGRES_PASSWORD=SecretStr(_postgres_container.password),
         POSTGRES_DB=_postgres_container.dbname,
         POSTGRES_HOST=_postgres_container.get_container_host_ip(),
         POSTGRES_PORT=int(_postgres_container.get_exposed_port(5432)),
@@ -124,8 +145,8 @@ def seed_user_credentials(
     ) -> None:
         user_credentials_entity = make_user_credentials(user_id=user_id, email=email, username=username)
         async with session_factory() as session:
-            repository = UserCredentialsRepository(session=session)
-            await repository.insert_user_credentials(user_credentials_entity=user_credentials_entity)
+            repository = UserCredentialsRepository(session)
+            await repository.insert_user_credentials(user_credentials_entity)
             await session.commit()
 
     return _seed

@@ -1,13 +1,9 @@
 /*
- * Марка MyJourney. ОДИН стиль на обе зоны — публичную и авторизованную.
+ * MyJourney brand mark. ONE style for both zones, public and authorized (a size difference
+ * between them made the logo visibly change across login).
  *
- * До этого марка существовала двумя независимыми реализациями: `BrandMark` с инлайн-стилями
- * (28.8px, глиф 0.85em) в шапке приложения и собственный блок в `PublicHeader` (24px,
- * глиф 0.72em). Редизайн свёл в общий компонент только сам глиф-глобус, а обёртку — нет,
- * поэтому логотип заметно менялся в размере ровно на переходе через логин.
- *
- * Кегль взят по большему из двух и посажен на ступень шкалы (`--fs-30` вместо внесистемных
- * 1.8rem): логотип — не заголовок, но и выпадать из шкалы ему незачем.
+ * The font size sits on a scale step (`--fs-30`, not an off-scale 1.8rem): a logo is not a
+ * heading, but there is no reason for it to fall off the scale.
  */
 .brand-mark {
   display: inline-flex;
@@ -21,15 +17,15 @@
   text-decoration: none;
 }
 
-/* Глиф встаёт на место «o» — поэтому размер в `em`, он следует за кеглем марки. */
+/* The glyph replaces the "o", so its size is in `em` and follows the mark's font size. */
 .brand-mark__globe {
   width: 0.85em;
   height: 0.85em;
   display: inline-block;
 }
 
-/* Узкие экраны: марка уступает место навигации (в публичной шапке она делит строку
-   с переключателем языка и двумя пилюлями — на 320px иначе не помещается). */
+/* Narrow screens: the mark yields room to navigation (in the public header it shares the row
+   with the language switcher and two pills, which would not fit at 320px otherwise). */
 @media (max-width: 560px) {
   .brand-mark {
     font-size: var(--fs-17);

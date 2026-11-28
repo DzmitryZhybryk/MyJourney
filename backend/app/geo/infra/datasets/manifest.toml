@@ -1,0 +1,13 @@
+[[dataset]]
+name = "geonames-cities"
+format = "cities"
+version = "2026-10-26"
+url = "https://github.com/DzmitryZhybryk/MyJourney/releases/download/geo-data-v3/geonames-cities.csv.gz"
+sha256 = "7f76a274599f0b71e0ee01a8e06ab2c3984f6432d5726285330590fe9ee0615e"
+
+[[dataset]]
+name = "wikidata-places"
+format = "places"
+version = "2026-10-27"
+url = "https://github.com/DzmitryZhybryk/MyJourney/releases/download/geo-data-v4/wikidata-places.csv.gz"
+sha256 = "35a9799a10052e6fcc2762c019c17b214c74fcb5c6c943b0f9c146e2bac51c7f"

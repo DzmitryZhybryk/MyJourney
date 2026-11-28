@@ -4,10 +4,10 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.application.ports import RefreshTokenRepositoryPort
+from app.auth.application.ports.refresh_token_repository import RefreshTokenRepositoryPort
 from app.auth.domain.entities import RefreshTokenEntity
 from app.auth.infra.models import RefreshToken
-from app.shared.repositories.base_repository import BaseDBRepository
+from app.shared.infra.db.postgres.repository import BaseDBRepository
 from app.shared.types import DictStrAny
 
 
@@ -31,7 +31,7 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
         Args:
             refresh_token_entity: Доменная сущность refresh-токена
         """
-        await self.insert(data=RefreshToken(**self._to_columns(refresh_token_entity=refresh_token_entity)))
+        await self.insert(RefreshToken(**self._to_columns(refresh_token_entity)))
 
     async def find_refresh_token_by_hash_for_update(self, token_hash: str) -> RefreshTokenEntity | None:
         """
@@ -48,8 +48,8 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
             Доменная сущность refresh-токена либо ``None``, если запись не найдена
         """
         query = sa.select(RefreshToken).where(RefreshToken.token_hash == token_hash).with_for_update()
-        refresh_token_model = await self._fetch_one(query=query)
-        return self._to_entity(refresh_token_model=refresh_token_model) if refresh_token_model else None
+        refresh_token_model = await self._fetch_one(query)
+        return self._to_entity(refresh_token_model) if refresh_token_model else None
 
     async def update_refresh_token_by_id(self, refresh_token_entity: RefreshTokenEntity) -> None:
         """
@@ -61,7 +61,7 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
         Args:
             refresh_token_entity: Доменная сущность с уже обновлённым состоянием
         """
-        values = self._to_columns(refresh_token_entity=refresh_token_entity)
+        values = self._to_columns(refresh_token_entity)
         del values["id"]  # PK не входит в SET
         query = sa.update(RefreshToken).where(RefreshToken.id == refresh_token_entity.token_id).values(**values)
         await self._session.execute(query)
@@ -96,6 +96,11 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
         и UPDATE (те же колонки минус PK). Новое поле добавляется здесь один раз —
         и попадает и в INSERT, и в UPDATE, рассинхрон между ними невозможен.
 
+        Scenarios:
+            - регистрация и вход
+            - выход из аккаунта
+            - обновление сессии
+
         Args:
             refresh_token_entity: Доменная сущность refresh-токена
 
@@ -118,6 +123,10 @@ class RefreshTokenRepository(BaseDBRepository[RefreshToken], RefreshTokenReposit
     def _to_entity(self, refresh_token_model: RefreshToken) -> RefreshTokenEntity:
         """
         Конвертирует ORM-модель в доменную сущность.
+
+        Scenarios:
+            - выход из аккаунта
+            - обновление сессии
 
         Args:
             refresh_token_model: ORM-модель из БД

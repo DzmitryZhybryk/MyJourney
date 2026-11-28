@@ -1,25 +1,24 @@
 /*
- * Лендинг MyJourney. Поверхность — ночь продукта, как и везде после разворота
- * направления: вход в приложение не должен менять мир.
+ * MyJourney landing. The surface is the product night, as everywhere: entering the app must not
+ * change the world.
  *
- * Ритм страницы держится НЕ инверсией яркости (её тут больше нет), а высотой
- * поверхности: hero прозрачен и сквозит планетой, контент лежит на базовой ночи,
- * полоса «как это работает» приподнята, карточки приподняты и обведены волосяной
- * линией, журнальная вырезка наоборот утоплена глубже фона. Акцент и штемпели
- * добавляют третий уровень внимания.
+ * The page rhythm comes NOT from brightness inversion but from surface elevation: the hero is
+ * transparent and shows the planet through, content sits on the base night, the "how it works"
+ * band is raised, cards are raised and outlined with a hairline, and the journal clipping is
+ * sunk deeper than the background. The accent and stamps add a third level of attention.
  *
- * Длинные тексты набраны приглушённым `--lp-muted-on-dark`, а не самым светлым
- * тоном: на тёмном фоне максимально яркий текст даёт ореолы вокруг букв.
+ * Long texts use the muted `--lp-muted-on-dark`, not the lightest tone: on a dark background the
+ * brightest text produces halos around letters.
  *
- * Локальные имена токенов сохранены (на них завязан весь файл), но значения
- * приходят из общего семантического слоя — см. index.css.
+ * Local token names are kept (the whole file depends on them) but their values come from the
+ * shared semantic layer, see index.css.
  */
 
 .lp {
-  /* --- Палитра: псевдонимы общей семантики -------------------------------- */
+  /* --- Palette: aliases of the shared semantics -------------------------------- */
   --lp-ink: var(--surface);
   --lp-ink-2: var(--surface-2);
-  --lp-deep: var(--ink-deep); /* глубже фона — утопленные объекты */
+  --lp-deep: var(--ink-deep); /* deeper than the background: sunken objects */
   --lp-sun: var(--accent);
   --lp-sun-deep: var(--accent-deep);
   --lp-glow: var(--text-stamp);
@@ -29,7 +28,7 @@
   --lp-muted-on-dark: var(--text-muted);
   --lp-line-dark: var(--hairline);
 
-  /* --- Типографика -------------------------------------------------------- */
+  /* --- Typography -------------------------------------------------------- */
   --lp-display: var(--font-display);
   --lp-body: var(--font-body);
   --lp-mono: var(--font-mono);
@@ -38,8 +37,8 @@
 
   color: var(--lp-ink-on-dark);
   font-family: var(--lp-body);
-  /* Прозрачно: под hero сквозит персистентный глобус из PublicLayout; ниже
-     контентная обёртка `.lp-content` закрывает его непрозрачной ночью. */
+  /* Transparent: the persistent globe from PublicLayout shows through under the hero; below it the
+     `.lp-content` wrapper covers it with an opaque night. */
   background: transparent;
   min-height: 100vh;
   overflow-x: hidden;
@@ -51,7 +50,7 @@
   box-sizing: border-box;
 }
 
-/* --- Общие примитивы ------------------------------------------------------ */
+/* --- Shared primitives ------------------------------------------------------ */
 
 .lp-eyebrow {
   margin: 0;
@@ -65,7 +64,7 @@
   gap: 10px;
 }
 
-/* Станция-точка перед эйбрау — узел «линии маршрута» (signature). */
+/* Station dot before the eyebrow: a node of the "route line" (signature). */
 .lp-eyebrow::before {
   content: "";
   width: 7px;
@@ -132,14 +131,14 @@
   min-height: 100vh;
   display: flex;
   align-items: center;
-  /* Прозрачно — за hero виден фиксированный глобус (PublicLayout). Скрим ниже
-     (`.lp-hero__scrim`) сохраняет читаемость текста поверх любой грани планеты. */
+  /* Transparent: the fixed globe (PublicLayout) shows behind the hero. The scrim below
+     (`.lp-hero__scrim`) keeps text readable over any face of the planet. */
   background: transparent;
   color: var(--lp-ink-on-dark);
   overflow: hidden;
 }
 
-/* Мягкое затемнение слева — чтобы текст читался поверх любого фона. */
+/* Soft darkening on the left so text reads over any background. */
 .lp-hero__scrim {
   position: absolute;
   inset: 0;
@@ -157,8 +156,8 @@
 .lp-hero__inner {
   position: relative;
   z-index: 2;
-  /* Full-width с отступом от края вьюпорта (как `.flow-overlay`) — hero-текст
-     прижат к левому краю, а не центрирован в колонке. */
+  /* Full width with an inset from the viewport edge: the hero text is pinned to the left edge, not
+     centered in a column. */
   width: 100%;
   padding: 96px clamp(20px, 5vw, 64px) 72px;
 }
@@ -171,7 +170,7 @@
   margin: 18px 0 0;
   font-family: var(--lp-display);
   font-weight: 600;
-  /* Размер как во flow-прототипе — заголовок ложится в 2 строки, без лишних переносов. */
+  /* Size chosen so the heading fits in 2 lines without extra wraps. */
   font-size: clamp(2.4rem, 5.6vw, 4rem);
   line-height: 1.03;
   letter-spacing: -0.02em;
@@ -186,7 +185,7 @@
 .lp-hero__sub {
   margin: 20px 0 0;
   max-width: 500px;
-  /* Фиксированный кегль (как во flow) — sub не раздувается на широких экранах. */
+  /* Fixed font size: the sub text does not balloon on wide screens. */
   font-size: var(--fs-17);
   line-height: 1.6;
   color: var(--lp-muted-on-dark);
@@ -199,7 +198,7 @@
   gap: 14px;
 }
 
-/* Бортовой «штемпель» под CTA — моно-строка, привязывающая копирайт к анимации. */
+/* Onboard "stamp" under the CTA: a mono line tying the copy to the animation. */
 .lp-strip {
   margin-top: 44px;
   display: inline-flex;
@@ -232,7 +231,7 @@
   color: var(--lp-glow);
 }
 
-/* Подсказка «скролл» внизу hero. */
+/* "Scroll" hint at the bottom of the hero. */
 .lp-scroll {
   position: absolute;
   left: 50%;
@@ -272,12 +271,12 @@
   }
 }
 
-/* --- Секции контента ------------------------------------------------------ */
+/* --- Content sections ------------------------------------------------------ */
 
 /*
- * Непрозрачная обёртка для всего под-hero контента (фичи → шаги → атлас).
- * Полноширинная — перекрывает фиксированный глобус, чтобы планета сквозила только
- * в прозрачном hero. Футер живёт вне обёртки со своим радиалом.
+ * Opaque wrapper for all content under the hero (features -> steps -> atlas). Full width: it
+ * covers the fixed globe so the planet shows through only in the transparent hero. The footer
+ * lives outside the wrapper with its own radial.
  */
 .lp-content {
   position: relative;
@@ -316,7 +315,7 @@
   max-width: 560px;
 }
 
-/* Тонкая разделительная «параллель» между секциями. */
+/* Thin dividing "parallel" between sections. */
 .lp-rule {
   max-width: var(--lp-max);
   margin: 0 auto;
@@ -324,7 +323,7 @@
   background: var(--lp-line-dark);
 }
 
-/* --- Фичи (открытки) ------------------------------------------------------ */
+/* --- Features (postcards) ------------------------------------------------------ */
 
 .lp-features__grid {
   display: grid;
@@ -375,7 +374,7 @@
   color: var(--lp-muted-on-dark);
 }
 
-/* --- Как это работает (итинерарий 01/02/03) ------------------------------ */
+/* --- How it works (itinerary 01/02/03) ------------------------------ */
 
 .lp-steps {
   background: var(--lp-ink-2);
@@ -397,7 +396,7 @@
   position: relative;
 }
 
-/* Соединительная «линия маршрута» между тремя станциями. */
+/* Connecting "route line" between the three stations. */
 .lp-steps__list::before {
   content: "";
   position: absolute;
@@ -429,7 +428,7 @@
   font-weight: 500;
   position: relative;
   z-index: 1;
-  /* Кольцо цветом полосы — маскирует пунктирную линию маршрута под номером. */
+  /* A ring in the band colour masks the dashed route line under the number. */
   box-shadow: 0 0 0 6px var(--lp-ink-2);
 }
 
@@ -461,7 +460,7 @@
   padding: 4px 8px;
 }
 
-/* --- Атлас (пример статистики + журнальная запись) ----------------------- */
+/* --- Atlas (sample stats + journal entry) ----------------------- */
 
 .lp-atlas__grid {
   display: grid;
@@ -503,13 +502,13 @@
   color: var(--lp-muted-on-dark);
 }
 
-/* Журнальная запись — «вырезка из атласа», не выдуманный отзыв третьего лица. */
+/* Journal entry: a "clipping from the atlas", not an invented third-party review. */
 .lp-journal {
   position: relative;
   padding: 34px 32px;
   border-radius: 18px;
-  /* Вырезка утоплена ГЛУБЖЕ фона (остальные объекты приподняты) — второй способ
-     отделиться на одной поверхности, когда инверсии яркости больше нет. */
+  /* The clipping is sunk DEEPER than the background (other objects are raised): a second way to
+     stand apart on one surface without brightness inversion. */
   background: linear-gradient(160deg, var(--lp-deep) 0%, var(--lp-ink) 100%);
   border: 1px solid var(--lp-line-dark);
   color: var(--lp-ink-on-dark);
@@ -541,7 +540,7 @@
   color: var(--lp-muted-on-dark);
 }
 
-/* --- Футер (тёмный бэкенд-баннер, закрывающий скобку к hero) -------------- */
+/* --- Footer (a dark banner closing the bracket opened by the hero) -------------- */
 
 .lp-foot {
   position: relative;
@@ -599,7 +598,7 @@
   color: var(--lp-muted-on-dark);
 }
 
-/* --- Адаптив -------------------------------------------------------------- */
+/* --- Responsive -------------------------------------------------------------- */
 
 @media (max-width: 900px) {
   .lp-features__grid {
@@ -639,7 +638,7 @@
   }
 }
 
-/* --- Уважение к prefers-reduced-motion ----------------------------------- */
+/* --- Respect prefers-reduced-motion ----------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
   .lp-scroll__line {

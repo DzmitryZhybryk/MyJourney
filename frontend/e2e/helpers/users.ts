@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
-/** Креды для UI-логина: одно поле identifier (username ИЛИ email) + пароль. */
+/** Credentials for a UI login: one identifier field (username OR email) plus a password. */
 export interface Credentials {
   readonly login: string;
   readonly password: string;
 }
 
-/** Полные данные зарегистрированного через API пользователя. */
+/** Full data of a user registered through the API. */
 export interface RegisteredUser {
   readonly username: string;
   readonly email: string;
@@ -18,23 +18,20 @@ export interface RegisteredUser {
 const DEFAULT_PASSWORD = "e2e-Password-123";
 
 /**
- * Генерирует уникальный username, устойчивый к параллельным воркерам.
+ * Generates a unique username that is safe across parallel workers.
  *
- * Тесты гоняются `fullyParallel` в нескольких процессах — `Date.now()` сам по себе
- * может совпасть по миллисекунде, поэтому добавляем случайный хвост из uuid.
+ * Tests run `fullyParallel` in several processes and `Date.now()` alone can collide within a
+ * millisecond, so a random uuid suffix is added.
  */
 function uniqueUsername(): string {
   return `e2e_${Date.now()}_${randomUUID().slice(0, 8)}`;
 }
 
 /**
- * Генерирует данные нового пользователя БЕЗ обращения к API.
+ * Generates new user data WITHOUT calling the API: unique username/email and a default password.
  *
- * Нужен там, где регистрация идёт через UI-форму (а не через бэкенд-сид) и тесту
- * требуется уникальный набор полей для ввода.
- *
- * Returns:
- *   Уникальные username/email и дефолтный пароль
+ * Needed where registration goes through the UI form (not a backend seed) and the test requires a
+ * unique set of input fields.
  */
 export function makeUserData(): RegisteredUser {
   const username = uniqueUsername();
@@ -43,16 +40,12 @@ export function makeUserData(): RegisteredUser {
 }
 
 /**
- * Регистрирует свежего пользователя через `/v1/auth/register/` и возвращает его данные.
+ * Registers a fresh user via `/v1/auth/register/` and returns their data (username, email, password).
  *
- * Уникальный логин на каждый вызов → тесты не зависят от состояния БД и идут параллельно.
- * Email остаётся неверифицированным — по контракту это не блокирует вход на `/home`.
+ * A unique login per call means tests do not depend on DB state and run in parallel. The email
+ * stays unverified, which by contract does not block login to `/home`.
  *
- * Args:
- *   request: APIRequestContext с baseURL из конфига (идёт через vite-прокси на backend)
- *
- * Returns:
- *   Данные созданного пользователя (username, email, password)
+ * `request` is an APIRequestContext with the config baseURL (goes through the vite proxy to the backend).
  */
 export async function registerUser(request: APIRequestContext): Promise<RegisteredUser> {
   const user = makeUserData();
@@ -72,14 +65,10 @@ export async function registerUser(request: APIRequestContext): Promise<Register
 }
 
 /**
- * Проходит UI-логин: заполняет форму на `/login` и ждёт появления дашборда (`/home`).
+ * Performs a UI login: fills the form at `/login` and waits for the dashboard (`/home`).
  *
- * `exact: true` обязателен — `getByLabel` матчит подстроку без регистра, и "Password"
- * без него цепляет ещё и кнопку-глазик (aria-label "Toggle password visibility").
- *
- * Args:
- *   page: страница Playwright
- *   credentials: identifier (username или email) + пароль
+ * `exact: true` is required: `getByLabel` matches a case-insensitive substring, and "Password"
+ * without it also catches the eye button (aria-label "Toggle password visibility").
  */
 export async function loginViaUi(page: Page, credentials: Credentials): Promise<void> {
   await page.goto("/login");
@@ -87,22 +76,16 @@ export async function loginViaUi(page: Page, credentials: Credentials): Promise<
   await page.getByLabel("Password", { exact: true }).fill(credentials.password);
   await page.getByRole("button", { name: "Log in" }).click();
 
-  // Кнопка профиля живёт только на HomePage — её появление = успешный вход и редирект на `/home`.
+  // The profile button lives only on HomePage: its appearance means a successful login and redirect to `/home`.
   await expect(page.getByRole("button", { name: "Open profile menu" })).toBeVisible();
 }
 
 /**
- * Регистрирует свежего юзера через API и логинит его в UI по username.
+ * Registers a fresh user via the API and logs them in through the UI by username; returns the
+ * logged-in user's data.
  *
- * Удобно как precondition для тестов, которым нужна уже залогиненная страница,
- * но важна гибкость по таймингу (когда фикстуры `authedPage` мало).
- *
- * Args:
- *   page: страница Playwright
- *   request: APIRequestContext для сида юзера
- *
- * Returns:
- *   Данные залогиненного пользователя
+ * Handy as a precondition for tests that need an already logged-in page but also timing
+ * flexibility (when the `authedPage` fixture is not enough).
  */
 export async function registerAndLogin(page: Page, request: APIRequestContext): Promise<RegisteredUser> {
   const user = await registerUser(request);

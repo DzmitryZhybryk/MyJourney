@@ -6,7 +6,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 
 describe("LanguageSwitcher", () => {
   afterEach(async () => {
-    // changeLanguage меняет глобальный singleton i18n — возвращаем en для изоляции.
+    // changeLanguage mutates the global i18n singleton; restore en for isolation.
     await i18n.changeLanguage("en");
   });
 
@@ -21,8 +21,8 @@ describe("LanguageSwitcher", () => {
 
     await user.click(screen.getByRole("button", { name: "Language" }));
 
-    // Одним async-запросом — меню Mantine в jsdom держится открытым лишь кратко,
-    // поэтому снимаем все пункты разом, а не отдельными getByRole.
+    // One async query: the Mantine menu stays open only briefly in jsdom, so grab all items at once
+    // instead of separate getByRole calls.
     const items = await screen.findAllByRole("menuitem");
     expect(items.map((item) => item.textContent)).toEqual(
       expect.arrayContaining(["English", "Русский"]),

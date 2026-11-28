@@ -1,0 +1,22 @@
+/* Slightly heavier than regular text on all items, not only the selected one: otherwise on hover
+   the text would change width and rows would twitch. */
+.city-option {
+  font-weight: 500;
+}
+
+.city-option__country {
+  color: var(--text-muted);
+}
+
+/*
+ * Mantine fills the selected item with the accent (`--accent`), and light text "swims" on it: the
+ * grey country vanished entirely. On the fill use a dark label, with the country slightly quieter than the name.
+ */
+.city-option[data-combobox-selected] {
+  color: var(--on-accent);
+}
+
+.city-option[data-combobox-selected] .city-option__country {
+  color: var(--on-accent);
+  opacity: 0.72;
+}

@@ -2,7 +2,7 @@
 Health-данные для generic api-проводки (``tests/api/conftest.py``).
 
 Операционный роутер без зависимостей и без версионного префикса — три data-фикстуры вырождены:
-роутер health, пустой префикс (``/healthz`` монтируется в корень), пустая карта override'ов.
+роутер health, пустой префикс (``/healthz/`` монтируется в корень), пустая карта override'ов.
 Механизм сборки ``app``/``client`` живёт в родительском ``tests/api/conftest.py``.
 """
 
@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from fastapi import APIRouter
 
-from app.health import health_router
+from app.health.presentation.routes import health_router
 
 
 @pytest.fixture

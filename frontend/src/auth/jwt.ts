@@ -1,9 +1,11 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
 const accessTokenClaimsSchema = z.object({
   sub: z.string(),
   email_verified: z.boolean(),
   exp: z.number(),
+  // Optional: a token without the claim decodes as a plain user.
+  role: z._default(z.string(), "user"),
 });
 
 export type AccessTokenClaims = z.infer<typeof accessTokenClaimsSchema>;
@@ -15,10 +17,10 @@ function base64UrlDecode(segment: string): string {
 }
 
 /**
- * Декодирует payload access-токена БЕЗ верификации подписи.
+ * Decodes the access token payload WITHOUT verifying the signature.
  *
- * Используется только для UI-логики: показать/скрыть баннер о неподтверждённом email,
- * прочитать `sub`/`exp`. Все security-решения остаются на бэке.
+ * UI logic only (show/hide the unverified-email banner, read `sub`/`exp`). All security
+ * decisions stay on the backend.
  */
 export function decodeAccessTokenClaims(token: string): AccessTokenClaims | null {
   const parts = token.split(".");

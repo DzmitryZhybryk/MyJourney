@@ -1,18 +1,22 @@
 """
 In-memory фейки домена users: репозиторий и UoW.
 
-Реализуют порты из ``app.users.application.ports`` — тот же контракт, что и боевой
+Реализуют порты из ``app.users.application.ports.*`` — тот же контракт, что и боевой
 SQLAlchemy-репозиторий/UoW. ``ty`` сверяет обе реализации с портом, поэтому фейк не
 может молча разойтись с реальной сигнатурой. Сторадж — ``dict`` по ``user_id``;
 сущность кладётся по ссылке (моделирует identity map SA-сессии).
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import cast
 from unittest.mock import AsyncMock
 from uuid import UUID
 
-from app.users.application.ports import UserRepositoryPort, UserUnitOfWorkPort
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.users.application.ports.unit_of_work import UserUnitOfWorkPort
+from app.users.application.ports.user_repository import UserRepositoryPort
 from app.users.domain.entities import UserEntity
 
 
@@ -21,9 +25,22 @@ class FakeUserRepository(UserRepositoryPort):
 
     def __init__(self) -> None:
         self.by_user_id: dict[UUID, UserEntity] = {}
+        # Entities are stored by reference, so a change is visible in the dict even when nothing
+        # was written; this list is what shows the write itself.
+        self.updated_user_ids: list[UUID] = []
 
     async def insert_user(self, user_entity: UserEntity) -> None:
         self.by_user_id[user_entity.user_id] = user_entity
+
+    async def find_user_by_id(self, user_id: UUID) -> UserEntity | None:
+        return self.by_user_id.get(user_id)
+
+    async def find_user_by_id_for_update(self, user_id: UUID) -> UserEntity | None:
+        return self.by_user_id.get(user_id)
+
+    async def update_user_by_id(self, user_entity: UserEntity) -> None:
+        self.by_user_id[user_entity.user_id] = user_entity
+        self.updated_user_ids.append(user_entity.user_id)
 
 
 class FakeUserUnitOfWork(UserUnitOfWorkPort):
@@ -32,15 +49,21 @@ class FakeUserUnitOfWork(UserUnitOfWorkPort):
 
     Репозиторий передаётся снаружи (фикстура держит тот же инстанс, чтобы тест мог
     проверять его состояние), ``commit`` — ``AsyncMock`` (``commit_mock``) для проверки
-    факта фиксации.
+    факта фиксации, ``session`` — sentinel: фейк-издатель её не использует, но тест
+    сверяет, что событие опубликовано именно в этой сессии.
     """
 
-    def __init__(self, *, user_repository: UserRepositoryPort) -> None:
+    def __init__(self, user_repository: UserRepositoryPort) -> None:
         self.user_repository = user_repository
         self.commit_mock = AsyncMock()
+        self._session = cast(AsyncSession, object())
+
+    @property
+    def session(self) -> AsyncSession:
+        return self._session
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
+    async def transaction(self) -> AsyncGenerator[None]:
         yield
 
     async def commit(self) -> None:

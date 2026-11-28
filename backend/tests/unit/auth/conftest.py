@@ -4,20 +4,24 @@
 Фейки I/O-границы (репозитории, UoW, users-client, hasher'ы, task-bus, email-настройки)
 переехали в корневой ``tests/conftest.py`` — они переиспользуются и api-уровнем. Здесь
 остаётся только доменно-специфичная проводка сервисов-под-тестом, чтобы тесты не повторяли
-её. ``TokenIssuer`` и ``JWTService`` — реальные (stateless infra, дешёвые и детерминированные).
+её. ``TokenIssuer``, ``JWTService`` и шифратор кодов — реальные (stateless infra, дешёвые и
+детерминированные).
 """
 
 import pytest
 
-from app.auth.application.auth_service import AuthService
-from app.auth.application.email_verification_service import EmailVerificationService
-from app.auth.application.settings import EmailVerificationConfig
-from app.auth.application.token_issuer import TokenIssuer
-from app.shared.infra.crypto import Sha256DeterministicHasher
-from app.shared.infra.jwt import JWTService
+from app.auth.application.config import EmailVerificationConfig
+from app.auth.application.services.account import AccountService
+from app.auth.application.services.auth import AuthService
+from app.auth.application.services.email_verification import EmailVerificationService
+from app.auth.application.services.token_issuer import TokenIssuer
+from app.shared.infra.crypto.fernet import FernetSecretCipher
+from app.shared.infra.crypto.sha256 import Sha256DeterministicHasher
+from app.shared.infra.jwt.service import JWTService
 from tests.fakes import (
     FakeAuthUnitOfWork,
     FakeEmailVerificationService,
+    FakeEventPublisher,
     FakeSaltedHasher,
     FakeTaskBus,
     FakeUsersClient,
@@ -30,7 +34,7 @@ _REFRESH_TOKEN_TTL_DAYS = 30
 def token_issuer(deterministic_hasher: Sha256DeterministicHasher, jwt_service: JWTService) -> TokenIssuer:
     return TokenIssuer(
         deterministic_hasher=deterministic_hasher,
-        jwt_service=jwt_service,
+        access_token_issuer=jwt_service,
         refresh_token_ttl_days=_REFRESH_TOKEN_TTL_DAYS,
     )
 
@@ -47,6 +51,7 @@ def auth_service(
     fake_salted_hasher: FakeSaltedHasher,
     token_issuer: TokenIssuer,
     fake_email_verification_service: FakeEmailVerificationService,
+    fake_event_publisher: FakeEventPublisher,
 ) -> AuthService:
     return AuthService(
         uow=fake_uow,
@@ -54,19 +59,27 @@ def auth_service(
         salted_hasher=fake_salted_hasher,
         token_issuer=token_issuer,
         email_verification_service=fake_email_verification_service,
+        event_publisher=fake_event_publisher,
     )
+
+
+@pytest.fixture
+def account_service(fake_uow: FakeAuthUnitOfWork) -> AccountService:
+    return AccountService(fake_uow)
 
 
 @pytest.fixture
 def email_verification_service(
     fake_uow: FakeAuthUnitOfWork,
-    fake_salted_hasher: FakeSaltedHasher,
+    secret_cipher: FernetSecretCipher,
     fake_task_bus: FakeTaskBus,
-    email_verification_settings: EmailVerificationConfig,
+    fake_event_publisher: FakeEventPublisher,
+    email_verification_config: EmailVerificationConfig,
 ) -> EmailVerificationService:
     return EmailVerificationService(
         uow=fake_uow,
-        salted_hasher=fake_salted_hasher,
+        secret_cipher=secret_cipher,
         task_bus=fake_task_bus,
-        email_verification_settings=email_verification_settings,
+        event_publisher=fake_event_publisher,
+        config=email_verification_config,
     )
